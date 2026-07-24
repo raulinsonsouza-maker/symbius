@@ -1,0 +1,603 @@
+.section__label--center {
+  text-align: center;
+  margin-bottom: clamp(28px, 5vh, 48px);
+}
+.section--hero {
+  min-height: auto;
+  padding: 0;
+  display: block;
+  scroll-snap-align: none;
+  scroll-snap-stop: normal;
+}
+
+.hero__beat {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: clamp(24px, 5vw, 80px);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  background-color: var(--symbius-black);
+}
+
+.hero__beat--logo {
+  padding: clamp(32px, 6vw, 80px);
+}
+
+.hero__logo--splash {
+  width: clamp(340px, 55vw, 620px);
+  opacity: 0;
+}
+
+.hero__beat--manifesto {
+  flex-direction: column;
+}
+
+.hero__phrases {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(28px, 5vh, 48px);
+  max-width: var(--symbius-max-text);
+  margin: 0 auto;
+}
+
+.hero__phrase {
+  font-size: var(--symbius-text-display);
+  font-weight: 300;
+  line-height: var(--symbius-line-height-tight);
+  letter-spacing: -0.02em;
+  opacity: 0;
+}
+
+.hero__phrase--secondary {
+  font-size: var(--symbius-text-title);
+  color: var(--symbius-muted-light);
+}
+
+/* ── Seção 2: BrandGrowth ── */
+.section--brandgrowth {
+  position: relative;
+  z-index: 1;
+}
+
+.brandgrowth-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 4.5vh, 44px);
+  width: 100%;
+  max-width: min(1080px, 94vw);
+  margin: 0 auto;
+}
+
+.brandgrowth-v2__headline {
+  max-width: 780px;
+  font-size: clamp(1.85rem, 3.6vw, 3rem);
+  line-height: 1.12;
+}
+
+.brandgrowth-v2__pillars {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(20px, 3vw, 32px);
+}
+
+.brandgrowth-v2__pillar {
+  border: 1px solid var(--symbius-border);
+  padding: clamp(24px, 3.5vw, 40px);
+  opacity: 0;
+}
+
+.brandgrowth-v2__pillar-title {
+  font-size: var(--symbius-text-small);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--symbius-muted);
+  margin-bottom: 1.15rem;
+}
+
+.brandgrowth-v2__topics {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.brandgrowth-v2__topics li {
+  font-size: clamp(1.15rem, 2.1vw, 1.5rem);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+}
+
+.brandgrowth-v2__flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 2.5vw, 28px);
+  width: 100%;
+  padding-top: clamp(20px, 3.5vh, 32px);
+  border-top: 1px solid var(--symbius-border);
+}
+
+.brandgrowth-v2__flow-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+}
+
+.brandgrowth-v2__flow-number {
+  font-size: var(--symbius-text-small);
+  letter-spacing: 0.2em;
+  color: var(--symbius-muted);
+}
+
+.brandgrowth-v2__flow-label {
+  font-size: clamp(1rem, 1.8vw, 1.3rem);
+  font-weight: 400;
+}
+
+.brandgrowth-v2__flow-arrow {
+  color: var(--symbius-muted);
+  margin-left: 4px;
+  font-size: 1rem;
+}
+
+.brandgrowth-v2__objective {
+  font-size: clamp(1.35rem, 2.8vw, 2rem);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: var(--symbius-line-height-tight);
+  color: var(--symbius-white);
+  opacity: 0;
+  text-align: center;
+  width: 100%;
+  max-width: 28ch;
+  margin: 0 auto;
+}
+
+#brandgrowthSlide.presentation-slide {
+  padding-inline: clamp(32px, 6vw, 96px);
+}
+
+/* ── Seção 3: Poder da Marca ── */
+.section--marca {
+  min-height: 100vh;
+}
+
+.marca__intro {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(32px, 6vh, 64px);
+}
+
+.marca__hero-image {
+  position: relative;
+  width: 100%;
+  height: clamp(240px, 42vh, 420px);
+  overflow: hidden;
+  border: 1px solid var(--symbius-border);
+}
+
+.marca__hero-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #111 0%, #000 50%, #0a0a0a 100%);
+  position: relative;
+}
+
+.marca__hero-placeholder::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('/images/textura-preta.png') center/cover;
+  opacity: 0.15;
+  mix-blend-mode: soft-light;
+}
+
+.marca__quote {
+  max-width: var(--symbius-max-text);
+  margin: 0 auto;
+  text-align: center;
+}
+
+.marca__quote p {
+  font-size: var(--symbius-text-display);
+  font-weight: 300;
+  line-height: var(--symbius-line-height-tight);
+  letter-spacing: -0.02em;
+}
+
+.marca__support {
+  max-width: var(--symbius-max-text);
+  margin: 0 auto;
+  text-align: center;
+  font-size: var(--symbius-text-body);
+  font-weight: 300;
+  color: var(--symbius-muted);
+  opacity: 0;
+}
+
+/* ── Seção 4: Branding ── */
+.section--branding {
+  min-height: 100vh;
+}
+
+.branding__intro {
+  max-width: 640px;
+  margin-bottom: clamp(28px, 4vh, 48px);
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+/* ── Seção 5: Growth ── */
+.section--growth {
+  position: relative;
+}
+
+#growthSlide.presentation-slide {
+  padding: clamp(24px, 4vh, 52px) clamp(28px, 5vw, 80px);
+}
+
+#growthSlide .presentation-slide__inner {
+  max-width: min(1360px, 96vw);
+}
+
+.growth {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
+  gap: clamp(36px, 5vw, 72px);
+  align-items: center;
+  width: 100%;
+}
+
+.growth__copy {
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: clamp(0px, 2vw, 24px);
+}
+
+.growth__intro {
+  margin-bottom: 0.85rem;
+  font-size: clamp(1.85rem, 3.6vw, 2.85rem);
+  line-height: 1.1;
+}
+
+.growth__subtitle {
+  margin-bottom: 1.5rem;
+  font-size: clamp(1.05rem, 1.9vw, 1.4rem);
+  max-width: 42ch;
+}
+
+.growth__stack-label {
+  font-size: clamp(0.8rem, 1.2vw, 0.95rem);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--symbius-muted);
+  margin-bottom: 0.9rem;
+  opacity: 0;
+}
+
+.growth__pillars {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 1.25rem;
+}
+
+.growth__pillar {
+  border: 1px solid var(--symbius-border);
+  padding: clamp(14px, 2vh, 20px) clamp(16px, 2vw, 22px);
+  opacity: 0;
+  text-align: left;
+}
+
+.growth__pillar-title {
+  font-size: clamp(1rem, 1.6vw, 1.2rem);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.25rem;
+}
+
+.growth__pillar-copy {
+  font-size: clamp(0.9rem, 1.4vw, 1.05rem);
+  font-weight: 300;
+  color: var(--symbius-muted-light);
+  line-height: 1.45;
+}
+
+.growth__payoff {
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  line-height: var(--symbius-line-height-tight);
+  color: var(--symbius-muted-light);
+  opacity: 0;
+  max-width: 34ch;
+}
+
+.growth__visual {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  width: 100%;
+}
+
+/* ── Seção 6: Metodologia ── */
+.section--metodologia {
+  position: relative;
+}
+
+.metodologia__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(16px, 2vw, 24px);
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.metodologia__hint {
+  text-align: center;
+  font-size: var(--symbius-text-small);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--symbius-muted);
+  margin: -0.5rem 0 1.5rem;
+  opacity: 0;
+}
+
+.metodologia__card {
+  border: 1px solid var(--symbius-border);
+  padding: clamp(16px, 2.5vw, 24px);
+  opacity: 0;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  transition: border-color 0.35s var(--symbius-transition), background 0.35s var(--symbius-transition), transform 0.35s var(--symbius-transition);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.metodologia__card:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.03);
+  transform: translateY(-2px);
+}
+
+.metodologia__card:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}
+
+.metodologia__number {
+  font-size: var(--symbius-text-small);
+  letter-spacing: 0.3em;
+  color: var(--symbius-muted);
+  margin-bottom: 1rem;
+}
+
+.metodologia__title {
+  font-size: var(--symbius-text-title);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.75rem;
+}
+
+.metodologia__copy {
+  font-size: var(--symbius-text-body);
+  font-weight: 300;
+  color: var(--symbius-muted-light);
+  line-height: var(--symbius-line-height-body);
+  flex: 1;
+}
+
+.metodologia__card-action {
+  display: inline-block;
+  margin-top: 1.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--symbius-muted);
+  transition: color 0.3s var(--symbius-transition);
+}
+
+.metodologia__card:hover .metodologia__card-action {
+  color: var(--symbius-white);
+}
+
+/* ── Modal metodologia ── */
+.metodologia-modal__panel {
+  width: min(640px, 100%);
+  gap: 0;
+}
+
+.metodologia-modal__header {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--symbius-border);
+}
+
+.metodologia-modal__number {
+  font-size: var(--symbius-text-small);
+  letter-spacing: 0.3em;
+  color: var(--symbius-muted);
+  margin-bottom: 0.75rem;
+}
+
+.metodologia-modal__title {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  margin-bottom: 1rem;
+}
+
+.metodologia-modal__intro {
+  font-size: var(--symbius-text-body);
+  font-weight: 300;
+  color: var(--symbius-muted-light);
+  line-height: var(--symbius-line-height-body);
+}
+
+.metodologia-modal__body {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--symbius-border);
+}
+
+.metodologia-modal__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--symbius-muted);
+  margin-bottom: 1rem;
+}
+
+.metodologia-modal__topics {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.metodologia-modal__topics li {
+  font-size: var(--symbius-text-body);
+  font-weight: 300;
+  padding-left: 1.25rem;
+  position: relative;
+}
+
+.metodologia-modal__topics li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.65em;
+  width: 6px;
+  height: 1px;
+  background: var(--symbius-white);
+}
+
+.metodologia-modal__footer {
+  padding-top: 1.5rem;
+}
+
+.metodologia-modal__outcome {
+  font-size: var(--symbius-text-title);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  line-height: var(--symbius-line-height-tight);
+}
+
+/* ── Seção 7: Resultado ── */
+.section--resultado {
+  min-height: 100vh;
+}
+
+.resultado__list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(32px, 5vh, 56px);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.resultado__item {
+  position: relative;
+  min-height: 3rem;
+}
+
+.resultado__before,
+.resultado__after {
+  font-size: var(--symbius-text-title);
+  font-weight: 300;
+  line-height: var(--symbius-line-height-tight);
+  letter-spacing: -0.01em;
+}
+
+.resultado__before {
+  color: var(--symbius-muted);
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+}
+
+.resultado__after {
+  color: var(--symbius-white);
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+/* ── Seção 8: Fechamento ── */
+.section--fechamento {
+  min-height: 100vh;
+  text-align: center;
+  padding-bottom: clamp(80px, 12vh, 160px);
+}
+
+.fechamento__content {
+  max-width: var(--symbius-max-text);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(32px, 5vh, 56px);
+}
+
+.fechamento__text {
+  font-size: var(--symbius-text-body);
+  font-weight: 300;
+  color: var(--symbius-muted-light);
+  line-height: var(--symbius-line-height-body);
+}
+
+.fechamento__cta {
+  font-size: var(--symbius-text-display);
+  font-weight: 300;
+  line-height: var(--symbius-line-height-tight);
+  letter-spacing: -0.02em;
+  margin-top: 1rem;
+}
+
+.fechamento__footer {
+  margin-top: clamp(64px, 10vh, 120px);
+}
+
+.fechamento__logo {
+  width: clamp(120px, 15vw, 160px);
+  opacity: 0.6;
+  margin: 0 auto;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .brandgrowth-v2__pillars,
+  .growth {
+    grid-template-columns: 1fr;
+  }
+
+  .growth__copy {
+    padding-right: 0;
+  }
+
+  .growth__pillars {
+    grid-template-columns: 1fr;
+  }
+
+  .growth__visual {
+    order: -1;
+  }
+
+  .metodologia__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero__phrase {
+    font-size: var(--symbius-text-title);
+  }
+}

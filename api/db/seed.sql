@@ -1,0 +1,44 @@
+INSERT INTO settings (id, company_name, contact_email, contact_phone, contact_website, logo_url, default_responsible, whatsapp_number)
+VALUES (
+  1,
+  'Symbius',
+  'contato@symbius.com.br',
+  '(11) 99999-9999',
+  'www.symbius.com.br',
+  '/images/logotipo-branco.png',
+  '',
+  '5511999999999'
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO services (name, block, sort_order) VALUES
+  ('Diagnóstico de Marca', 'setup', 10),
+  ('Auditoria de Canais Digitais', 'setup', 20),
+  ('Pesquisa de Público-Alvo', 'setup', 30),
+  ('Posicionamento de Marca', 'setup', 40),
+  ('Naming', 'setup', 50),
+  ('Identidade Visual', 'setup', 60),
+  ('Redesign de Marca', 'setup', 70),
+  ('Manual de Marca', 'setup', 80),
+  ('Site Institucional', 'setup', 90),
+  ('Landing Page', 'setup', 100),
+  ('Implantação de CRM', 'setup', 110),
+  ('Implantação de E-commerce', 'setup', 120),
+  ('Kit de Criativos de Lançamento', 'setup', 130),
+  ('Copy Institucional', 'setup', 140),
+  ('Configuração de Analytics/Tags de Rastreamento', 'setup', 150),
+  ('Integração de Ferramentas (WhatsApp, ERP, pixel, etc.)', 'setup', 160),
+  ('Gestão de Tráfego Pago (Meta Ads)', 'operacao', 10),
+  ('Gestão de Tráfego Pago (Google Ads)', 'operacao', 20),
+  ('Social Media', 'operacao', 30),
+  ('Produção de Criativos', 'operacao', 40),
+  ('Automação de CRM', 'operacao', 50),
+  ('Follow-up de Leads', 'operacao', 60),
+  ('Copywriting de Campanhas', 'operacao', 70),
+  ('Teste A/B de Campanhas', 'operacao', 80),
+  ('Dashboard de BI', 'operacao', 90),
+  ('Relatório de Performance', 'operacao', 100),
+  ('Reunião Mensal de Acompanhamento', 'operacao', 110),
+  ('Otimização de Funil', 'operacao', 120),
+  ('Gestão de E-commerce (operação pós-implantação)', 'operacao', 130),
+  ('Email Marketing / Automação de Fluxos', 'operacao', 140);

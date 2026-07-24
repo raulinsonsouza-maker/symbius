@@ -1,0 +1,18 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: symbius-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: symbius
+      POSTGRES_PASSWORD: symbius
+      POSTGRES_DB: symbius
+    ports:
+      - "5432:5432"
+    volumes:
+      - symbius_pg_data:/var/lib/postgresql/data
+      - ./api/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./api/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+
+volumes:
+  symbius_pg_data:

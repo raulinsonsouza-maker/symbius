@@ -1,0 +1,125 @@
+/* ── Growth: browser preview + dashboard modal ── */
+
+.browser-chrome {
+  width: 100%;
+  border: 1px solid var(--symbius-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0a0a0a;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+.browser-chrome--mini {
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+}
+
+.browser-chrome__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--symbius-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.browser-chrome__dots {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.browser-chrome__dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.browser-chrome__address {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.browser-chrome__lock {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  color: var(--symbius-muted);
+}
+
+.browser-chrome__url {
+  font-size: 0.75rem;
+  color: var(--symbius-muted-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.browser-chrome__frame {
+  display: block;
+  width: 100%;
+  height: min(72vh, 720px);
+  border: none;
+  background: #111;
+}
+
+.growth-browser-preview {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  transition: transform 0.45s var(--symbius-transition);
+}
+
+.growth-browser-preview__body {
+  overflow: hidden;
+  background: #050505;
+  line-height: 0;
+}
+
+.growth-browser-preview__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(72vh, 760px);
+  object-fit: contain;
+  object-position: top center;
+}
+
+.growth-browser-preview:hover {
+  transform: translateY(-4px);
+}
+
+.growth-browser-preview:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 4px;
+}
+
+.growth-dashboard-modal__panel {
+  width: min(1280px, 100%);
+  padding: clamp(16px, 2vw, 24px);
+}
+
+.growth-dashboard-modal .browser-chrome__frame {
+  height: min(78vh, 760px);
+}
+
+@media (max-width: 900px) {
+  .growth-dashboard-modal__panel {
+    padding: 12px;
+  }
+
+  .growth-dashboard-modal .browser-chrome__frame {
+    height: min(68vh, 560px);
+  }
+}

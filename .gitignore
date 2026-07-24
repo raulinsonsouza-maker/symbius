@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+dist-ssr/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+!api/.env.example
+*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Cursor
+.cursor/
+
+# Agent tools / temp
+agent-tools/
+
+# API local data / secrets
+api/data/
+api/.env
+
+# Proposal generator source artifact (heavy zip / extract)
+Gerador de Proposta/
+
+# Local tooling outside project intent
