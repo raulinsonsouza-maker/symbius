@@ -9,8 +9,19 @@ CREATE TABLE IF NOT EXISTS settings (
   logo_url TEXT NOT NULL DEFAULT '/images/logotipo-branco.png',
   default_responsible TEXT NOT NULL DEFAULT '',
   whatsapp_number TEXT NOT NULL DEFAULT '5511999999999',
+  legal_name TEXT NOT NULL DEFAULT '',
+  legal_document TEXT NOT NULL DEFAULT '',
+  legal_address TEXT NOT NULL DEFAULT '',
+  legal_rep_name TEXT NOT NULL DEFAULT '',
+  legal_rep_role TEXT NOT NULL DEFAULT '',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS legal_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS legal_document TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS legal_address TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS legal_rep_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS legal_rep_role TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS services (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -49,9 +60,87 @@ CREATE TABLE IF NOT EXISTS proposals (
   traffic_footer TEXT NOT NULL DEFAULT 'Gestão de mídia (mídia à parte)',
   blank_items JSONB NOT NULL DEFAULT '[]'::jsonb,
   observations JSONB NOT NULL DEFAULT '[]'::jsonb,
+  client_id UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE proposals ADD COLUMN IF NOT EXISTS client_id UUID;
+ALTER TABLE proposals DROP CONSTRAINT IF EXISTS proposals_status_check;
+ALTER TABLE proposals ADD CONSTRAINT proposals_status_check
+  CHECK (status IN ('draft', 'sent', 'won', 'archived'));
+
+CREATE TABLE IF NOT EXISTS clients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  legal_name TEXT NOT NULL DEFAULT '',
+  trade_name TEXT NOT NULL DEFAULT '',
+  document_type TEXT NOT NULL DEFAULT 'cnpj' CHECK (document_type IN ('cnpj', 'cpf')),
+  document TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL DEFAULT '',
+  whatsapp TEXT NOT NULL DEFAULT '',
+  street TEXT NOT NULL DEFAULT '',
+  number TEXT NOT NULL DEFAULT '',
+  complement TEXT NOT NULL DEFAULT '',
+  district TEXT NOT NULL DEFAULT '',
+  city TEXT NOT NULL DEFAULT '',
+  state TEXT NOT NULL DEFAULT '',
+  zip TEXT NOT NULL DEFAULT '',
+  legal_rep_name TEXT NOT NULL DEFAULT '',
+  legal_rep_role TEXT NOT NULL DEFAULT '',
+  legal_rep_document TEXT NOT NULL DEFAULT '',
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS contracts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  number TEXT NOT NULL UNIQUE,
+  public_slug TEXT NOT NULL UNIQUE,
+  proposal_id UUID,
+  client_id UUID,
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'sent', 'signed', 'active', 'cancelled')),
+  title TEXT NOT NULL DEFAULT 'Proposta comercial e contrato de prestação de serviços',
+  subtitle TEXT NOT NULL DEFAULT '',
+  start_date TEXT NOT NULL DEFAULT '',
+  min_term_days INT NOT NULL DEFAULT 90,
+  meeting_cadence_days INT NOT NULL DEFAULT 15,
+  objective TEXT NOT NULL DEFAULT '',
+  scope_items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  provider_responsibilities JSONB NOT NULL DEFAULT '[]'::jsonb,
+  client_responsibilities JSONB NOT NULL DEFAULT '[]'::jsonb,
+  out_of_scope JSONB NOT NULL DEFAULT '[]'::jsonb,
+  meeting_topics JSONB NOT NULL DEFAULT '[]'::jsonb,
+  important_notes JSONB NOT NULL DEFAULT '[]'::jsonb,
+  setup_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  setup_title TEXT NOT NULL DEFAULT 'Investimento de setup',
+  setup_price NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  setup_description TEXT NOT NULL DEFAULT '',
+  fee_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  fee_title TEXT NOT NULL DEFAULT 'Fee mensal',
+  fee_price NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  fee_description TEXT NOT NULL DEFAULT '',
+  commission_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  commission_base_label TEXT NOT NULL DEFAULT 'faturamento bruto mensal',
+  commission_tiers JSONB NOT NULL DEFAULT '[]'::jsonb,
+  commission_close_day INT NOT NULL DEFAULT 5,
+  commission_pay_day INT NOT NULL DEFAULT 6,
+  commission_examples JSONB NOT NULL DEFAULT '[]'::jsonb,
+  media_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  media_monthly_budget NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  media_notes TEXT NOT NULL DEFAULT '',
+  acceptance_provider_name TEXT NOT NULL DEFAULT '',
+  acceptance_client_name TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS subtitle TEXT NOT NULL DEFAULT '';
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS meeting_topics JSONB NOT NULL DEFAULT '[]'::jsonb;
+
 CREATE INDEX IF NOT EXISTS proposals_created_at_idx ON proposals (created_at DESC);
 CREATE INDEX IF NOT EXISTS services_block_sort_idx ON services (block, sort_order);
+CREATE INDEX IF NOT EXISTS clients_created_at_idx ON clients (created_at DESC);
+CREATE INDEX IF NOT EXISTS contracts_created_at_idx ON contracts (created_at DESC);

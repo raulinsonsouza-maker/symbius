@@ -173,6 +173,53 @@ export default function SettingsModal({ onClose }) {
                 }
               />
             </label>
+
+            <p className="prop-form-section">Dados para contrato</p>
+            <label>
+              Razão social
+              <input
+                value={settings.legalName || ''}
+                onChange={(e) =>
+                  setSettings({ ...settings, legalName: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              CNPJ
+              <input
+                value={settings.legalDocument || ''}
+                onChange={(e) =>
+                  setSettings({ ...settings, legalDocument: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Endereço completo
+              <input
+                value={settings.legalAddress || ''}
+                onChange={(e) =>
+                  setSettings({ ...settings, legalAddress: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Representante legal
+              <input
+                value={settings.legalRepName || ''}
+                onChange={(e) =>
+                  setSettings({ ...settings, legalRepName: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Cargo do representante
+              <input
+                value={settings.legalRepRole || ''}
+                onChange={(e) =>
+                  setSettings({ ...settings, legalRepRole: e.target.value })
+                }
+              />
+            </label>
             <button type="submit" className="lp-btn lp-btn--solid" disabled={saving}>
               {saving ? 'Salvando…' : 'Salvar configurações'}
             </button>

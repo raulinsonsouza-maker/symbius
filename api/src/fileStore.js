@@ -72,9 +72,16 @@ function defaultDb() {
       logoUrl: '/images/logotipo-branco.png',
       defaultResponsible: '',
       whatsappNumber: '5511999999999',
+      legalName: 'Symbius',
+      legalDocument: '',
+      legalAddress: '',
+      legalRepName: '',
+      legalRepRole: '',
     },
     services,
     proposals: [],
+    clients: [],
+    contracts: [],
   };
 }
 
@@ -85,7 +92,18 @@ function readDb() {
     fs.writeFileSync(dataFile, JSON.stringify(db, null, 2), 'utf8');
     return db;
   }
-  return JSON.parse(fs.readFileSync(dataFile, 'utf8'));
+  const db = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
+  if (!Array.isArray(db.clients)) db.clients = [];
+  if (!Array.isArray(db.contracts)) db.contracts = [];
+  db.settings = {
+    legalName: db.settings.companyName || 'Symbius',
+    legalDocument: '',
+    legalAddress: '',
+    legalRepName: '',
+    legalRepRole: '',
+    ...db.settings,
+  };
+  return db;
 }
 
 function writeDb(db) {
@@ -99,6 +117,17 @@ function nextNumber(proposals) {
   const seqs = proposals
     .filter((p) => p.number?.startsWith(prefix))
     .map((p) => Number(p.number.split('-').pop()))
+    .filter((n) => !Number.isNaN(n));
+  const next = (seqs.length ? Math.max(...seqs) : 0) + 1;
+  return `${prefix}${String(next).padStart(4, '0')}`;
+}
+
+function nextContractNumber(contracts) {
+  const year = new Date().getFullYear();
+  const prefix = `CTR-${year}-`;
+  const seqs = contracts
+    .filter((c) => c.number?.startsWith(prefix))
+    .map((c) => Number(c.number.split('-').pop()))
     .filter((n) => !Number.isNaN(n));
   const next = (seqs.length ? Math.max(...seqs) : 0) + 1;
   return `${prefix}${String(next).padStart(4, '0')}`;
@@ -197,6 +226,7 @@ export const fileStore = {
         input.trafficFooter || 'Gestão de mídia (mídia à parte)',
       blankItems: input.blankItems || [],
       observations: input.observations || [],
+      clientId: input.clientId || null,
       createdAt: now,
       updatedAt: now,
     };
@@ -225,6 +255,158 @@ export const fileStore = {
       next.trafficPrice = Number(patch.trafficPrice);
     }
     db.proposals[idx] = next;
+    writeDb(db);
+    return next;
+  },
+
+  async listClients() {
+    return [...readDb().clients].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+    );
+  },
+
+  async getClient(id) {
+    return readDb().clients.find((c) => c.id === id) || null;
+  },
+
+  async createClient(input) {
+    const db = readDb();
+    const now = new Date().toISOString();
+    const client = {
+      id: randomUUID(),
+      legalName: input.legalName || '',
+      tradeName: input.tradeName || '',
+      documentType: input.documentType || 'cnpj',
+      document: input.document || '',
+      email: input.email || '',
+      phone: input.phone || '',
+      whatsapp: input.whatsapp || '',
+      street: input.street || '',
+      number: input.number || '',
+      complement: input.complement || '',
+      district: input.district || '',
+      city: input.city || '',
+      state: input.state || '',
+      zip: input.zip || '',
+      legalRepName: input.legalRepName || '',
+      legalRepRole: input.legalRepRole || '',
+      legalRepDocument: input.legalRepDocument || '',
+      notes: input.notes || '',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.clients.push(client);
+    writeDb(db);
+    return client;
+  },
+
+  async updateClient(id, patch) {
+    const db = readDb();
+    const idx = db.clients.findIndex((c) => c.id === id);
+    if (idx < 0) return null;
+    const next = {
+      ...db.clients[idx],
+      ...Object.fromEntries(
+        Object.entries(patch).filter(([, v]) => v !== undefined),
+      ),
+      updatedAt: new Date().toISOString(),
+    };
+    db.clients[idx] = next;
+    writeDb(db);
+    return next;
+  },
+
+  async listContracts() {
+    return [...readDb().contracts].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+    );
+  },
+
+  async getContract(id) {
+    return readDb().contracts.find((c) => c.id === id) || null;
+  },
+
+  async getContractBySlug(slug) {
+    return readDb().contracts.find((c) => c.publicSlug === slug) || null;
+  },
+
+  async getContractByProposal(proposalId) {
+    const list = readDb().contracts.filter((c) => c.proposalId === proposalId);
+    if (!list.length) return null;
+    return list.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+    )[0];
+  },
+
+  async createContract(input) {
+    const db = readDb();
+    const now = new Date().toISOString();
+    const contract = {
+      id: randomUUID(),
+      number: nextContractNumber(db.contracts),
+      publicSlug: slugId(),
+      proposalId: input.proposalId || null,
+      clientId: input.clientId || null,
+      status: input.status || 'draft',
+      title:
+        input.title ||
+        'Proposta comercial e contrato de prestação de serviços',
+      subtitle: input.subtitle || '',
+      startDate: input.startDate || '',
+      minTermDays: input.minTermDays ?? 90,
+      meetingCadenceDays: input.meetingCadenceDays ?? 15,
+      objective: input.objective || '',
+      scopeItems: input.scopeItems || [],
+      providerResponsibilities: input.providerResponsibilities || [],
+      clientResponsibilities: input.clientResponsibilities || [],
+      outOfScope: input.outOfScope || [],
+      meetingTopics: input.meetingTopics || [],
+      importantNotes: input.importantNotes || [],
+      setupEnabled: input.setupEnabled ?? false,
+      setupTitle: input.setupTitle || 'Investimento de setup',
+      setupPrice: Number(input.setupPrice ?? 0),
+      setupDescription: input.setupDescription || '',
+      feeEnabled: input.feeEnabled ?? false,
+      feeTitle: input.feeTitle || 'Fee mensal',
+      feePrice: Number(input.feePrice ?? 0),
+      feeDescription: input.feeDescription || '',
+      commissionEnabled: input.commissionEnabled ?? false,
+      commissionBaseLabel:
+        input.commissionBaseLabel || 'faturamento bruto mensal',
+      commissionTiers: input.commissionTiers || [],
+      commissionCloseDay: input.commissionCloseDay ?? 5,
+      commissionPayDay: input.commissionPayDay ?? 6,
+      commissionExamples: input.commissionExamples || [],
+      mediaEnabled: input.mediaEnabled ?? false,
+      mediaMonthlyBudget: Number(input.mediaMonthlyBudget ?? 0),
+      mediaNotes: input.mediaNotes || '',
+      acceptanceProviderName: input.acceptanceProviderName || '',
+      acceptanceClientName: input.acceptanceClientName || '',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.contracts.push(contract);
+    writeDb(db);
+    return contract;
+  },
+
+  async updateContract(id, patch) {
+    const db = readDb();
+    const idx = db.contracts.findIndex((c) => c.id === id);
+    if (idx < 0) return null;
+    const next = {
+      ...db.contracts[idx],
+      ...Object.fromEntries(
+        Object.entries(patch).filter(([, v]) => v !== undefined),
+      ),
+      updatedAt: new Date().toISOString(),
+    };
+    if (patch.setupPrice != null) next.setupPrice = Number(patch.setupPrice);
+    if (patch.feePrice != null) next.feePrice = Number(patch.feePrice);
+    if (patch.mediaMonthlyBudget != null) {
+      next.mediaMonthlyBudget = Number(patch.mediaMonthlyBudget);
+    }
+    db.contracts[idx] = next;
     writeDb(db);
     return next;
   },

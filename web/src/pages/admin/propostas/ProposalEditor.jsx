@@ -215,6 +215,14 @@ export default function ProposalEditor() {
     }
   }
 
+  async function handleGenerateContract() {
+    const saved = await save();
+    const targetId = saved?.id || savedId;
+    if (targetId) {
+      navigate(`/admin/propostas/${targetId}/contrato`);
+    }
+  }
+
   if (loading || !proposal || !settings) {
     return (
       <div className="admin-shell prop-shell">
@@ -259,6 +267,14 @@ export default function ProposalEditor() {
             onClick={openPublicLp}
           >
             Abrir LP
+          </button>
+          <button
+            type="button"
+            className="lp-btn lp-btn--ghost lp-btn--sm"
+            onClick={handleGenerateContract}
+            disabled={saving}
+          >
+            Gerar contrato
           </button>
           <button
             type="button"

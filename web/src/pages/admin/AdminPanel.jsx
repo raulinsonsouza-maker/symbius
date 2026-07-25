@@ -21,6 +21,24 @@ const TOOLS = [
     available: true,
   },
   {
+    id: 'contratos',
+    title: 'Contratos',
+    description:
+      'Contratos gerados a partir das propostas fechadas, com remuneração configurável.',
+    to: '/admin/contratos',
+    tag: 'Comercial',
+    available: true,
+  },
+  {
+    id: 'clientes',
+    title: 'Clientes',
+    description:
+      'Cadastro completo dos clientes (CNPJ, endereço, representante legal).',
+    to: '/admin/clientes',
+    tag: 'Cadastro',
+    available: true,
+  },
+  {
     id: 'central',
     title: 'Central de Clientes',
     description:

@@ -1,4 +1,4 @@
-INSERT INTO settings (id, company_name, contact_email, contact_phone, contact_website, logo_url, default_responsible, whatsapp_number)
+INSERT INTO settings (id, company_name, contact_email, contact_phone, contact_website, logo_url, default_responsible, whatsapp_number, legal_name, legal_document, legal_address, legal_rep_name, legal_rep_role)
 VALUES (
   1,
   'Symbius',
@@ -7,7 +7,12 @@ VALUES (
   'www.symbius.com.br',
   '/images/logotipo-branco.png',
   '',
-  '5511999999999'
+  '5511999999999',
+  'Symbius',
+  '',
+  '',
+  '',
+  ''
 )
 ON CONFLICT (id) DO NOTHING;
 

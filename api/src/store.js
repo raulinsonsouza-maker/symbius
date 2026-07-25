@@ -34,6 +34,79 @@ function mapProposal(row) {
     trafficFooter: row.traffic_footer,
     blankItems: row.blank_items || [],
     observations: row.observations || [],
+    clientId: row.client_id || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapClient(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    legalName: row.legal_name,
+    tradeName: row.trade_name,
+    documentType: row.document_type,
+    document: row.document,
+    email: row.email,
+    phone: row.phone,
+    whatsapp: row.whatsapp,
+    street: row.street,
+    number: row.number,
+    complement: row.complement,
+    district: row.district,
+    city: row.city,
+    state: row.state,
+    zip: row.zip,
+    legalRepName: row.legal_rep_name,
+    legalRepRole: row.legal_rep_role,
+    legalRepDocument: row.legal_rep_document,
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapContract(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    number: row.number,
+    publicSlug: row.public_slug,
+    proposalId: row.proposal_id || null,
+    clientId: row.client_id || null,
+    status: row.status,
+    title: row.title,
+    subtitle: row.subtitle || '',
+    startDate: row.start_date,
+    minTermDays: row.min_term_days,
+    meetingCadenceDays: row.meeting_cadence_days,
+    objective: row.objective,
+    scopeItems: row.scope_items || [],
+    providerResponsibilities: row.provider_responsibilities || [],
+    clientResponsibilities: row.client_responsibilities || [],
+    outOfScope: row.out_of_scope || [],
+    meetingTopics: row.meeting_topics || [],
+    importantNotes: row.important_notes || [],
+    setupEnabled: row.setup_enabled,
+    setupTitle: row.setup_title,
+    setupPrice: Number(row.setup_price),
+    setupDescription: row.setup_description,
+    feeEnabled: row.fee_enabled,
+    feeTitle: row.fee_title,
+    feePrice: Number(row.fee_price),
+    feeDescription: row.fee_description,
+    commissionEnabled: row.commission_enabled,
+    commissionBaseLabel: row.commission_base_label,
+    commissionTiers: row.commission_tiers || [],
+    commissionCloseDay: row.commission_close_day,
+    commissionPayDay: row.commission_pay_day,
+    commissionExamples: row.commission_examples || [],
+    mediaEnabled: row.media_enabled,
+    mediaMonthlyBudget: Number(row.media_monthly_budget),
+    mediaNotes: row.media_notes,
+    acceptanceProviderName: row.acceptance_provider_name,
+    acceptanceClientName: row.acceptance_client_name,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -58,6 +131,11 @@ function mapSettings(row) {
     logoUrl: row.logo_url,
     defaultResponsible: row.default_responsible,
     whatsappNumber: row.whatsapp_number,
+    legalName: row.legal_name,
+    legalDocument: row.legal_document,
+    legalAddress: row.legal_address,
+    legalRepName: row.legal_rep_name,
+    legalRepRole: row.legal_rep_role,
   };
 }
 
@@ -66,6 +144,18 @@ async function nextProposalNumber() {
   const prefix = `SYM-${year}-`;
   const { rows } = await pool.query(
     `SELECT number FROM proposals WHERE number LIKE $1 ORDER BY number DESC LIMIT 1`,
+    [`${prefix}%`],
+  );
+  let seq = 1;
+  if (rows[0]) seq = Number(rows[0].number.split('-').pop()) + 1;
+  return `${prefix}${String(seq).padStart(4, '0')}`;
+}
+
+async function nextContractNumber() {
+  const year = new Date().getFullYear();
+  const prefix = `CTR-${year}-`;
+  const { rows } = await pool.query(
+    `SELECT number FROM contracts WHERE number LIKE $1 ORDER BY number DESC LIMIT 1`,
     [`${prefix}%`],
   );
   let seq = 1;
@@ -91,6 +181,11 @@ const pgStore = {
         logo_url = COALESCE($5, logo_url),
         default_responsible = COALESCE($6, default_responsible),
         whatsapp_number = COALESCE($7, whatsapp_number),
+        legal_name = COALESCE($8, legal_name),
+        legal_document = COALESCE($9, legal_document),
+        legal_address = COALESCE($10, legal_address),
+        legal_rep_name = COALESCE($11, legal_rep_name),
+        legal_rep_role = COALESCE($12, legal_rep_role),
         updated_at = NOW()
        WHERE id = 1 RETURNING *`,
       [
@@ -101,6 +196,11 @@ const pgStore = {
         b.logoUrl,
         b.defaultResponsible,
         b.whatsappNumber,
+        b.legalName,
+        b.legalDocument,
+        b.legalAddress,
+        b.legalRepName,
+        b.legalRepRole,
       ],
     );
     return mapSettings(rows[0]);
@@ -169,12 +269,12 @@ const pgStore = {
         client_name, responsible_name, date, title, subtitle, manifesto, scope_items,
         setup_enabled, setup_title, setup_price, setup_footer, setup_service_ids,
         operation_enabled, operation_title, operation_price, operation_footer, operation_service_ids,
-        traffic_enabled, traffic_price, traffic_footer, blank_items, observations
+        traffic_enabled, traffic_price, traffic_footer, blank_items, observations, client_id
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
         $12,$13,$14,$15,$16,
         $17,$18,$19,$20,$21,
-        $22,$23,$24,$25,$26
+        $22,$23,$24,$25,$26,$27
       ) RETURNING *`,
       [
         number,
@@ -203,6 +303,7 @@ const pgStore = {
         b.trafficFooter || 'Gestão de mídia (mídia à parte)',
         JSON.stringify(b.blankItems || []),
         JSON.stringify(b.observations || []),
+        b.clientId || null,
       ],
     );
     return mapProposal(rows[0]);
@@ -235,8 +336,9 @@ const pgStore = {
         traffic_footer = COALESCE($22, traffic_footer),
         blank_items = COALESCE($23, blank_items),
         observations = COALESCE($24, observations),
+        client_id = COALESCE($25, client_id),
         updated_at = NOW()
-       WHERE id = $25 RETURNING *`,
+       WHERE id = $26 RETURNING *`,
       [
         b.status,
         b.template,
@@ -264,10 +366,285 @@ const pgStore = {
         b.trafficFooter,
         b.blankItems != null ? JSON.stringify(b.blankItems) : null,
         b.observations != null ? JSON.stringify(b.observations) : null,
+        b.clientId ?? null,
         id,
       ],
     );
     return mapProposal(rows[0]);
+  },
+
+  async listClients() {
+    const { rows } = await pool.query(
+      'SELECT * FROM clients ORDER BY created_at DESC',
+    );
+    return rows.map(mapClient);
+  },
+
+  async getClient(id) {
+    const { rows } = await pool.query('SELECT * FROM clients WHERE id = $1', [
+      id,
+    ]);
+    return mapClient(rows[0]);
+  },
+
+  async createClient(b) {
+    const { rows } = await pool.query(
+      `INSERT INTO clients (
+        legal_name, trade_name, document_type, document, email, phone, whatsapp,
+        street, number, complement, district, city, state, zip,
+        legal_rep_name, legal_rep_role, legal_rep_document, notes
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18
+      ) RETURNING *`,
+      [
+        b.legalName || '',
+        b.tradeName || '',
+        b.documentType || 'cnpj',
+        b.document || '',
+        b.email || '',
+        b.phone || '',
+        b.whatsapp || '',
+        b.street || '',
+        b.number || '',
+        b.complement || '',
+        b.district || '',
+        b.city || '',
+        b.state || '',
+        b.zip || '',
+        b.legalRepName || '',
+        b.legalRepRole || '',
+        b.legalRepDocument || '',
+        b.notes || '',
+      ],
+    );
+    return mapClient(rows[0]);
+  },
+
+  async updateClient(id, b) {
+    const { rows } = await pool.query(
+      `UPDATE clients SET
+        legal_name = COALESCE($1, legal_name),
+        trade_name = COALESCE($2, trade_name),
+        document_type = COALESCE($3, document_type),
+        document = COALESCE($4, document),
+        email = COALESCE($5, email),
+        phone = COALESCE($6, phone),
+        whatsapp = COALESCE($7, whatsapp),
+        street = COALESCE($8, street),
+        number = COALESCE($9, number),
+        complement = COALESCE($10, complement),
+        district = COALESCE($11, district),
+        city = COALESCE($12, city),
+        state = COALESCE($13, state),
+        zip = COALESCE($14, zip),
+        legal_rep_name = COALESCE($15, legal_rep_name),
+        legal_rep_role = COALESCE($16, legal_rep_role),
+        legal_rep_document = COALESCE($17, legal_rep_document),
+        notes = COALESCE($18, notes),
+        updated_at = NOW()
+       WHERE id = $19 RETURNING *`,
+      [
+        b.legalName,
+        b.tradeName,
+        b.documentType,
+        b.document,
+        b.email,
+        b.phone,
+        b.whatsapp,
+        b.street,
+        b.number,
+        b.complement,
+        b.district,
+        b.city,
+        b.state,
+        b.zip,
+        b.legalRepName,
+        b.legalRepRole,
+        b.legalRepDocument,
+        b.notes,
+        id,
+      ],
+    );
+    return mapClient(rows[0]);
+  },
+
+  async listContracts() {
+    const { rows } = await pool.query(
+      'SELECT * FROM contracts ORDER BY created_at DESC',
+    );
+    return rows.map(mapContract);
+  },
+
+  async getContract(id) {
+    const { rows } = await pool.query('SELECT * FROM contracts WHERE id = $1', [
+      id,
+    ]);
+    return mapContract(rows[0]);
+  },
+
+  async getContractBySlug(slug) {
+    const { rows } = await pool.query(
+      'SELECT * FROM contracts WHERE public_slug = $1',
+      [slug],
+    );
+    return mapContract(rows[0]);
+  },
+
+  async getContractByProposal(proposalId) {
+    const { rows } = await pool.query(
+      'SELECT * FROM contracts WHERE proposal_id = $1 ORDER BY created_at DESC LIMIT 1',
+      [proposalId],
+    );
+    return mapContract(rows[0]);
+  },
+
+  async createContract(b) {
+    const number = await nextContractNumber();
+    const publicSlug = slugId();
+    const { rows } = await pool.query(
+      `INSERT INTO contracts (
+        number, public_slug, proposal_id, client_id, status, title, subtitle,
+        start_date, min_term_days, meeting_cadence_days, objective,
+        scope_items, provider_responsibilities, client_responsibilities, out_of_scope, meeting_topics, important_notes,
+        setup_enabled, setup_title, setup_price, setup_description,
+        fee_enabled, fee_title, fee_price, fee_description,
+        commission_enabled, commission_base_label, commission_tiers, commission_close_day, commission_pay_day, commission_examples,
+        media_enabled, media_monthly_budget, media_notes,
+        acceptance_provider_name, acceptance_client_name
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,
+        $8,$9,$10,$11,
+        $12,$13,$14,$15,$16,$17,
+        $18,$19,$20,$21,
+        $22,$23,$24,$25,
+        $26,$27,$28,$29,$30,$31,
+        $32,$33,$34,
+        $35,$36
+      ) RETURNING *`,
+      [
+        number,
+        publicSlug,
+        b.proposalId || null,
+        b.clientId || null,
+        b.status || 'draft',
+        b.title || 'Proposta comercial e contrato de prestação de serviços',
+        b.subtitle || '',
+        b.startDate || '',
+        b.minTermDays ?? 90,
+        b.meetingCadenceDays ?? 15,
+        b.objective || '',
+        JSON.stringify(b.scopeItems || []),
+        JSON.stringify(b.providerResponsibilities || []),
+        JSON.stringify(b.clientResponsibilities || []),
+        JSON.stringify(b.outOfScope || []),
+        JSON.stringify(b.meetingTopics || []),
+        JSON.stringify(b.importantNotes || []),
+        b.setupEnabled ?? false,
+        b.setupTitle || 'Investimento de setup',
+        b.setupPrice ?? 0,
+        b.setupDescription || '',
+        b.feeEnabled ?? false,
+        b.feeTitle || 'Fee mensal',
+        b.feePrice ?? 0,
+        b.feeDescription || '',
+        b.commissionEnabled ?? false,
+        b.commissionBaseLabel || 'faturamento bruto mensal',
+        JSON.stringify(b.commissionTiers || []),
+        b.commissionCloseDay ?? 5,
+        b.commissionPayDay ?? 6,
+        JSON.stringify(b.commissionExamples || []),
+        b.mediaEnabled ?? false,
+        b.mediaMonthlyBudget ?? 0,
+        b.mediaNotes || '',
+        b.acceptanceProviderName || '',
+        b.acceptanceClientName || '',
+      ],
+    );
+    return mapContract(rows[0]);
+  },
+
+  async updateContract(id, b) {
+    const { rows } = await pool.query(
+      `UPDATE contracts SET
+        client_id = COALESCE($1, client_id),
+        status = COALESCE($2, status),
+        title = COALESCE($3, title),
+        subtitle = COALESCE($4, subtitle),
+        start_date = COALESCE($5, start_date),
+        min_term_days = COALESCE($6, min_term_days),
+        meeting_cadence_days = COALESCE($7, meeting_cadence_days),
+        objective = COALESCE($8, objective),
+        scope_items = COALESCE($9, scope_items),
+        provider_responsibilities = COALESCE($10, provider_responsibilities),
+        client_responsibilities = COALESCE($11, client_responsibilities),
+        out_of_scope = COALESCE($12, out_of_scope),
+        meeting_topics = COALESCE($13, meeting_topics),
+        important_notes = COALESCE($14, important_notes),
+        setup_enabled = COALESCE($15, setup_enabled),
+        setup_title = COALESCE($16, setup_title),
+        setup_price = COALESCE($17, setup_price),
+        setup_description = COALESCE($18, setup_description),
+        fee_enabled = COALESCE($19, fee_enabled),
+        fee_title = COALESCE($20, fee_title),
+        fee_price = COALESCE($21, fee_price),
+        fee_description = COALESCE($22, fee_description),
+        commission_enabled = COALESCE($23, commission_enabled),
+        commission_base_label = COALESCE($24, commission_base_label),
+        commission_tiers = COALESCE($25, commission_tiers),
+        commission_close_day = COALESCE($26, commission_close_day),
+        commission_pay_day = COALESCE($27, commission_pay_day),
+        commission_examples = COALESCE($28, commission_examples),
+        media_enabled = COALESCE($29, media_enabled),
+        media_monthly_budget = COALESCE($30, media_monthly_budget),
+        media_notes = COALESCE($31, media_notes),
+        acceptance_provider_name = COALESCE($32, acceptance_provider_name),
+        acceptance_client_name = COALESCE($33, acceptance_client_name),
+        updated_at = NOW()
+       WHERE id = $34 RETURNING *`,
+      [
+        b.clientId ?? null,
+        b.status,
+        b.title,
+        b.subtitle,
+        b.startDate,
+        b.minTermDays,
+        b.meetingCadenceDays,
+        b.objective,
+        b.scopeItems != null ? JSON.stringify(b.scopeItems) : null,
+        b.providerResponsibilities != null
+          ? JSON.stringify(b.providerResponsibilities)
+          : null,
+        b.clientResponsibilities != null
+          ? JSON.stringify(b.clientResponsibilities)
+          : null,
+        b.outOfScope != null ? JSON.stringify(b.outOfScope) : null,
+        b.meetingTopics != null ? JSON.stringify(b.meetingTopics) : null,
+        b.importantNotes != null ? JSON.stringify(b.importantNotes) : null,
+        b.setupEnabled,
+        b.setupTitle,
+        b.setupPrice,
+        b.setupDescription,
+        b.feeEnabled,
+        b.feeTitle,
+        b.feePrice,
+        b.feeDescription,
+        b.commissionEnabled,
+        b.commissionBaseLabel,
+        b.commissionTiers != null ? JSON.stringify(b.commissionTiers) : null,
+        b.commissionCloseDay,
+        b.commissionPayDay,
+        b.commissionExamples != null
+          ? JSON.stringify(b.commissionExamples)
+          : null,
+        b.mediaEnabled,
+        b.mediaMonthlyBudget,
+        b.mediaNotes,
+        b.acceptanceProviderName,
+        b.acceptanceClientName,
+        id,
+      ],
+    );
+    return mapContract(rows[0]);
   },
 };
 

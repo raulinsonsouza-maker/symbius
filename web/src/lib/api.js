@@ -32,4 +32,23 @@ export const api = {
     request(`/proposals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   getPublicProposal: (slug) =>
     request(`/public/proposals/${slug}`, { auth: false }),
+  convertProposal: (id, data) =>
+    request(`/proposals/${id}/convert`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  listClients: () => request('/clients'),
+  getClient: (id) => request(`/clients/${id}`),
+  createClient: (data) =>
+    request('/clients', { method: 'POST', body: JSON.stringify(data) }),
+  updateClient: (id, data) =>
+    request(`/clients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  listContracts: () => request('/contracts'),
+  getContract: (id) => request(`/contracts/${id}`),
+  createContract: (data) =>
+    request('/contracts', { method: 'POST', body: JSON.stringify(data) }),
+  updateContract: (id, data) =>
+    request(`/contracts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  getPublicContract: (slug) =>
+    request(`/public/contracts/${slug}`, { auth: false }),
 };

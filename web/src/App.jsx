@@ -7,6 +7,12 @@ import RequireAuth from './pages/admin/RequireAuth';
 import PropostasList from './pages/admin/propostas/PropostasList';
 import ProposalEditor from './pages/admin/propostas/ProposalEditor';
 import ProposalPublicPage from './pages/ProposalPublicPage';
+import ClientesList from './pages/admin/clientes/ClientesList';
+import ClientForm from './pages/admin/clientes/ClientForm';
+import ContratosList from './pages/admin/contratos/ContratosList';
+import ContractEditor from './pages/admin/contratos/ContractEditor';
+import ConvertProposalWizard from './pages/admin/contratos/ConvertProposalWizard';
+import ContractPublicPage from './pages/ContractPublicPage';
 
 export default function App() {
   return (
@@ -14,6 +20,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/p/:slug" element={<ProposalPublicPage />} />
+        <Route path="/c/:slug" element={<ContractPublicPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route
           path="/admin"
@@ -52,6 +59,54 @@ export default function App() {
           element={
             <RequireAuth>
               <ProposalEditor />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/propostas/:id/contrato"
+          element={
+            <RequireAuth>
+              <ConvertProposalWizard />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/clientes"
+          element={
+            <RequireAuth>
+              <ClientesList />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/clientes/novo"
+          element={
+            <RequireAuth>
+              <ClientForm />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/clientes/:id"
+          element={
+            <RequireAuth>
+              <ClientForm />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/contratos"
+          element={
+            <RequireAuth>
+              <ContratosList />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/contratos/:id"
+          element={
+            <RequireAuth>
+              <ContractEditor />
             </RequireAuth>
           }
         />
