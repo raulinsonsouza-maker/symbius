@@ -3,6 +3,19 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { customAlphabet } from 'nanoid';
 import { randomUUID } from 'crypto';
+import {
+  buildContractSchedule,
+  DEFAULT_FINANCE_CATEGORIES,
+  resolveEntryStatus,
+  parseBRDate,
+  toISODate,
+  resolvePipelineStatus,
+  resolveLegacyStage,
+  contractStatusFromPipeline,
+  CLOSED_PIPELINES,
+  isContractOrigin,
+  summarizeLeadFinance,
+} from './financeSync.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(__dirname, '../data');
@@ -82,7 +95,35 @@ function defaultDb() {
     proposals: [],
     clients: [],
     contracts: [],
+    financeCategories: DEFAULT_FINANCE_CATEGORIES.map(({ key, ...rest }) => ({
+      id: randomUUID(),
+      ...rest,
+      key,
+    })),
+    financeEntries: [],
   };
+}
+
+function ensureFinance(db) {
+  if (!Array.isArray(db.clients)) db.clients = [];
+  if (!Array.isArray(db.contracts)) db.contracts = [];
+  if (!Array.isArray(db.financeCategories) || db.financeCategories.length === 0) {
+    db.financeCategories = DEFAULT_FINANCE_CATEGORIES.map(({ key, ...rest }) => ({
+      id: randomUUID(),
+      ...rest,
+      key,
+    }));
+  }
+  if (!Array.isArray(db.financeEntries)) db.financeEntries = [];
+  db.settings = {
+    legalName: db.settings?.companyName || 'Symbius',
+    legalDocument: '',
+    legalAddress: '',
+    legalRepName: '',
+    legalRepRole: '',
+    ...db.settings,
+  };
+  return db;
 }
 
 function readDb() {
@@ -92,18 +133,7 @@ function readDb() {
     fs.writeFileSync(dataFile, JSON.stringify(db, null, 2), 'utf8');
     return db;
   }
-  const db = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
-  if (!Array.isArray(db.clients)) db.clients = [];
-  if (!Array.isArray(db.contracts)) db.contracts = [];
-  db.settings = {
-    legalName: db.settings.companyName || 'Symbius',
-    legalDocument: '',
-    legalAddress: '',
-    legalRepName: '',
-    legalRepRole: '',
-    ...db.settings,
-  };
-  return db;
+  return ensureFinance(JSON.parse(fs.readFileSync(dataFile, 'utf8')));
 }
 
 function writeDb(db) {
@@ -382,6 +412,9 @@ export const fileStore = {
       mediaNotes: input.mediaNotes || '',
       acceptanceProviderName: input.acceptanceProviderName || '',
       acceptanceClientName: input.acceptanceClientName || '',
+      feePayDay: input.feePayDay ?? 5,
+      setupDueDays: input.setupDueDays ?? 0,
+      commissionEstimate: Number(input.commissionEstimate ?? 0),
       createdAt: now,
       updatedAt: now,
     };
@@ -406,8 +439,293 @@ export const fileStore = {
     if (patch.mediaMonthlyBudget != null) {
       next.mediaMonthlyBudget = Number(patch.mediaMonthlyBudget);
     }
+    if (patch.commissionEstimate != null) {
+      next.commissionEstimate = Number(patch.commissionEstimate);
+    }
     db.contracts[idx] = next;
     writeDb(db);
     return next;
+  },
+
+  async listFinanceCategories() {
+    return readDb().financeCategories;
+  },
+
+  async createFinanceCategory({ name, kind }) {
+    const db = readDb();
+    const category = {
+      id: randomUUID(),
+      name: name.trim(),
+      kind,
+      system: false,
+      key: null,
+    };
+    db.financeCategories.push(category);
+    writeDb(db);
+    return category;
+  },
+
+  async listFinanceEntries(filters = {}) {
+    let entries = [...readDb().financeEntries];
+    if (filters.type) entries = entries.filter((e) => e.type === filters.type);
+    if (filters.origin) {
+      entries = entries.filter((e) => e.origin === filters.origin);
+    }
+    if (filters.clientId) {
+      entries = entries.filter((e) => e.clientId === filters.clientId);
+    }
+    if (filters.contractId) {
+      entries = entries.filter((e) => e.contractId === filters.contractId);
+    }
+    if (filters.from || filters.to) {
+      entries = entries.filter((e) => {
+        const iso = toISODate(parseBRDate(e.dueDate));
+        if (!iso) return true;
+        if (filters.from && iso < filters.from) return false;
+        if (filters.to && iso > filters.to) return false;
+        return true;
+      });
+    }
+    entries = entries.map((e) => ({
+      ...e,
+      status: resolveEntryStatus(e),
+    }));
+    if (filters.status) {
+      entries = entries.filter((e) => e.status === filters.status);
+    }
+    return entries.sort((a, b) => {
+      const da = toISODate(parseBRDate(a.dueDate));
+      const db_ = toISODate(parseBRDate(b.dueDate));
+      return da.localeCompare(db_);
+    });
+  },
+
+  async createFinanceEntry(input) {
+    const db = readDb();
+    const now = new Date().toISOString();
+    const entry = {
+      id: randomUUID(),
+      type: input.type || 'expense',
+      origin: input.origin || 'manual',
+      status: input.status || 'scheduled',
+      amount: Number(input.amount) || 0,
+      dueDate: input.dueDate || '',
+      paidAt: input.paidAt || null,
+      description: input.description || '',
+      categoryId: input.categoryId || null,
+      clientId: input.clientId || null,
+      contractId: input.contractId || null,
+      proposalId: input.proposalId || null,
+      recurrenceGroupId: input.recurrenceGroupId || null,
+      notes: input.notes || '',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.financeEntries.push(entry);
+    writeDb(db);
+    return entry;
+  },
+
+  async updateFinanceEntry(id, patch) {
+    const db = readDb();
+    const idx = db.financeEntries.findIndex((e) => e.id === id);
+    if (idx < 0) return null;
+    const next = {
+      ...db.financeEntries[idx],
+      ...Object.fromEntries(
+        Object.entries(patch).filter(([, v]) => v !== undefined),
+      ),
+      updatedAt: new Date().toISOString(),
+    };
+    if (patch.amount != null) next.amount = Number(patch.amount);
+    db.financeEntries[idx] = next;
+    writeDb(db);
+    return { ...next, status: resolveEntryStatus(next) };
+  },
+
+  async syncContractFinance(contractId) {
+    const db = readDb();
+    const contract = db.contracts.find((c) => c.id === contractId);
+    if (!contract) return null;
+
+    const cats = Object.fromEntries(
+      db.financeCategories
+        .filter((c) => c.key)
+        .map((c) => [c.key, c.id]),
+    );
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayIso = toISODate(today);
+
+    // Cancel future scheduled contract-origin entries
+    db.financeEntries = db.financeEntries.map((e) => {
+      if (e.contractId !== contractId) return e;
+      if (!['contract_setup', 'contract_fee', 'contract_commission'].includes(e.origin)) {
+        return e;
+      }
+      if (['received', 'paid'].includes(e.status)) return e;
+      const dueIso = toISODate(parseBRDate(e.dueDate));
+      if (dueIso && dueIso >= todayIso) {
+        return { ...e, status: 'cancelled', updatedAt: new Date().toISOString() };
+      }
+      return e;
+    });
+
+    const schedule = buildContractSchedule(contract, cats, 12);
+    const now = new Date().toISOString();
+    for (const item of schedule) {
+      const dueIso = toISODate(parseBRDate(item.dueDate));
+      if (dueIso && dueIso < todayIso && item.origin !== 'contract_setup') {
+        // still create past fee months in current horizon? Skip past monthly except keep setup if past
+        continue;
+      }
+      db.financeEntries.push({
+        id: randomUUID(),
+        ...item,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    writeDb(db);
+    return this.listFinanceEntries({ contractId });
+  },
+
+  /** Cancela recebíveis futuros gerados pelo contrato (churn/perdido) */
+  async cancelFutureContractEntries(contractId) {
+    const db = readDb();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayIso = toISODate(today);
+    const now = new Date().toISOString();
+    let changed = 0;
+
+    db.financeEntries = db.financeEntries.map((e) => {
+      if (e.contractId !== contractId) return e;
+      if (!isContractOrigin(e.origin)) return e;
+      if (['received', 'paid', 'cancelled'].includes(e.status)) return e;
+      const dueIso = toISODate(parseBRDate(e.dueDate));
+      if (dueIso && dueIso >= todayIso) {
+        changed += 1;
+        return { ...e, status: 'cancelled', updatedAt: now };
+      }
+      return e;
+    });
+
+    if (changed) writeDb(db);
+    return changed;
+  },
+
+  /**
+   * Mantém o contrato coerente com o pipeline comercial:
+   * churn/perdido encerram a agenda, ativo regenera os recebíveis.
+   */
+  async applyPipelineToContract(proposalId, pipeline) {
+    const nextStatus = contractStatusFromPipeline(pipeline);
+    if (!nextStatus) return null;
+
+    const db = readDb();
+    const contracts = db.contracts.filter((c) => c.proposalId === proposalId);
+    if (contracts.length === 0) return null;
+    const contract = contracts.reduce((latest, c) =>
+      !latest || new Date(c.createdAt) > new Date(latest.createdAt) ? c : latest,
+    );
+
+    const previousStatus = contract.status;
+    if (previousStatus !== nextStatus) {
+      await this.updateContract(contract.id, { status: nextStatus });
+    }
+
+    if (CLOSED_PIPELINES.includes(pipeline)) {
+      await this.cancelFutureContractEntries(contract.id);
+    } else if (pipeline === 'active') {
+      const scheduled = (await this.listFinanceEntries({
+        contractId: contract.id,
+      })).filter(
+        (e) => isContractOrigin(e.origin) && e.status !== 'cancelled',
+      );
+      if (scheduled.length === 0) {
+        await this.syncContractFinance(contract.id);
+      }
+    }
+
+    return this.getContract(contract.id);
+  },
+
+  async getCashflow({ from, to } = {}) {
+    const entries = await this.listFinanceEntries({ from, to });
+    const active = entries.filter((e) => e.status !== 'cancelled');
+    const byDay = {};
+    for (const e of active) {
+      const day = toISODate(parseBRDate(e.dueDate)) || 'unknown';
+      if (!byDay[day]) byDay[day] = { date: day, income: 0, expense: 0 };
+      if (e.type === 'income') byDay[day].income += Number(e.amount) || 0;
+      else byDay[day].expense += Number(e.amount) || 0;
+    }
+    const days = Object.values(byDay).sort((a, b) => a.date.localeCompare(b.date));
+    let balance = 0;
+    return days.map((d) => {
+      balance += d.income - d.expense;
+      return { ...d, balance };
+    });
+  },
+
+  async listComercial() {
+    const db = readDb();
+    const clients = Object.fromEntries(db.clients.map((c) => [c.id, c]));
+    const contractsByProposal = {};
+    for (const c of db.contracts) {
+      if (!c.proposalId) continue;
+      const prev = contractsByProposal[c.proposalId];
+      if (!prev || new Date(c.createdAt) > new Date(prev.createdAt)) {
+        contractsByProposal[c.proposalId] = c;
+      }
+    }
+
+    const today = new Date();
+    const leads = [...db.proposals]
+      .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+      .map((proposal) => {
+        const contract = contractsByProposal[proposal.id] || null;
+        const client =
+          (proposal.clientId && clients[proposal.clientId]) ||
+          (contract?.clientId && clients[contract.clientId]) ||
+          null;
+
+        let stage = resolveLegacyStage(proposal, contract);
+        const pipelineStatus = resolvePipelineStatus(proposal, contract);
+
+        const contractEntries = contract
+          ? db.financeEntries.filter((e) => e.contractId === contract.id)
+          : [];
+
+        const nextReceivables = contractEntries
+          .filter(
+            (e) =>
+              e.type === 'income' &&
+              !['cancelled', 'received', 'paid'].includes(e.status),
+          )
+          .map((e) => ({ ...e, status: resolveEntryStatus(e, today) }))
+          .filter((e) => e.status !== 'cancelled')
+          .sort((a, b) =>
+            toISODate(parseBRDate(a.dueDate)).localeCompare(
+              toISODate(parseBRDate(b.dueDate)),
+            ),
+          )
+          .slice(0, 5);
+
+        return {
+          proposal,
+          client,
+          contract,
+          stage,
+          pipelineStatus,
+          nextReceivables,
+          finance: summarizeLeadFinance(contractEntries, today),
+        };
+      });
+
+    return leads;
   },
 };

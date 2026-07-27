@@ -9,5 +9,6 @@ import './styles/growth-dashboard.css';
 import './styles/landing.css';
 import './styles/admin.css';
 import './styles/propostas.css';
+import './styles/client-panel.css';
 
 createRoot(document.getElementById('root')).render(<App />);

@@ -46,8 +46,15 @@ export async function createProposal(req, res) {
 }
 
 export async function updateProposal(req, res) {
-  const proposal = await getStore().updateProposal(req.params.id, req.body || {});
+  const store = getStore();
+  const proposal = await store.updateProposal(req.params.id, req.body || {});
   if (!proposal) return res.status(404).json({ error: 'Proposta não encontrada' });
+
+  const pipeline = req.body?.pipelineStatus;
+  if (pipeline && store.applyPipelineToContract) {
+    await store.applyPipelineToContract(proposal.id, pipeline);
+  }
+
   return res.json(proposal);
 }
 
@@ -94,14 +101,22 @@ export async function getContract(req, res) {
 }
 
 export async function createContract(req, res) {
-  const contract = await getStore().createContract(req.body || {});
+  const store = getStore();
+  const contract = await store.createContract(req.body || {});
+  if (store.syncContractFinance) {
+    await store.syncContractFinance(contract.id);
+  }
   return res.status(201).json(contract);
 }
 
 export async function updateContract(req, res) {
-  const contract = await getStore().updateContract(req.params.id, req.body || {});
+  const store = getStore();
+  const contract = await store.updateContract(req.params.id, req.body || {});
   if (!contract) {
     return res.status(404).json({ error: 'Contrato não encontrado' });
+  }
+  if (store.syncContractFinance) {
+    await store.syncContractFinance(contract.id);
   }
   return res.json(contract);
 }
@@ -137,6 +152,7 @@ export async function convertProposal(req, res) {
     ...(body.contract || {}),
     proposalId: proposal.id,
     clientId: client.id,
+    status: body.contract?.status || 'active',
   });
 
   const updatedProposal = await store.updateProposal(proposal.id, {
@@ -144,11 +160,79 @@ export async function convertProposal(req, res) {
     clientId: client.id,
   });
 
+  if (store.syncContractFinance) {
+    await store.syncContractFinance(contract.id);
+  }
+
   return res.status(201).json({
     proposal: updatedProposal,
     client,
     contract,
   });
+}
+
+export async function listComercial(_req, res) {
+  return res.json(await getStore().listComercial());
+}
+
+export async function listFinanceCategories(_req, res) {
+  return res.json(await getStore().listFinanceCategories());
+}
+
+export async function createFinanceCategory(req, res) {
+  const { name, kind } = req.body || {};
+  if (!name || !['income', 'expense'].includes(kind)) {
+    return res.status(400).json({ error: 'name e kind (income|expense) obrigatórios' });
+  }
+  return res
+    .status(201)
+    .json(await getStore().createFinanceCategory({ name, kind }));
+}
+
+export async function listFinanceEntries(req, res) {
+  return res.json(
+    await getStore().listFinanceEntries({
+      type: req.query.type,
+      status: req.query.status,
+      clientId: req.query.clientId,
+      contractId: req.query.contractId,
+      from: req.query.from,
+      to: req.query.to,
+    }),
+  );
+}
+
+export async function createFinanceEntry(req, res) {
+  const entry = await getStore().createFinanceEntry(req.body || {});
+  return res.status(201).json(entry);
+}
+
+export async function updateFinanceEntry(req, res) {
+  const entry = await getStore().updateFinanceEntry(
+    req.params.id,
+    req.body || {},
+  );
+  if (!entry) {
+    return res.status(404).json({ error: 'Lançamento não encontrado' });
+  }
+  return res.json(entry);
+}
+
+export async function syncContractFinance(req, res) {
+  const entries = await getStore().syncContractFinance(req.params.id);
+  if (!entries) {
+    return res.status(404).json({ error: 'Contrato não encontrado' });
+  }
+  return res.json(entries);
+}
+
+export async function getCashflow(req, res) {
+  return res.json(
+    await getStore().getCashflow({
+      from: req.query.from,
+      to: req.query.to,
+    }),
+  );
 }
 
 export async function getPublicContract(req, res) {

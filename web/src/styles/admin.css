@@ -161,10 +161,16 @@
   border-color:#ffffff47
 }
 
+.admin-shell {
+  overflow-x:clip
+}
+
 .admin-shell__main {
-  max-width:var(--symbius-max-wide);
+  max-width:1400px;
+  width:100%;
   margin:0 auto;
-  padding:clamp(40px,7vh,72px) clamp(20px,5vw,56px) 80px
+  box-sizing:border-box;
+  padding:clamp(28px,6vh,64px) clamp(16px,4vw,56px) 80px
 }
 
 .admin-shell__intro {
@@ -271,4 +277,35 @@
 .deck-back:hover {
   background:#141414e6;
   border-color:#ffffff4d
+}
+
+@media (max-width:720px) {
+  .admin-shell__header {
+    flex-wrap:wrap;
+    gap:12px;
+    padding:16px 16px
+  }
+
+  .admin-shell__brand {
+    flex-wrap:wrap;
+    gap:8px 12px
+  }
+
+  .admin-shell__main {
+    padding:24px 16px 64px
+  }
+
+  .admin-grid {
+    grid-template-columns:1fr;
+    gap:14px
+  }
+
+  .admin-card {
+    min-height:0;
+    padding:22px 20px
+  }
+
+  .admin-auth__card {
+    padding:32px 22px
+  }
 }

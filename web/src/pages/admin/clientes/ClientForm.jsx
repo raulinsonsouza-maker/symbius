@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../../lib/api';
 import { emptyClient } from '../../../data/contractTemplates';
 import ClientFields from '../../../components/clientes/ClientFields';
 
 export default function ClientForm() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const leadId = searchParams.get('lead');
   const isNew = !id || id === 'novo';
   const navigate = useNavigate();
 
@@ -63,8 +65,11 @@ export default function ClientForm() {
     <div className="admin-shell prop-shell">
       <header className="admin-shell__header">
         <div className="admin-shell__brand">
-          <Link to="/admin/clientes" className="prop-back">
-            ← Clientes
+          <Link
+            to={leadId ? `/admin/comercial/${leadId}` : '/admin/comercial'}
+            className="prop-back"
+          >
+            {leadId ? '← Painel' : '← Comercial'}
           </Link>
           <span className="admin-shell__label">
             {isNew ? 'Novo cliente' : client.legalName || 'Cliente'}

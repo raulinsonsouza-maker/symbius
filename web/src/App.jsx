@@ -1,18 +1,26 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import PresentationDeck from './pages/PresentationDeck';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminPanel from './pages/admin/AdminPanel';
 import RequireAuth from './pages/admin/RequireAuth';
-import PropostasList from './pages/admin/propostas/PropostasList';
 import ProposalEditor from './pages/admin/propostas/ProposalEditor';
 import ProposalPublicPage from './pages/ProposalPublicPage';
-import ClientesList from './pages/admin/clientes/ClientesList';
 import ClientForm from './pages/admin/clientes/ClientForm';
-import ContratosList from './pages/admin/contratos/ContratosList';
 import ContractEditor from './pages/admin/contratos/ContractEditor';
-import ConvertProposalWizard from './pages/admin/contratos/ConvertProposalWizard';
 import ContractPublicPage from './pages/ContractPublicPage';
+import ComercialList from './pages/admin/comercial/ComercialList';
+import LeadCard from './pages/admin/comercial/LeadCard';
+import CloseLead from './pages/admin/comercial/CloseLead';
+import LeadProposalTool from './pages/admin/comercial/LeadProposalTool';
+import LeadContractTool from './pages/admin/comercial/LeadContractTool';
+import LeadClientTool from './pages/admin/comercial/LeadClientTool';
+import FinanceiroPage from './pages/admin/financeiro/FinanceiroPage';
+
+function RedirectToLeadClose() {
+  const { id } = useParams();
+  return <Navigate to={`/admin/comercial/${id}/fechar`} replace />;
+}
 
 export default function App() {
   return (
@@ -39,13 +47,62 @@ export default function App() {
           }
         />
         <Route
-          path="/admin/propostas"
+          path="/admin/comercial"
           element={
             <RequireAuth>
-              <PropostasList />
+              <ComercialList />
             </RequireAuth>
           }
         />
+        <Route
+          path="/admin/comercial/:id"
+          element={
+            <RequireAuth>
+              <LeadCard />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/comercial/:id/proposta"
+          element={
+            <RequireAuth>
+              <LeadProposalTool />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/comercial/:id/fechar"
+          element={
+            <RequireAuth>
+              <CloseLead />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/comercial/:id/contrato"
+          element={
+            <RequireAuth>
+              <LeadContractTool />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/comercial/:id/cliente"
+          element={
+            <RequireAuth>
+              <LeadClientTool />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/financeiro"
+          element={
+            <RequireAuth>
+              <FinanceiroPage />
+            </RequireAuth>
+          }
+        />
+        {/* Ferramentas internas (acessadas via card do lead) */}
         <Route
           path="/admin/propostas/nova"
           element={
@@ -59,22 +116,6 @@ export default function App() {
           element={
             <RequireAuth>
               <ProposalEditor />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin/propostas/:id/contrato"
-          element={
-            <RequireAuth>
-              <ConvertProposalWizard />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin/clientes"
-          element={
-            <RequireAuth>
-              <ClientesList />
             </RequireAuth>
           }
         />
@@ -95,20 +136,33 @@ export default function App() {
           }
         />
         <Route
-          path="/admin/contratos"
-          element={
-            <RequireAuth>
-              <ContratosList />
-            </RequireAuth>
-          }
-        />
-        <Route
           path="/admin/contratos/:id"
           element={
             <RequireAuth>
               <ContractEditor />
             </RequireAuth>
           }
+        />
+        {/* Redirects dos silos antigos */}
+        <Route
+          path="/admin/propostas"
+          element={<Navigate to="/admin/comercial" replace />}
+        />
+        <Route
+          path="/admin/propostas/:id/contrato"
+          element={
+            <RequireAuth>
+              <RedirectToLeadClose />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/clientes"
+          element={<Navigate to="/admin/comercial" replace />}
+        />
+        <Route
+          path="/admin/contratos"
+          element={<Navigate to="/admin/comercial" replace />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

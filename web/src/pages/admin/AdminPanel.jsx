@@ -3,39 +3,30 @@ import { logout } from '../../lib/auth';
 
 const TOOLS = [
   {
+    id: 'comercial',
+    title: 'Comercial',
+    description:
+      'CRM de leads: proposta, fechamento, contrato e cliente em um só card.',
+    to: '/admin/comercial',
+    tag: 'CRM',
+    available: true,
+  },
+  {
+    id: 'financeiro',
+    title: 'Financeiro',
+    description:
+      'Fluxo de caixa, previsão, contas a receber e lançamentos manuais.',
+    to: '/admin/financeiro',
+    tag: 'Cash flow',
+    available: true,
+  },
+  {
     id: 'apresentacao',
     title: 'Apresentação de Vendas',
     description:
       'Deck interativo BrandGrowth para apresentar a metodologia Symbius aos clientes.',
     to: '/admin/apresentacao',
     tag: 'Comercial',
-    available: true,
-  },
-  {
-    id: 'propostas',
-    title: 'Propostas',
-    description:
-      'Gere, edite e compartilhe propostas Setup + Operação BrandGrowth.',
-    to: '/admin/propostas',
-    tag: 'Comercial',
-    available: true,
-  },
-  {
-    id: 'contratos',
-    title: 'Contratos',
-    description:
-      'Contratos gerados a partir das propostas fechadas, com remuneração configurável.',
-    to: '/admin/contratos',
-    tag: 'Comercial',
-    available: true,
-  },
-  {
-    id: 'clientes',
-    title: 'Clientes',
-    description:
-      'Cadastro completo dos clientes (CNPJ, endereço, representante legal).',
-    to: '/admin/clientes',
-    tag: 'Cadastro',
     available: true,
   },
   {
@@ -87,7 +78,7 @@ export default function AdminPanel() {
         <div className="admin-shell__intro">
           <h1 className="admin-shell__title">Ferramentas Symbius</h1>
           <p className="admin-shell__subtitle">
-            Central interna de recursos comerciais e de crescimento.
+            Central interna de recursos comerciais e financeiros.
           </p>
         </div>
 

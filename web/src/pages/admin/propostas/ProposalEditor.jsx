@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../../lib/api';
 import {
   createBlankDraft,
@@ -83,6 +83,8 @@ function BlockEditor({
 
 export default function ProposalEditor() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const leadId = searchParams.get('lead');
   const isNew = !id || id === 'nova';
   const navigate = useNavigate();
   const previewRef = useRef(null);
@@ -182,7 +184,8 @@ export default function ProposalEditor() {
       } else {
         saved = await api.createProposal(proposal);
         setSavedId(saved.id);
-        navigate(`/admin/propostas/${saved.id}`, { replace: true });
+        const leadQs = leadId ? `?lead=${leadId}` : `?lead=${saved.id}`;
+        navigate(`/admin/propostas/${saved.id}${leadQs}`, { replace: true });
       }
       setProposal(saved);
       return saved;
@@ -215,14 +218,6 @@ export default function ProposalEditor() {
     }
   }
 
-  async function handleGenerateContract() {
-    const saved = await save();
-    const targetId = saved?.id || savedId;
-    if (targetId) {
-      navigate(`/admin/propostas/${targetId}/contrato`);
-    }
-  }
-
   if (loading || !proposal || !settings) {
     return (
       <div className="admin-shell prop-shell">
@@ -237,8 +232,11 @@ export default function ProposalEditor() {
     <div className="admin-shell prop-shell">
       <header className="admin-shell__header">
         <div className="admin-shell__brand">
-          <Link to="/admin/propostas" className="prop-back">
-            ← Propostas
+          <Link
+            to={leadId ? `/admin/comercial/${leadId}` : '/admin/comercial'}
+            className="prop-back"
+          >
+            {leadId ? '← Painel' : '← Comercial'}
           </Link>
           <span className="admin-shell__label">
             {proposal.number || 'Nova proposta'}
@@ -267,14 +265,6 @@ export default function ProposalEditor() {
             onClick={openPublicLp}
           >
             Abrir LP
-          </button>
-          <button
-            type="button"
-            className="lp-btn lp-btn--ghost lp-btn--sm"
-            onClick={handleGenerateContract}
-            disabled={saving}
-          >
-            Gerar contrato
           </button>
           <button
             type="button"

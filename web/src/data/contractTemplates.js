@@ -144,6 +144,10 @@ export function buildContractDraft(proposal, settings = {}, services = []) {
     mediaMonthlyBudget: Number(proposal?.trafficPrice) || 0,
     mediaNotes: `O investimento previsto para mídia será pago diretamente por ${clientLabel} às plataformas utilizadas. Este valor poderá ser ajustado futuramente conforme resultados, maturidade do projeto e oportunidade de escala. O valor de mídia não está incluído na remuneração da ${company} e é de responsabilidade integral do contratante.`,
 
+    feePayDay: 5,
+    setupDueDays: 0,
+    commissionEstimate: 0,
+
     acceptanceProviderName: company,
     acceptanceClientName: proposal?.clientName || '',
     status: 'draft',

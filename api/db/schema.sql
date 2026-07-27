@@ -133,14 +133,52 @@ CREATE TABLE IF NOT EXISTS contracts (
   media_notes TEXT NOT NULL DEFAULT '',
   acceptance_provider_name TEXT NOT NULL DEFAULT '',
   acceptance_client_name TEXT NOT NULL DEFAULT '',
+  fee_pay_day INT NOT NULL DEFAULT 5,
+  setup_due_days INT NOT NULL DEFAULT 0,
+  commission_estimate NUMERIC(12, 2) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS subtitle TEXT NOT NULL DEFAULT '';
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS meeting_topics JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS fee_pay_day INT NOT NULL DEFAULT 5;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS setup_due_days INT NOT NULL DEFAULT 0;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS commission_estimate NUMERIC(12, 2) NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS finance_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('income', 'expense')),
+  system BOOLEAN NOT NULL DEFAULT FALSE,
+  key TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS finance_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
+  origin TEXT NOT NULL DEFAULT 'manual'
+    CHECK (origin IN ('manual', 'contract_setup', 'contract_fee', 'contract_commission')),
+  status TEXT NOT NULL DEFAULT 'scheduled'
+    CHECK (status IN ('scheduled', 'received', 'paid', 'overdue', 'cancelled')),
+  amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  due_date TEXT NOT NULL DEFAULT '',
+  paid_at TEXT,
+  description TEXT NOT NULL DEFAULT '',
+  category_id UUID,
+  client_id UUID,
+  contract_id UUID,
+  proposal_id UUID,
+  recurrence_group_id TEXT,
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 CREATE INDEX IF NOT EXISTS proposals_created_at_idx ON proposals (created_at DESC);
 CREATE INDEX IF NOT EXISTS services_block_sort_idx ON services (block, sort_order);
 CREATE INDEX IF NOT EXISTS clients_created_at_idx ON clients (created_at DESC);
 CREATE INDEX IF NOT EXISTS contracts_created_at_idx ON contracts (created_at DESC);
+CREATE INDEX IF NOT EXISTS finance_entries_due_date_idx ON finance_entries (due_date);
+CREATE INDEX IF NOT EXISTS finance_entries_contract_idx ON finance_entries (contract_id);

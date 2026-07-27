@@ -24,6 +24,14 @@ import {
   updateContract,
   convertProposal,
   getPublicContract,
+  listComercial,
+  listFinanceCategories,
+  createFinanceCategory,
+  listFinanceEntries,
+  createFinanceEntry,
+  updateFinanceEntry,
+  syncContractFinance,
+  getCashflow,
 } from './routes.js';
 
 dotenv.config();
@@ -45,6 +53,7 @@ app.put('/api/settings', updateSettings);
 app.get('/api/services', listServices);
 app.post('/api/services', createService);
 app.patch('/api/services/:id', patchService);
+app.get('/api/comercial', listComercial);
 app.get('/api/proposals', listProposals);
 app.post('/api/proposals', createProposal);
 app.get('/api/proposals/:id', getProposal);
@@ -58,6 +67,13 @@ app.get('/api/contracts', listContracts);
 app.post('/api/contracts', createContract);
 app.get('/api/contracts/:id', getContract);
 app.put('/api/contracts/:id', updateContract);
+app.get('/api/finance/categories', listFinanceCategories);
+app.post('/api/finance/categories', createFinanceCategory);
+app.get('/api/finance/entries', listFinanceEntries);
+app.post('/api/finance/entries', createFinanceEntry);
+app.put('/api/finance/entries/:id', updateFinanceEntry);
+app.post('/api/finance/contracts/:id/sync', syncContractFinance);
+app.get('/api/finance/cashflow', getCashflow);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

@@ -37,6 +37,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  listComercial: () => request('/comercial'),
   listClients: () => request('/clients'),
   getClient: (id) => request(`/clients/${id}`),
   createClient: (data) =>
@@ -51,4 +52,34 @@ export const api = {
     request(`/contracts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   getPublicContract: (slug) =>
     request(`/public/contracts/${slug}`, { auth: false }),
+  listFinanceCategories: () => request('/finance/categories'),
+  createFinanceCategory: (data) =>
+    request('/finance/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  listFinanceEntries: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== ''),
+    ).toString();
+    return request(`/finance/entries${q ? `?${q}` : ''}`);
+  },
+  createFinanceEntry: (data) =>
+    request('/finance/entries', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateFinanceEntry: (id, data) =>
+    request(`/finance/entries/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  syncContractFinance: (id) =>
+    request(`/finance/contracts/${id}/sync`, { method: 'POST' }),
+  getCashflow: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== ''),
+    ).toString();
+    return request(`/finance/cashflow${q ? `?${q}` : ''}`);
+  },
 };

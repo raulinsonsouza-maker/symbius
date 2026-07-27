@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../../lib/api';
 import { downloadContractPdf } from '../../../lib/contractPdf';
 import ContractPreview from '../../../components/contratos/ContractPreview';
@@ -16,6 +16,8 @@ const STATUS_OPTIONS = [
 
 export default function ContractEditor() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const leadId = searchParams.get('lead');
   const [contract, setContract] = useState(null);
   const [settings, setSettings] = useState(null);
   const [client, setClient] = useState(null);
@@ -100,8 +102,17 @@ export default function ContractEditor() {
     <div className="admin-shell prop-shell">
       <header className="admin-shell__header">
         <div className="admin-shell__brand">
-          <Link to="/admin/contratos" className="prop-back">
-            ← Contratos
+          <Link
+            to={
+              leadId
+                ? `/admin/comercial/${leadId}`
+                : contract?.proposalId
+                  ? `/admin/comercial/${contract.proposalId}`
+                  : '/admin/comercial'
+            }
+            className="prop-back"
+          >
+            ← Painel
           </Link>
           <span className="admin-shell__label">{contract.number}</span>
         </div>
@@ -188,6 +199,20 @@ export default function ContractEditor() {
                 />
               </label>
               <label>
+                Dia pagamento fee
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={contract.feePayDay ?? 5}
+                  onChange={(e) =>
+                    patch({ feePayDay: Number(e.target.value) })
+                  }
+                />
+              </label>
+            </div>
+            <div className="prop-form-row">
+              <label>
                 Reuniões a cada (dias)
                 <input
                   type="number"
@@ -195,6 +220,18 @@ export default function ContractEditor() {
                   value={contract.meetingCadenceDays}
                   onChange={(e) =>
                     patch({ meetingCadenceDays: Number(e.target.value) })
+                  }
+                />
+              </label>
+              <label>
+                Estimativa comissão (R$)
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={contract.commissionEstimate ?? 0}
+                  onChange={(e) =>
+                    patch({ commissionEstimate: Number(e.target.value) })
                   }
                 />
               </label>

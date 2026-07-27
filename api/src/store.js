@@ -1,6 +1,19 @@
 import { pool } from './db.js';
 import { fileStore } from './fileStore.js';
 import { customAlphabet } from 'nanoid';
+import { randomUUID } from 'crypto';
+import {
+  buildContractSchedule,
+  DEFAULT_FINANCE_CATEGORIES,
+  resolveEntryStatus,
+  parseBRDate,
+  toISODate,
+  resolvePipelineStatus,
+  resolveLegacyStage,
+  contractStatusFromPipeline,
+  CLOSED_PIPELINES,
+  summarizeLeadFinance,
+} from './financeSync.js';
 
 const slugId = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 10);
 
@@ -107,9 +120,46 @@ function mapContract(row) {
     mediaNotes: row.media_notes,
     acceptanceProviderName: row.acceptance_provider_name,
     acceptanceClientName: row.acceptance_client_name,
+    feePayDay: row.fee_pay_day ?? 5,
+    setupDueDays: row.setup_due_days ?? 0,
+    commissionEstimate: Number(row.commission_estimate || 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function mapFinanceCategory(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    kind: row.kind,
+    system: row.system,
+    key: row.key || null,
+  };
+}
+
+function mapFinanceEntry(row) {
+  if (!row) return null;
+  const entry = {
+    id: row.id,
+    type: row.type,
+    origin: row.origin,
+    status: row.status,
+    amount: Number(row.amount),
+    dueDate: row.due_date,
+    paidAt: row.paid_at,
+    description: row.description,
+    categoryId: row.category_id,
+    clientId: row.client_id,
+    contractId: row.contract_id,
+    proposalId: row.proposal_id,
+    recurrenceGroupId: row.recurrence_group_id,
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+  return { ...entry, status: resolveEntryStatus(entry) };
 }
 
 function mapService(row) {
@@ -645,6 +695,278 @@ const pgStore = {
       ],
     );
     return mapContract(rows[0]);
+  },
+
+  async listFinanceCategories() {
+    const { rows } = await pool.query(
+      'SELECT * FROM finance_categories ORDER BY kind, name',
+    );
+    if (!rows.length) {
+      for (const cat of DEFAULT_FINANCE_CATEGORIES) {
+        await pool.query(
+          `INSERT INTO finance_categories (name, kind, system) VALUES ($1,$2,$3)`,
+          [cat.name, cat.kind, cat.system],
+        );
+      }
+      const again = await pool.query(
+        'SELECT * FROM finance_categories ORDER BY kind, name',
+      );
+      return again.rows.map(mapFinanceCategory);
+    }
+    return rows.map(mapFinanceCategory);
+  },
+
+  async createFinanceCategory({ name, kind }) {
+    const { rows } = await pool.query(
+      `INSERT INTO finance_categories (name, kind, system) VALUES ($1,$2,false) RETURNING *`,
+      [name.trim(), kind],
+    );
+    return mapFinanceCategory(rows[0]);
+  },
+
+  async listFinanceEntries(filters = {}) {
+    const { rows } = await pool.query(
+      'SELECT * FROM finance_entries ORDER BY due_date ASC',
+    );
+    let entries = rows.map(mapFinanceEntry);
+    if (filters.type) entries = entries.filter((e) => e.type === filters.type);
+    if (filters.clientId) {
+      entries = entries.filter((e) => e.clientId === filters.clientId);
+    }
+    if (filters.contractId) {
+      entries = entries.filter((e) => e.contractId === filters.contractId);
+    }
+    if (filters.status) {
+      entries = entries.filter((e) => e.status === filters.status);
+    }
+    if (filters.from || filters.to) {
+      entries = entries.filter((e) => {
+        const iso = toISODate(parseBRDate(e.dueDate));
+        if (!iso) return true;
+        if (filters.from && iso < filters.from) return false;
+        if (filters.to && iso > filters.to) return false;
+        return true;
+      });
+    }
+    return entries;
+  },
+
+  async createFinanceEntry(input) {
+    const { rows } = await pool.query(
+      `INSERT INTO finance_entries (
+        type, origin, status, amount, due_date, paid_at, description,
+        category_id, client_id, contract_id, proposal_id, recurrence_group_id, notes
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [
+        input.type || 'expense',
+        input.origin || 'manual',
+        input.status || 'scheduled',
+        input.amount ?? 0,
+        input.dueDate || '',
+        input.paidAt || null,
+        input.description || '',
+        input.categoryId || null,
+        input.clientId || null,
+        input.contractId || null,
+        input.proposalId || null,
+        input.recurrenceGroupId || null,
+        input.notes || '',
+      ],
+    );
+    return mapFinanceEntry(rows[0]);
+  },
+
+  async updateFinanceEntry(id, patch) {
+    const current = (
+      await pool.query('SELECT * FROM finance_entries WHERE id = $1', [id])
+    ).rows[0];
+    if (!current) return null;
+    const merged = {
+      ...mapFinanceEntry(current),
+      ...Object.fromEntries(
+        Object.entries(patch).filter(([, v]) => v !== undefined),
+      ),
+    };
+    const { rows } = await pool.query(
+      `UPDATE finance_entries SET
+        type = $1, origin = $2, status = $3, amount = $4, due_date = $5,
+        paid_at = $6, description = $7, category_id = $8, client_id = $9,
+        contract_id = $10, proposal_id = $11, recurrence_group_id = $12,
+        notes = $13, updated_at = NOW()
+       WHERE id = $14 RETURNING *`,
+      [
+        merged.type,
+        merged.origin,
+        patch.status || current.status,
+        merged.amount,
+        merged.dueDate,
+        merged.paidAt,
+        merged.description,
+        merged.categoryId,
+        merged.clientId,
+        merged.contractId,
+        merged.proposalId,
+        merged.recurrenceGroupId,
+        merged.notes,
+        id,
+      ],
+    );
+    return mapFinanceEntry(rows[0]);
+  },
+
+  async syncContractFinance(contractId) {
+    const contract = await this.getContract(contractId);
+    if (!contract) return null;
+    const cats = await this.listFinanceCategories();
+    const byKey = {};
+    for (const c of cats) {
+      const match = DEFAULT_FINANCE_CATEGORIES.find((d) => d.name === c.name);
+      if (match) byKey[match.key] = c.id;
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayIso = toISODate(today);
+
+    await pool.query(
+      `UPDATE finance_entries SET status = 'cancelled', updated_at = NOW()
+       WHERE contract_id = $1
+         AND origin IN ('contract_setup','contract_fee','contract_commission')
+         AND status NOT IN ('received','paid')
+         AND due_date IS NOT NULL`,
+      [contractId],
+    );
+
+    const schedule = buildContractSchedule(contract, byKey, 12);
+    for (const item of schedule) {
+      const dueIso = toISODate(parseBRDate(item.dueDate));
+      if (dueIso && dueIso < todayIso && item.origin !== 'contract_setup') continue;
+      await this.createFinanceEntry(item);
+    }
+    return this.listFinanceEntries({ contractId });
+  },
+
+  async getCashflow({ from, to } = {}) {
+    const entries = await this.listFinanceEntries({ from, to });
+    const active = entries.filter((e) => e.status !== 'cancelled');
+    const byDay = {};
+    for (const e of active) {
+      const day = toISODate(parseBRDate(e.dueDate)) || 'unknown';
+      if (!byDay[day]) byDay[day] = { date: day, income: 0, expense: 0 };
+      if (e.type === 'income') byDay[day].income += Number(e.amount) || 0;
+      else byDay[day].expense += Number(e.amount) || 0;
+    }
+    const days = Object.values(byDay).sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
+    let balance = 0;
+    return days.map((d) => {
+      balance += d.income - d.expense;
+      return { ...d, balance };
+    });
+  },
+
+  async listComercial() {
+    const proposals = await this.listProposals();
+    const clients = Object.fromEntries(
+      (await this.listClients()).map((c) => [c.id, c]),
+    );
+    const contracts = await this.listContracts();
+    const contractsByProposal = {};
+    for (const c of contracts) {
+      if (!c.proposalId) continue;
+      const prev = contractsByProposal[c.proposalId];
+      if (!prev || new Date(c.createdAt) > new Date(prev.createdAt)) {
+        contractsByProposal[c.proposalId] = c;
+      }
+    }
+    const allEntries = await this.listFinanceEntries({});
+    const today = new Date();
+    return proposals.map((proposal) => {
+      const contract = contractsByProposal[proposal.id] || null;
+      const client =
+        (proposal.clientId && clients[proposal.clientId]) ||
+        (contract?.clientId && clients[contract.clientId]) ||
+        null;
+      let stage = resolveLegacyStage(proposal, contract);
+      const pipelineStatus = resolvePipelineStatus(proposal, contract);
+
+      const contractEntries = contract
+        ? allEntries.filter((e) => e.contractId === contract.id)
+        : [];
+
+      const nextReceivables = contractEntries
+        .filter(
+          (e) =>
+            e.type === 'income' &&
+            !['cancelled', 'received', 'paid'].includes(e.status),
+        )
+        .slice(0, 5);
+
+      return {
+        proposal,
+        client,
+        contract,
+        stage,
+        pipelineStatus,
+        nextReceivables,
+        finance: summarizeLeadFinance(contractEntries, today),
+      };
+    });
+  },
+
+  /** Cancela recebíveis futuros gerados pelo contrato (churn/perdido) */
+  async cancelFutureContractEntries(contractId) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const { rowCount } = await pool.query(
+      `UPDATE finance_entries SET status = 'cancelled', updated_at = NOW()
+       WHERE contract_id = $1
+         AND origin IN ('contract_setup','contract_fee','contract_commission')
+         AND status NOT IN ('received','paid','cancelled')
+         AND due_date >= $2`,
+      [contractId, toISODate(today)],
+    );
+    return rowCount;
+  },
+
+  /**
+   * Mantém o contrato coerente com o pipeline comercial:
+   * churn/perdido encerram a agenda, ativo regenera os recebíveis.
+   */
+  async applyPipelineToContract(proposalId, pipeline) {
+    const nextStatus = contractStatusFromPipeline(pipeline);
+    if (!nextStatus) return null;
+
+    const contracts = (await this.listContracts()).filter(
+      (c) => c.proposalId === proposalId,
+    );
+    if (contracts.length === 0) return null;
+    const contract = contracts.reduce((latest, c) =>
+      !latest || new Date(c.createdAt) > new Date(latest.createdAt) ? c : latest,
+    );
+
+    const previousStatus = contract.status;
+    if (previousStatus !== nextStatus) {
+      await this.updateContract(contract.id, { status: nextStatus });
+    }
+
+    if (CLOSED_PIPELINES.includes(pipeline)) {
+      await this.cancelFutureContractEntries(contract.id);
+    } else if (pipeline === 'active') {
+      const scheduled = (await this.listFinanceEntries({
+        contractId: contract.id,
+      })).filter(
+        (e) =>
+          ['contract_setup', 'contract_fee', 'contract_commission'].includes(
+            e.origin,
+          ) && e.status !== 'cancelled',
+      );
+      if (scheduled.length === 0) {
+        await this.syncContractFinance(contract.id);
+      }
+    }
+
+    return this.getContract(contract.id);
   },
 };
 
