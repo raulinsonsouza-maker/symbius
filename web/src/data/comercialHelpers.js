@@ -244,43 +244,7 @@ export function buildComercialDashboard(leads = []) {
   const churnRate =
     served > 0 ? Math.round((buckets.churn.length / served) * 100) : null;
 
-  const activeFees = buckets.active
-    .map((l) => {
-      const contracted = contractedFee(l);
-      const ledger = ledgerFee(l);
-      const fee = ledger || contracted;
-      return {
-        proposalId: l.proposal?.id,
-        name: leadDisplayName(l),
-        fee,
-        contracted,
-        ledger,
-        fromLedger: ledger > 0,
-        diverges: ledger > 0 && contracted > 0 && ledger !== contracted,
-        feeEnabled: Boolean(
-          l.contract?.feeEnabled || l.proposal?.operationEnabled,
-        ),
-      };
-    })
-    .sort((a, b) => b.fee - a.fee);
-
-  const mrr = activeFees.reduce((s, row) => s + row.fee, 0);
-  const mrrLedger = activeFees.reduce((s, row) => s + row.ledger, 0);
-  const mrrContracted = activeFees.reduce((s, row) => s + row.contracted, 0);
-
-  const ltvTotal = leads.reduce(
-    (s, l) => s + (Number(l.finance?.ltv) || 0),
-    0,
-  );
-  const openTotal = leads.reduce(
-    (s, l) => s + (Number(l.finance?.openTotal) || 0),
-    0,
-  );
-  const overdueTotal = leads.reduce(
-    (s, l) => s + (Number(l.finance?.overdueTotal) || 0),
-    0,
-  );
-  const feeMismatch = activeFees.filter((row) => row.diverges).length;
+  const activeContracts = buckets.active.filter((l) => l.contract?.id).length;
 
   // Funil comercial = negociação → fechado (ativo) ou perdido (sem churn)
   const funnelStages = [
@@ -313,19 +277,15 @@ export function buildComercialDashboard(leads = []) {
       lost: buckets.lost.length,
       churn: buckets.churn.length,
       total: leads.length,
-      funnel: buckets.negotiating.length + buckets.active.length + buckets.lost.length,
+      funnel:
+        buckets.negotiating.length +
+        buckets.active.length +
+        buckets.lost.length,
+      activeContracts,
     },
     pipelineValue,
-    mrr,
-    mrrLedger,
-    mrrContracted,
-    ltvTotal,
-    openTotal,
-    overdueTotal,
-    feeMismatch,
     winRate,
     churnRate,
-    activeFees,
     mix,
     funnelStages,
   };
