@@ -333,7 +333,7 @@ export function ClientPanelContrato({
           <div className="cp-empty">
             <p>
               {client?.id
-                ? 'Cliente pronto. Gere o contrato e a agenda financeira a partir da proposta.'
+                ? 'Revise e ajuste o contrato antes de gerar. Remuneração, datas e textos ficam editáveis até a geração.'
                 : 'Cadastre o cliente antes de gerar o contrato.'}
             </p>
             <button
@@ -341,7 +341,7 @@ export function ClientPanelContrato({
               className="lp-btn lp-btn--solid lp-btn--sm"
               onClick={onGenerate}
             >
-              {client?.id ? 'Gerar contrato' : 'Ir para cliente'}
+              {client?.id ? 'Ajustar e gerar' : 'Ir para cliente'}
             </button>
           </div>
         </div>

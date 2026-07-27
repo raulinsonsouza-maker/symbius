@@ -97,6 +97,7 @@ export default function LeadCard() {
   }
 
   function onClientSaved(updated) {
+    const isFirstCadastro = !lead?.client?.id && !lead?.contract;
     setLead((prev) =>
       prev
         ? {
@@ -113,6 +114,10 @@ export default function LeadCard() {
           }
         : prev,
     );
+    if (isFirstCadastro) {
+      navigate(`/admin/comercial/${id}/fechar`);
+      return;
+    }
     load();
   }
 

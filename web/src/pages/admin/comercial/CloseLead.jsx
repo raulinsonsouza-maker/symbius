@@ -5,6 +5,7 @@ import { buildContractDraft } from '../../../data/contractTemplates';
 import { formatCurrency } from '../../../data/proposalTemplates';
 import { proposalInvestmentSummary } from '../../../data/comercialHelpers';
 import RemunerationEditor from '../../../components/contratos/RemunerationEditor';
+import ListEditor from '../../../components/contratos/ListEditor';
 import {
   BillingTypeSelect,
   fromDateInputValue,
@@ -114,7 +115,7 @@ export default function CloseLead() {
           <Link to={`/admin/comercial/${id}`} className="prop-back">
             ← Painel
           </Link>
-          <span className="admin-shell__label">Gerar contrato</span>
+          <span className="admin-shell__label">Ajustar contrato</span>
         </div>
       </header>
 
@@ -144,8 +145,8 @@ export default function CloseLead() {
             </div>
           </div>
           <p className="prop-muted" style={{ margin: '12px 0 0' }}>
-            Confirme a remuneração e gere o contrato. Em seguida, envie para
-            assinatura na etapa Assinatura.
+            Revise remuneração, condições e textos do contrato antes de gerar.
+            Depois envie para assinatura na etapa Assinatura.
           </p>
         </section>
 
@@ -225,6 +226,20 @@ export default function CloseLead() {
                 />
               </label>
             )}
+            <label>
+              Reuniões a cada (dias)
+              <input
+                type="number"
+                min="0"
+                value={contract.meetingCadenceDays ?? 0}
+                onChange={(e) =>
+                  setContract({
+                    ...contract,
+                    meetingCadenceDays: Number(e.target.value),
+                  })
+                }
+              />
+            </label>
           </div>
           {contract.feeEnabled && contract.feeFirstDueDate && (
             <p className="prop-muted" style={{ margin: '0 0 12px' }}>
@@ -248,6 +263,65 @@ export default function CloseLead() {
             </p>
           )}
         </section>
+
+        <section className="prop-card">
+          <h3>Objetivo</h3>
+          <textarea
+            rows={4}
+            value={contract.objective || ''}
+            onChange={(e) =>
+              setContract({ ...contract, objective: e.target.value })
+            }
+          />
+        </section>
+
+        <ListEditor
+          label="Escopo do trabalho"
+          items={contract.scopeItems}
+          onChange={(scopeItems) => setContract({ ...contract, scopeItems })}
+          addLabel="+ Item de escopo"
+        />
+        <ListEditor
+          label="Responsabilidades da Symbius"
+          items={contract.providerResponsibilities}
+          onChange={(providerResponsibilities) =>
+            setContract({ ...contract, providerResponsibilities })
+          }
+          addLabel="+ Responsabilidade"
+          multiline
+        />
+        <ListEditor
+          label="Não faz parte do escopo"
+          items={contract.outOfScope}
+          onChange={(outOfScope) => setContract({ ...contract, outOfScope })}
+          addLabel="+ Item"
+        />
+        <ListEditor
+          label="Responsabilidades do contratante"
+          items={contract.clientResponsibilities}
+          onChange={(clientResponsibilities) =>
+            setContract({ ...contract, clientResponsibilities })
+          }
+          addLabel="+ Responsabilidade"
+          multiline
+        />
+        <ListEditor
+          label="Pauta das reuniões"
+          items={contract.meetingTopics || []}
+          onChange={(meetingTopics) =>
+            setContract({ ...contract, meetingTopics })
+          }
+          addLabel="+ Tópico"
+        />
+        <ListEditor
+          label="Considerações importantes (cláusulas genéricas)"
+          items={contract.importantNotes}
+          onChange={(importantNotes) =>
+            setContract({ ...contract, importantNotes })
+          }
+          addLabel="+ Consideração"
+          multiline
+        />
 
         <div className="wizard-actions">
           <button
