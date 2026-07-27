@@ -15,7 +15,7 @@ export default function LeadClientTool() {
         const proposal = await api.getProposal(id);
         if (!proposal.clientId) {
           if (!cancelled) {
-            setError('Cliente ainda não cadastrado. Feche o lead primeiro.');
+            setError('Cliente ainda não cadastrado. Cadastre o cliente antes de editar.');
           }
         } else if (!cancelled) setClientId(proposal.clientId);
       } catch (err) {

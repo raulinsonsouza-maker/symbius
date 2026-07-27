@@ -4,9 +4,10 @@ import { pipelineLabel } from '../../../../data/comercialHelpers';
 const NAV = [
   { id: 'inicio', label: 'Início' },
   { id: 'proposta', label: 'Proposta' },
-  { id: 'contrato', label: 'Contrato' },
-  { id: 'financeiro', label: 'Financeiro' },
   { id: 'cliente', label: 'Cliente' },
+  { id: 'contrato', label: 'Contrato' },
+  { id: 'assinatura', label: 'Assinatura' },
+  { id: 'financeiro', label: 'Financeiro' },
 ];
 
 const COMING_SOON = [
@@ -23,6 +24,7 @@ export default function ClientPanelShell({
   section,
   onSectionChange,
   onPipelineChange,
+  progress,
   children,
 }) {
   const status = pipelineStatus || 'negotiating';
@@ -109,6 +111,32 @@ export default function ClientPanelShell({
             <span className="cp-top__name">{name}</span>
           </div>
         </header>
+
+        {progress?.steps?.length > 0 && (
+          <ol className="cp-stepper" aria-label="Etapas do fluxo">
+            {progress.steps.map((step, index) => (
+              <li
+                key={step.id}
+                className={[
+                  'cp-stepper__item',
+                  step.done ? 'is-done' : '',
+                  step.current ? 'is-current' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <button
+                  type="button"
+                  className="cp-stepper__btn"
+                  onClick={() => onSectionChange(step.sec)}
+                >
+                  <span className="cp-stepper__num">{index + 1}</span>
+                  <span className="cp-stepper__label">{step.label}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
 
         <div className="cp-content">{children}</div>
       </div>

@@ -1,4 +1,35 @@
 import { getStore } from './store.js';
+import {
+  createSigningToken,
+  signingExpiresAt,
+  hashContractContent,
+  isSigningTokenExpired,
+  clientIp,
+  publicSignatureView,
+  stripSigningSecrets,
+} from './signing.js';
+import {
+  emailConfigured,
+  appBaseUrl,
+  buildReadyToSignEmail,
+  buildSignedEmail,
+  sendEmail,
+} from './email/resend.js';
+import {
+  generateSignedContractPdf,
+  regenerateSignedContractPdf,
+  resolveSignedPdfAbsolute,
+} from './pdf/signedPdf.js';
+import {
+  applyAsaasPaymentEvent,
+  chargeCommission,
+  chargeContractSetupAndFee,
+} from './asaas/billing.js';
+import {
+  buildAsaasOverview,
+  listAsaasPaymentsForUi,
+  syncAsaasPayments,
+} from './asaas/financeOverview.js';
 
 export async function getSettings(_req, res) {
   const settings = await getStore().getSettings();
@@ -75,6 +106,27 @@ export async function getClient(req, res) {
   const client = await getStore().getClient(req.params.id);
   if (!client) return res.status(404).json({ error: 'Cliente não encontrado' });
   return res.json(client);
+}
+
+export async function archiveClient(req, res) {
+  const client = await getStore().archiveClient(req.params.id);
+  if (!client) {
+    return res.status(404).json({ error: 'Cliente não encontrado' });
+  }
+  return res.json(client);
+}
+
+export async function archiveProposal(req, res) {
+  try {
+    const proposal = await getStore().archiveProposal(req.params.id);
+    if (!proposal) {
+      return res.status(404).json({ error: 'Proposta não encontrada' });
+    }
+    return res.json(proposal);
+  } catch (err) {
+    const status = err.status && err.status < 500 ? err.status : 400;
+    return res.status(status).json({ error: err.message });
+  }
 }
 
 export async function createClient(req, res) {
@@ -158,7 +210,12 @@ export async function convertProposal(req, res) {
   const updatedProposal = await store.updateProposal(proposal.id, {
     status: 'won',
     clientId: client.id,
+    pipelineStatus: 'active',
   });
+
+  if (store.applyPipelineToContract) {
+    await store.applyPipelineToContract(proposal.id, 'active');
+  }
 
   if (store.syncContractFinance) {
     await store.syncContractFinance(contract.id);
@@ -235,6 +292,95 @@ export async function getCashflow(req, res) {
   );
 }
 
+export async function getAsaasFinanceOverview(_req, res) {
+  try {
+    return res.json(await buildAsaasOverview(getStore()));
+  } catch (err) {
+    const status = err.status && err.status < 500 ? err.status : 502;
+    return res.status(status).json({ error: err.message });
+  }
+}
+
+export async function listAsaasFinancePayments(req, res) {
+  try {
+    return res.json(
+      await listAsaasPaymentsForUi(getStore(), {
+        status: req.query.status,
+        limit: req.query.limit,
+        offset: req.query.offset,
+      }),
+    );
+  } catch (err) {
+    const status = err.status && err.status < 500 ? err.status : 502;
+    return res.status(status).json({ error: err.message });
+  }
+}
+
+export async function syncAsaasFinance(req, res) {
+  try {
+    const days = Number(req.body?.days) || 90;
+    const result = await syncAsaasPayments(getStore(), { days });
+    return res.json(result);
+  } catch (err) {
+    const status = err.status && err.status < 500 ? err.status : 502;
+    return res.status(status).json({ error: err.message });
+  }
+}
+
+export async function chargeContractAsaas(req, res) {
+  try {
+    const result = await chargeContractSetupAndFee(
+      getStore(),
+      req.params.id,
+    );
+    return res.json(result);
+  } catch (err) {
+    const status = err.status && err.status < 500 ? err.status : 400;
+    return res.status(status).json({ error: err.message });
+  }
+}
+
+export async function chargeContractCommission(req, res) {
+  try {
+    const result = await chargeCommission(
+      getStore(),
+      req.params.id,
+      req.body || {},
+    );
+    return res.status(201).json(result);
+  } catch (err) {
+    const status = err.status && err.status < 500 ? err.status : 400;
+    return res.status(status).json({ error: err.message });
+  }
+}
+
+export async function asaasWebhook(req, res) {
+  const expected = String(process.env.ASAAS_WEBHOOK_TOKEN || '').trim();
+  if (expected) {
+    const token =
+      req.headers['asaas-access-token'] ||
+      req.query.token ||
+      req.headers['x-asaas-token'];
+    if (String(token || '') !== expected) {
+      return res.status(401).json({ error: 'Webhook não autorizado' });
+    }
+  }
+
+  const event = req.body?.event;
+  const payment = req.body?.payment;
+  if (!event || !payment) {
+    return res.status(400).json({ error: 'Payload inválido' });
+  }
+
+  try {
+    const entry = await applyAsaasPaymentEvent(getStore(), event, payment);
+    return res.json({ ok: true, entryId: entry?.id || null });
+  } catch (err) {
+    console.error('Webhook Asaas falhou:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 export async function getPublicContract(req, res) {
   const store = getStore();
   const contract = await store.getContractBySlug(req.params.slug);
@@ -245,5 +391,404 @@ export async function getPublicContract(req, res) {
   const client = contract.clientId
     ? await store.getClient(contract.clientId)
     : null;
-  return res.json({ contract, settings, client });
+  return res.json({
+    contract: stripSigningSecrets(contract),
+    settings,
+    client,
+  });
+}
+
+const signRate = new Map();
+
+function checkSignRate(ip) {
+  const key = ip || 'unknown';
+  const now = Date.now();
+  const windowMs = 60_000;
+  const max = 20;
+  const entry = signRate.get(key) || { count: 0, start: now };
+  if (now - entry.start > windowMs) {
+    entry.count = 0;
+    entry.start = now;
+  }
+  entry.count += 1;
+  signRate.set(key, entry);
+  return entry.count <= max;
+}
+
+export async function sendContract(req, res) {
+  const store = getStore();
+  const contract = await store.getContract(req.params.id);
+  if (!contract) {
+    return res.status(404).json({ error: 'Contrato não encontrado' });
+  }
+  if (contract.status === 'cancelled' || contract.status === 'churn') {
+    return res
+      .status(400)
+      .json({ error: 'Contrato cancelado não pode ser enviado para assinatura' });
+  }
+  if (contract.signedAt || contract.status === 'signed') {
+    return res.status(400).json({ error: 'Contrato já está assinado' });
+  }
+
+  const client = contract.clientId
+    ? await store.getClient(contract.clientId)
+    : null;
+  if (!client?.email) {
+    return res.status(400).json({
+      error: 'Cliente sem e-mail cadastrado. Atualize o contato antes de enviar.',
+    });
+  }
+
+  if (!emailConfigured()) {
+    return res.status(503).json({
+      error:
+        'Envio de e-mail não configurado. Defina RESEND_API_KEY e EMAIL_FROM na API.',
+    });
+  }
+
+  const token = createSigningToken();
+  const expiresAt = signingExpiresAt();
+  const updated = await store.prepareContractForSend(contract.id, {
+    token,
+    expiresAt,
+  });
+  const settings = await store.getSettings();
+  const signUrl = `${appBaseUrl()}/assinar/${token}`;
+  const company =
+    settings?.legalName || settings?.companyName || 'Symbius';
+  const { subject, html } = buildReadyToSignEmail({
+    clientName: client.tradeName || client.legalName || client.legalRepName,
+    contractNumber: updated.number,
+    companyName: company,
+    signUrl,
+  });
+
+  try {
+    await sendEmail({ to: client.email, subject, html });
+    await store.addSignatureEvent(contract.id, 'sent', {
+      to: client.email,
+      expiresAt: expiresAt.toISOString(),
+    });
+  } catch (err) {
+    await store.addSignatureEvent(contract.id, 'email_failed', {
+      stage: 'send',
+      message: err.message,
+    });
+    return res.status(502).json({
+      error: err.message || 'Falha ao enviar e-mail',
+    });
+  }
+
+  return res.json({
+    contract: stripSigningSecrets(updated),
+    signUrl,
+    expiresAt: expiresAt.toISOString(),
+  });
+}
+
+export async function getContractSignature(req, res) {
+  const store = getStore();
+  const contract = await store.getContract(req.params.id);
+  if (!contract) {
+    return res.status(404).json({ error: 'Contrato não encontrado' });
+  }
+  const events = await store.listSignatureEvents(contract.id);
+  return res.json({
+    signature: {
+      ...publicSignatureView(contract),
+      signerIp: contract.signerIp || '',
+      signerUserAgent: contract.signerUserAgent || '',
+      signingTokenExpiresAt: contract.signingTokenExpiresAt || null,
+      hasActiveToken: Boolean(contract.signingToken),
+    },
+    events,
+  });
+}
+
+export async function downloadSignedPdf(req, res) {
+  const store = getStore();
+  const contract = await store.getContract(req.params.id);
+  if (!contract || (!contract.signedAt && contract.status !== 'signed')) {
+    return res.status(404).json({ error: 'PDF assinado não encontrado' });
+  }
+
+  const settings = await store.getSettings();
+  const client = contract.clientId
+    ? await store.getClient(contract.clientId)
+    : null;
+
+  try {
+    const pdf = await regenerateSignedContractPdf({
+      contract,
+      client,
+      settings,
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="contrato-${contract.number || contract.id}-assinado.pdf"`,
+    );
+    return res.send(pdf.buffer);
+  } catch (err) {
+    console.error('Regenerar PDF assinado falhou:', err);
+    if (!contract.signedPdfPath) {
+      return res.status(500).json({ error: 'Falha ao gerar PDF assinado' });
+    }
+    const abs = resolveSignedPdfAbsolute(contract.signedPdfPath);
+    if (!abs) {
+      return res.status(404).json({ error: 'Arquivo do PDF não encontrado' });
+    }
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="contrato-${contract.number || contract.id}-assinado.pdf"`,
+    );
+    return res.sendFile(abs);
+  }
+}
+
+export async function getPublicSign(req, res) {
+  const store = getStore();
+  const contract = await store.getContractBySigningToken(req.params.token);
+  if (!contract) {
+    return res.status(404).json({ error: 'Link de assinatura inválido' });
+  }
+
+  const alreadySigned =
+    Boolean(contract.signedAt) || contract.status === 'signed';
+  if (alreadySigned) {
+    return res.status(410).json({
+      error: 'Este contrato já foi assinado',
+      code: 'ALREADY_SIGNED',
+      contract: stripSigningSecrets(contract),
+    });
+  }
+
+  if (isSigningTokenExpired(contract.signingTokenExpiresAt)) {
+    return res.status(410).json({
+      error: 'Link de assinatura expirado. Solicite um novo envio.',
+      code: 'EXPIRED',
+    });
+  }
+
+  const settings = await store.getSettings();
+  const client = contract.clientId
+    ? await store.getClient(contract.clientId)
+    : null;
+
+  await store.addSignatureEvent(contract.id, 'viewed', {
+    ip: clientIp(req),
+  });
+
+  return res.json({
+    contract: stripSigningSecrets(contract),
+    settings,
+    client: client
+      ? {
+          id: client.id,
+          tradeName: client.tradeName,
+          legalName: client.legalName,
+          email: client.email,
+          legalRepName: client.legalRepName,
+          legalRepDocument: client.legalRepDocument,
+        }
+      : null,
+    expiresAt: contract.signingTokenExpiresAt,
+  });
+}
+
+export async function postPublicSign(req, res) {
+  const ip = clientIp(req);
+  if (!checkSignRate(ip)) {
+    return res
+      .status(429)
+      .json({ error: 'Muitas tentativas. Aguarde um momento e tente de novo.' });
+  }
+
+  const store = getStore();
+  const contract = await store.getContractBySigningToken(req.params.token);
+  if (!contract) {
+    return res.status(404).json({ error: 'Link de assinatura inválido' });
+  }
+
+  if (Boolean(contract.signedAt) || contract.status === 'signed') {
+    return res.status(410).json({ error: 'Este contrato já foi assinado' });
+  }
+
+  if (isSigningTokenExpired(contract.signingTokenExpiresAt)) {
+    return res.status(410).json({
+      error: 'Link de assinatura expirado. Solicite um novo envio.',
+      code: 'EXPIRED',
+    });
+  }
+
+  const body = req.body || {};
+  const name = String(body.name || '').trim();
+  const email = String(body.email || '').trim().toLowerCase();
+  const document = String(body.document || '').trim();
+  const accepted = body.accepted === true;
+
+  if (!accepted) {
+    return res
+      .status(400)
+      .json({ error: 'É necessário aceitar os termos do contrato' });
+  }
+  if (name.length < 3) {
+    return res.status(400).json({ error: 'Informe o nome completo do signatário' });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Informe um e-mail válido' });
+  }
+
+  const settings = await store.getSettings();
+  const client = contract.clientId
+    ? await store.getClient(contract.clientId)
+    : null;
+  const contentHash = hashContractContent(contract);
+  const signedAt = new Date().toISOString();
+  const userAgent = String(req.headers['user-agent'] || '').slice(0, 500);
+
+  let signedPdfPath = '';
+  let pdfBuffer = null;
+  try {
+    const pdf = await generateSignedContractPdf({
+      contract,
+      client,
+      settings,
+      signature: {
+        signerName: name,
+        signerEmail: email,
+        signerDocument: document,
+        signedAt,
+        signerIp: ip,
+        signerUserAgent: userAgent,
+        contentHash,
+      },
+    });
+    signedPdfPath = pdf.relativePath.replace(/\\/g, '/');
+    pdfBuffer = pdf.buffer;
+  } catch (err) {
+    console.error('PDF assinado falhou:', err);
+  }
+
+  const signed = await store.applyContractSignature(contract.id, {
+    signedAt,
+    signerName: name,
+    signerEmail: email,
+    signerDocument: document,
+    signerIp: ip,
+    signerUserAgent: userAgent,
+    contentHash,
+    signedPdfPath,
+  });
+
+  await store.addSignatureEvent(contract.id, 'signed', {
+    signerName: name,
+    signerEmail: email,
+    contentHash,
+  });
+
+  if (signed.proposalId) {
+    const proposal = await store.getProposal(signed.proposalId);
+    if (proposal && proposal.pipelineStatus !== 'active') {
+      await store.updateProposal(signed.proposalId, {
+        status: 'won',
+        pipelineStatus: 'active',
+      });
+      if (store.applyPipelineToContract) {
+        await store.applyPipelineToContract(signed.proposalId, 'active');
+      }
+    }
+  }
+
+  const company =
+    settings?.legalName || settings?.companyName || 'Symbius';
+  const viewUrl = `${appBaseUrl()}/c/${signed.publicSlug}`;
+  const { subject, html } = buildSignedEmail({
+    clientName: name,
+    contractNumber: signed.number,
+    companyName: company,
+    viewUrl,
+  });
+
+  const recipients = [email];
+  if (
+    settings?.contactEmail &&
+    settings.contactEmail.toLowerCase() !== email
+  ) {
+    recipients.push(settings.contactEmail);
+  }
+
+  if (emailConfigured()) {
+    try {
+      await sendEmail({
+        to: recipients,
+        subject,
+        html,
+        attachments: pdfBuffer
+          ? [
+              {
+                filename: `contrato-${signed.number || signed.id}-assinado.pdf`,
+                content: pdfBuffer,
+              },
+            ]
+          : undefined,
+      });
+    } catch (err) {
+      await store.addSignatureEvent(contract.id, 'email_failed', {
+        stage: 'signed_copy',
+        message: err.message,
+      });
+    }
+  }
+
+  return res.json({
+    contract: stripSigningSecrets(signed),
+    viewUrl,
+    downloadUrl: signedPdfPath
+      ? `/api/public/contracts/${signed.publicSlug}/signed-pdf`
+      : null,
+  });
+}
+
+export async function getPublicSignedPdfBySlug(req, res) {
+  const store = getStore();
+  const contract = await store.getContractBySlug(req.params.slug);
+  if (!contract || (!contract.signedAt && contract.status !== 'signed')) {
+    return res.status(404).json({ error: 'Contrato assinado não encontrado' });
+  }
+
+  const settings = await store.getSettings();
+  const client = contract.clientId
+    ? await store.getClient(contract.clientId)
+    : null;
+
+  try {
+    const pdf = await regenerateSignedContractPdf({
+      contract,
+      client,
+      settings,
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="contrato-${contract.number || contract.id}-assinado.pdf"`,
+    );
+    return res.send(pdf.buffer);
+  } catch (err) {
+    console.error('Regenerar PDF público falhou:', err);
+    if (!contract.signedPdfPath) {
+      return res.status(500).json({ error: 'Falha ao gerar PDF assinado' });
+    }
+    const abs = resolveSignedPdfAbsolute(contract.signedPdfPath);
+    if (!abs) {
+      return res.status(404).json({ error: 'Arquivo do PDF não encontrado' });
+    }
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="contrato-${contract.number || contract.id}-assinado.pdf"`,
+    );
+    return res.sendFile(abs);
+  }
 }

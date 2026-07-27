@@ -75,6 +75,8 @@ function mapClient(row) {
     legalRepRole: row.legal_rep_role,
     legalRepDocument: row.legal_rep_document,
     notes: row.notes,
+    archivedAt: row.archived_at || null,
+    asaasCustomerId: row.asaas_customer_id || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -123,6 +125,22 @@ function mapContract(row) {
     feePayDay: row.fee_pay_day ?? 5,
     setupDueDays: row.setup_due_days ?? 0,
     commissionEstimate: Number(row.commission_estimate || 0),
+    setupDueDate: row.setup_due_date || '',
+    feeFirstDueDate: row.fee_first_due_date || '',
+    asaasBillingType: row.asaas_billing_type || 'UNDEFINED',
+    asaasSubscriptionId: row.asaas_subscription_id || '',
+    asaasSetupPaymentId: row.asaas_setup_payment_id || '',
+    asaasSyncedAt: row.asaas_synced_at || null,
+    signingToken: row.signing_token || null,
+    signingTokenExpiresAt: row.signing_token_expires_at || null,
+    signedAt: row.signed_at || null,
+    signerName: row.signer_name || '',
+    signerEmail: row.signer_email || '',
+    signerDocument: row.signer_document || '',
+    signerIp: row.signer_ip || '',
+    signerUserAgent: row.signer_user_agent || '',
+    contentHash: row.content_hash || '',
+    signedPdfPath: row.signed_pdf_path || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -156,6 +174,9 @@ function mapFinanceEntry(row) {
     proposalId: row.proposal_id,
     recurrenceGroupId: row.recurrence_group_id,
     notes: row.notes,
+    asaasPaymentId: row.asaas_payment_id || '',
+    invoiceUrl: row.invoice_url || '',
+    billingType: row.billing_type || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -290,7 +311,9 @@ const pgStore = {
 
   async listProposals() {
     const { rows } = await pool.query(
-      'SELECT * FROM proposals ORDER BY created_at DESC',
+      `SELECT * FROM proposals
+       WHERE status IS DISTINCT FROM 'archived'
+       ORDER BY created_at DESC`,
     );
     return rows.map(mapProposal);
   },
@@ -423,7 +446,44 @@ const pgStore = {
     return mapProposal(rows[0]);
   },
 
+  /**
+   * Arquiva proposta não concluída (some do Comercial / listas).
+   * Clientes ativos devem usar arquivar cliente ou churn.
+   */
+  async archiveProposal(id) {
+    const proposal = await this.getProposal(id);
+    if (!proposal) return null;
+    if (proposal.status === 'archived') return proposal;
+
+    const contract = await this.getContractByProposal?.(id);
+    const pipeline = resolvePipelineStatus(proposal, contract);
+    if (pipeline === 'active') {
+      const err = new Error(
+        'Oportunidade ativa: use Arquivar cliente ou marque como Churn.',
+      );
+      err.status = 400;
+      throw err;
+    }
+
+    const { rows } = await pool.query(
+      `UPDATE proposals SET status = 'archived', updated_at = NOW()
+       WHERE id = $1 RETURNING *`,
+      [id],
+    );
+    if (contract?.id && this.applyPipelineToContract) {
+      await this.applyPipelineToContract(id, 'lost');
+    }
+    return mapProposal(rows[0]);
+  },
+
   async listClients() {
+    const { rows } = await pool.query(
+      'SELECT * FROM clients WHERE archived_at IS NULL ORDER BY created_at DESC',
+    );
+    return rows.map(mapClient);
+  },
+
+  async listClientsIncludingArchived() {
     const { rows } = await pool.query(
       'SELECT * FROM clients ORDER BY created_at DESC',
     );
@@ -435,6 +495,57 @@ const pgStore = {
       id,
     ]);
     return mapClient(rows[0]);
+  },
+
+  async archiveClient(id) {
+    const { rows } = await pool.query(
+      `UPDATE clients SET archived_at = NOW(), updated_at = NOW()
+       WHERE id = $1 AND archived_at IS NULL
+       RETURNING *`,
+      [id],
+    );
+    const newlyArchived = Boolean(rows[0]);
+    const client = rows[0] ? mapClient(rows[0]) : await this.getClient(id);
+    if (!client) return null;
+
+    if (newlyArchived) {
+      // Cancela agenda em aberto deste cliente (recebidos permanecem)
+      await pool.query(
+        `UPDATE finance_entries SET status = 'cancelled', updated_at = NOW()
+         WHERE client_id = $1
+           AND status NOT IN ('received','paid','cancelled')`,
+        [id],
+      );
+
+      const { rows: proposalRows } = await pool.query(
+        `UPDATE proposals SET status = 'lost', updated_at = NOW()
+         WHERE client_id = $1
+         RETURNING id`,
+        [id],
+      );
+      for (const row of proposalRows) {
+        if (this.applyPipelineToContract) {
+          await this.applyPipelineToContract(row.id, 'lost');
+        }
+      }
+      await pool.query(
+        `UPDATE contracts SET status = 'cancelled', updated_at = NOW()
+         WHERE client_id = $1
+           AND status NOT IN ('cancelled','churn')`,
+        [id],
+      );
+      // Cancela entradas ligadas a contratos do cliente (mesmo sem client_id no lançamento)
+      await pool.query(
+        `UPDATE finance_entries fe SET status = 'cancelled', updated_at = NOW()
+         FROM contracts c
+         WHERE fe.contract_id = c.id
+           AND c.client_id = $1
+           AND fe.status NOT IN ('received','paid','cancelled')`,
+        [id],
+      );
+    }
+
+    return client;
   },
 
   async createClient(b) {
@@ -491,8 +602,9 @@ const pgStore = {
         legal_rep_role = COALESCE($16, legal_rep_role),
         legal_rep_document = COALESCE($17, legal_rep_document),
         notes = COALESCE($18, notes),
+        asaas_customer_id = COALESCE($19, asaas_customer_id),
         updated_at = NOW()
-       WHERE id = $19 RETURNING *`,
+       WHERE id = $20 RETURNING *`,
       [
         b.legalName,
         b.tradeName,
@@ -512,6 +624,7 @@ const pgStore = {
         b.legalRepRole,
         b.legalRepDocument,
         b.notes,
+        b.asaasCustomerId,
         id,
       ],
     );
@@ -519,6 +632,16 @@ const pgStore = {
   },
 
   async listContracts() {
+    const { rows } = await pool.query(
+      `SELECT c.* FROM contracts c
+       LEFT JOIN clients cl ON cl.id = c.client_id
+       WHERE c.client_id IS NULL OR cl.archived_at IS NULL
+       ORDER BY c.created_at DESC`,
+    );
+    return rows.map(mapContract);
+  },
+
+  async listContractsIncludingArchived() {
     const { rows } = await pool.query(
       'SELECT * FROM contracts ORDER BY created_at DESC',
     );
@@ -546,6 +669,96 @@ const pgStore = {
       [proposalId],
     );
     return mapContract(rows[0]);
+  },
+
+  async getContractBySigningToken(token) {
+    if (!token) return null;
+    const { rows } = await pool.query(
+      'SELECT * FROM contracts WHERE signing_token = $1',
+      [token],
+    );
+    return mapContract(rows[0]);
+  },
+
+  async prepareContractForSend(id, { token, expiresAt }) {
+    const { rows } = await pool.query(
+      `UPDATE contracts SET
+        signing_token = $1,
+        signing_token_expires_at = $2,
+        status = 'sent',
+        updated_at = NOW()
+       WHERE id = $3
+       RETURNING *`,
+      [token, expiresAt.toISOString(), id],
+    );
+    return mapContract(rows[0]);
+  },
+
+  async applyContractSignature(id, data) {
+    const { rows } = await pool.query(
+      `UPDATE contracts SET
+        status = 'signed',
+        signed_at = $1,
+        signer_name = $2,
+        signer_email = $3,
+        signer_document = $4,
+        signer_ip = $5,
+        signer_user_agent = $6,
+        content_hash = $7,
+        signed_pdf_path = $8,
+        acceptance_client_name = COALESCE(NULLIF($2, ''), acceptance_client_name),
+        signing_token = NULL,
+        signing_token_expires_at = NULL,
+        updated_at = NOW()
+       WHERE id = $9
+       RETURNING *`,
+      [
+        data.signedAt,
+        data.signerName || '',
+        data.signerEmail || '',
+        data.signerDocument || '',
+        data.signerIp || '',
+        data.signerUserAgent || '',
+        data.contentHash || '',
+        data.signedPdfPath || '',
+        id,
+      ],
+    );
+    return mapContract(rows[0]);
+  },
+
+  async addSignatureEvent(contractId, eventType, meta = {}) {
+    const { rows } = await pool.query(
+      `INSERT INTO contract_signature_events (contract_id, event_type, meta)
+       VALUES ($1, $2, $3)
+       RETURNING id, contract_id, event_type, meta, created_at`,
+      [contractId, eventType, JSON.stringify(meta)],
+    );
+    const row = rows[0];
+    return {
+      id: row.id,
+      contractId: row.contract_id,
+      eventType: row.event_type,
+      meta: row.meta || {},
+      createdAt: row.created_at,
+    };
+  },
+
+  async listSignatureEvents(contractId) {
+    const { rows } = await pool.query(
+      `SELECT id, contract_id, event_type, meta, created_at
+       FROM contract_signature_events
+       WHERE contract_id = $1
+       ORDER BY created_at DESC`,
+      [contractId],
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      contractId: row.contract_id,
+      eventType: row.event_type,
+      meta: row.meta || {},
+      createdAt: row.created_at,
+    }));
   },
 
   async createContract(b) {
@@ -610,7 +823,25 @@ const pgStore = {
         b.acceptanceClientName || '',
       ],
     );
-    return mapContract(rows[0]);
+    const created = mapContract(rows[0]);
+    if (
+      b.feePayDay != null ||
+      b.setupDueDays != null ||
+      b.setupDueDate != null ||
+      b.feeFirstDueDate != null ||
+      b.asaasBillingType != null ||
+      b.commissionEstimate != null
+    ) {
+      return this.updateContract(created.id, {
+        feePayDay: b.feePayDay,
+        setupDueDays: b.setupDueDays,
+        commissionEstimate: b.commissionEstimate,
+        setupDueDate: b.setupDueDate,
+        feeFirstDueDate: b.feeFirstDueDate,
+        asaasBillingType: b.asaasBillingType,
+      });
+    }
+    return created;
   },
 
   async updateContract(id, b) {
@@ -649,8 +880,17 @@ const pgStore = {
         media_notes = COALESCE($31, media_notes),
         acceptance_provider_name = COALESCE($32, acceptance_provider_name),
         acceptance_client_name = COALESCE($33, acceptance_client_name),
+        fee_pay_day = COALESCE($34, fee_pay_day),
+        setup_due_days = COALESCE($35, setup_due_days),
+        commission_estimate = COALESCE($36, commission_estimate),
+        setup_due_date = COALESCE($37, setup_due_date),
+        fee_first_due_date = COALESCE($38, fee_first_due_date),
+        asaas_billing_type = COALESCE($39, asaas_billing_type),
+        asaas_subscription_id = COALESCE($40, asaas_subscription_id),
+        asaas_setup_payment_id = COALESCE($41, asaas_setup_payment_id),
+        asaas_synced_at = COALESCE($42, asaas_synced_at),
         updated_at = NOW()
-       WHERE id = $34 RETURNING *`,
+       WHERE id = $43 RETURNING *`,
       [
         b.clientId ?? null,
         b.status,
@@ -691,6 +931,15 @@ const pgStore = {
         b.mediaNotes,
         b.acceptanceProviderName,
         b.acceptanceClientName,
+        b.feePayDay,
+        b.setupDueDays,
+        b.commissionEstimate,
+        b.setupDueDate,
+        b.feeFirstDueDate,
+        b.asaasBillingType,
+        b.asaasSubscriptionId,
+        b.asaasSetupPaymentId,
+        b.asaasSyncedAt,
         id,
       ],
     );
@@ -724,11 +973,55 @@ const pgStore = {
     return mapFinanceCategory(rows[0]);
   },
 
+  async reconcileClosedFinance() {
+    await pool.query(
+      `UPDATE finance_entries fe SET status = 'cancelled', updated_at = NOW()
+       FROM clients c
+       WHERE fe.client_id = c.id
+         AND c.archived_at IS NOT NULL
+         AND fe.status NOT IN ('received','paid','cancelled')`,
+    );
+    await pool.query(
+      `UPDATE finance_entries fe SET status = 'cancelled', updated_at = NOW()
+       FROM contracts c
+       WHERE fe.contract_id = c.id
+         AND c.status IN ('cancelled','churn')
+         AND fe.status NOT IN ('received','paid','cancelled')`,
+    );
+  },
+
   async listFinanceEntries(filters = {}) {
+    if (!filters.includeClosed) {
+      await this.reconcileClosedFinance();
+    }
     const { rows } = await pool.query(
       'SELECT * FROM finance_entries ORDER BY due_date ASC',
     );
     let entries = rows.map(mapFinanceEntry);
+
+    const [allClients, allContracts] = await Promise.all([
+      this.listClientsIncludingArchived(),
+      this.listContractsIncludingArchived(),
+    ]);
+    const clientsById = Object.fromEntries(allClients.map((c) => [c.id, c]));
+
+    // Por padrão some agenda de clientes arquivados e contratos churn/cancelados
+    if (!filters.includeClosed) {
+      const archivedClientIds = new Set(
+        allClients.filter((c) => c.archivedAt).map((c) => c.id),
+      );
+      const closedContractIds = new Set(
+        allContracts
+          .filter((c) => ['cancelled', 'churn'].includes(c.status))
+          .map((c) => c.id),
+      );
+      entries = entries.filter((e) => {
+        if (e.clientId && archivedClientIds.has(e.clientId)) return false;
+        if (e.contractId && closedContractIds.has(e.contractId)) return false;
+        return true;
+      });
+    }
+
     if (filters.type) entries = entries.filter((e) => e.type === filters.type);
     if (filters.clientId) {
       entries = entries.filter((e) => e.clientId === filters.clientId);
@@ -748,15 +1041,21 @@ const pgStore = {
         return true;
       });
     }
-    return entries;
+
+    return entries.map((e) => {
+      const c = e.clientId ? clientsById[e.clientId] : null;
+      const clientName = c ? c.tradeName || c.legalName || '' : '';
+      return { ...e, clientName };
+    });
   },
 
   async createFinanceEntry(input) {
     const { rows } = await pool.query(
       `INSERT INTO finance_entries (
         type, origin, status, amount, due_date, paid_at, description,
-        category_id, client_id, contract_id, proposal_id, recurrence_group_id, notes
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+        category_id, client_id, contract_id, proposal_id, recurrence_group_id, notes,
+        asaas_payment_id, invoice_url, billing_type
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
       [
         input.type || 'expense',
         input.origin || 'manual',
@@ -771,7 +1070,27 @@ const pgStore = {
         input.proposalId || null,
         input.recurrenceGroupId || null,
         input.notes || '',
+        input.asaasPaymentId || '',
+        input.invoiceUrl || '',
+        input.billingType || '',
       ],
+    );
+    return mapFinanceEntry(rows[0]);
+  },
+
+  async getFinanceEntry(id) {
+    const { rows } = await pool.query(
+      'SELECT * FROM finance_entries WHERE id = $1',
+      [id],
+    );
+    return mapFinanceEntry(rows[0]);
+  },
+
+  async getFinanceEntryByAsaasPaymentId(asaasPaymentId) {
+    if (!asaasPaymentId) return null;
+    const { rows } = await pool.query(
+      'SELECT * FROM finance_entries WHERE asaas_payment_id = $1 LIMIT 1',
+      [asaasPaymentId],
     );
     return mapFinanceEntry(rows[0]);
   },
@@ -792,12 +1111,13 @@ const pgStore = {
         type = $1, origin = $2, status = $3, amount = $4, due_date = $5,
         paid_at = $6, description = $7, category_id = $8, client_id = $9,
         contract_id = $10, proposal_id = $11, recurrence_group_id = $12,
-        notes = $13, updated_at = NOW()
-       WHERE id = $14 RETURNING *`,
+        notes = $13, asaas_payment_id = $14, invoice_url = $15, billing_type = $16,
+        updated_at = NOW()
+       WHERE id = $17 RETURNING *`,
       [
         merged.type,
         merged.origin,
-        patch.status || current.status,
+        patch.status != null ? patch.status : current.status,
         merged.amount,
         merged.dueDate,
         merged.paidAt,
@@ -808,6 +1128,9 @@ const pgStore = {
         merged.proposalId,
         merged.recurrenceGroupId,
         merged.notes,
+        merged.asaasPaymentId || '',
+        merged.invoiceUrl || '',
+        merged.billingType || '',
         id,
       ],
     );
@@ -830,16 +1153,33 @@ const pgStore = {
     await pool.query(
       `UPDATE finance_entries SET status = 'cancelled', updated_at = NOW()
        WHERE contract_id = $1
-         AND origin IN ('contract_setup','contract_fee','contract_commission')
+         AND origin IN ('contract_setup','contract_fee')
          AND status NOT IN ('received','paid')
+         AND COALESCE(asaas_payment_id, '') = ''
          AND due_date IS NOT NULL`,
       [contractId],
     );
 
-    const schedule = buildContractSchedule(contract, byKey, 12);
+    const scheduleClient =
+      (contract.clientId && (await this.getClient(contract.clientId))) || null;
+    const clientName =
+      scheduleClient?.tradeName || scheduleClient?.legalName || '';
+    const schedule = buildContractSchedule(contract, byKey, 12, clientName);
+    const existing = await this.listFinanceEntries({
+      contractId,
+      includeClosed: true,
+    });
     for (const item of schedule) {
       const dueIso = toISODate(parseBRDate(item.dueDate));
       if (dueIso && dueIso < todayIso && item.origin !== 'contract_setup') continue;
+      const already = existing.some(
+        (e) =>
+          e.origin === item.origin &&
+          e.status !== 'cancelled' &&
+          (e.asaasPaymentId ||
+            toISODate(parseBRDate(e.dueDate)) === dueIso),
+      );
+      if (already) continue;
       await this.createFinanceEntry(item);
     }
     return this.listFinanceEntries({ contractId });
@@ -868,9 +1208,9 @@ const pgStore = {
   async listComercial() {
     const proposals = await this.listProposals();
     const clients = Object.fromEntries(
-      (await this.listClients()).map((c) => [c.id, c]),
+      (await this.listClientsIncludingArchived()).map((c) => [c.id, c]),
     );
-    const contracts = await this.listContracts();
+    const contracts = await this.listContractsIncludingArchived();
     const contractsByProposal = {};
     for (const c of contracts) {
       if (!c.proposalId) continue;
@@ -881,50 +1221,53 @@ const pgStore = {
     }
     const allEntries = await this.listFinanceEntries({});
     const today = new Date();
-    return proposals.map((proposal) => {
-      const contract = contractsByProposal[proposal.id] || null;
-      const client =
-        (proposal.clientId && clients[proposal.clientId]) ||
-        (contract?.clientId && clients[contract.clientId]) ||
-        null;
-      let stage = resolveLegacyStage(proposal, contract);
-      const pipelineStatus = resolvePipelineStatus(proposal, contract);
+    return proposals
+      .filter((proposal) => proposal.status !== 'archived')
+      .map((proposal) => {
+        const contract = contractsByProposal[proposal.id] || null;
+        const linkedClientId = proposal.clientId || contract?.clientId || null;
+        const linkedClient = linkedClientId ? clients[linkedClientId] : null;
+        // Cliente arquivado: some do comercial por completo
+        if (linkedClient?.archivedAt) return null;
 
-      const contractEntries = contract
-        ? allEntries.filter((e) => e.contractId === contract.id)
-        : [];
+        const client =
+          linkedClient && !linkedClient.archivedAt ? linkedClient : null;
+        let stage = resolveLegacyStage(proposal, contract);
+        const pipelineStatus = resolvePipelineStatus(proposal, contract);
 
-      const nextReceivables = contractEntries
-        .filter(
-          (e) =>
-            e.type === 'income' &&
-            !['cancelled', 'received', 'paid'].includes(e.status),
-        )
-        .slice(0, 5);
+        const contractEntries = contract
+          ? allEntries.filter((e) => e.contractId === contract.id)
+          : [];
 
-      return {
-        proposal,
-        client,
-        contract,
-        stage,
-        pipelineStatus,
-        nextReceivables,
-        finance: summarizeLeadFinance(contractEntries, today),
-      };
-    });
+        const nextReceivables = contractEntries
+          .filter(
+            (e) =>
+              e.type === 'income' &&
+              !['cancelled', 'received', 'paid'].includes(e.status),
+          )
+          .slice(0, 5);
+
+        return {
+          proposal,
+          client,
+          contract,
+          stage,
+          pipelineStatus,
+          nextReceivables,
+          finance: summarizeLeadFinance(contractEntries, today),
+        };
+      })
+      .filter(Boolean);
   },
 
-  /** Cancela recebíveis futuros gerados pelo contrato (churn/perdido) */
+  /** Cancela recebíveis em aberto do contrato (churn/perdido/arquivado) */
   async cancelFutureContractEntries(contractId) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const { rowCount } = await pool.query(
       `UPDATE finance_entries SET status = 'cancelled', updated_at = NOW()
        WHERE contract_id = $1
          AND origin IN ('contract_setup','contract_fee','contract_commission')
-         AND status NOT IN ('received','paid','cancelled')
-         AND due_date >= $2`,
-      [contractId, toISODate(today)],
+         AND status NOT IN ('received','paid','cancelled')`,
+      [contractId],
     );
     return rowCount;
   },
@@ -937,7 +1280,7 @@ const pgStore = {
     const nextStatus = contractStatusFromPipeline(pipeline);
     if (!nextStatus) return null;
 
-    const contracts = (await this.listContracts()).filter(
+    const contracts = (await this.listContractsIncludingArchived()).filter(
       (c) => c.proposalId === proposalId,
     );
     if (contracts.length === 0) return null;
@@ -953,9 +1296,12 @@ const pgStore = {
     if (CLOSED_PIPELINES.includes(pipeline)) {
       await this.cancelFutureContractEntries(contract.id);
     } else if (pipeline === 'active') {
-      const scheduled = (await this.listFinanceEntries({
-        contractId: contract.id,
-      })).filter(
+      const scheduled = (
+        await this.listFinanceEntries({
+          contractId: contract.id,
+          includeClosed: true,
+        })
+      ).filter(
         (e) =>
           ['contract_setup', 'contract_fee', 'contract_commission'].includes(
             e.origin,

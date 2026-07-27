@@ -5,6 +5,11 @@ import { downloadContractPdf } from '../../../lib/contractPdf';
 import ContractPreview from '../../../components/contratos/ContractPreview';
 import RemunerationEditor from '../../../components/contratos/RemunerationEditor';
 import ListEditor from '../../../components/contratos/ListEditor';
+import {
+  BillingTypeSelect,
+  fromDateInputValue,
+  toDateInputValue,
+} from '../../../components/contratos/AsaasBillingFields';
 
 const STATUS_OPTIONS = [
   ['draft', 'Rascunho'],
@@ -24,7 +29,27 @@ export default function ContractEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [charging, setCharging] = useState(false);
   const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [signatureInfo, setSignatureInfo] = useState(null);
+
+  useEffect(() => {
+    if (!contract?.id) return undefined;
+    let cancelled = false;
+    api
+      .getContractSignature(contract.id)
+      .then((data) => {
+        if (!cancelled) setSignatureInfo(data);
+      })
+      .catch(() => {
+        if (!cancelled) setSignatureInfo(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [contract?.id, contract?.status, contract?.signedAt]);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +113,41 @@ export default function ContractEditor() {
     }
   }
 
+  async function handleSend() {
+    setSending(true);
+    setError('');
+    setOk('');
+    try {
+      await save();
+      const result = await api.sendContract(id);
+      setContract(result.contract);
+      setOk('Contrato enviado por e-mail para assinatura.');
+      setSignatureInfo(await api.getContractSignature(id));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleAsaasCharge() {
+    setCharging(true);
+    setError('');
+    setOk('');
+    try {
+      await save();
+      const result = await api.chargeContractAsaas(id);
+      setContract(result.contract);
+      setOk(
+        'Cobranças enviadas no Asaas (setup/fee). O cliente receberá a fatura por e-mail.',
+      );
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCharging(false);
+    }
+  }
+
   if (loading || !contract || !settings) {
     return (
       <div className="admin-shell prop-shell">
@@ -97,6 +157,11 @@ export default function ContractEditor() {
       </div>
     );
   }
+
+  const isSigned =
+    contract.status === 'signed' ||
+    Boolean(contract.signedAt) ||
+    signatureInfo?.signature?.signed;
 
   return (
     <div className="admin-shell prop-shell">
@@ -132,6 +197,36 @@ export default function ContractEditor() {
           >
             Abrir LP
           </button>
+          {!isSigned && (
+            <button
+              type="button"
+              className="lp-btn lp-btn--ghost lp-btn--sm"
+              onClick={handleSend}
+              disabled={sending}
+            >
+              {sending ? 'Enviando…' : 'Enviar contrato'}
+            </button>
+          )}
+          {isSigned && (
+            <button
+              type="button"
+              className="lp-btn lp-btn--ghost lp-btn--sm"
+              onClick={handleAsaasCharge}
+              disabled={charging}
+            >
+              {charging ? 'Enviando…' : 'Enviar cobranças Asaas'}
+            </button>
+          )}
+          {isSigned && contract.publicSlug && (
+            <a
+              className="lp-btn lp-btn--ghost lp-btn--sm"
+              href={`/api/public/contracts/${contract.publicSlug}/signed-pdf`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              PDF assinado
+            </a>
+          )}
           <button
             type="button"
             className="lp-btn lp-btn--solid lp-btn--sm"
@@ -145,6 +240,33 @@ export default function ContractEditor() {
 
       <main className="prop-editor">
         {error && <p className="prop-error">{error}</p>}
+        {ok && <p className="prop-ok">{ok}</p>}
+
+        {signatureInfo?.signature && (
+          <div className="prop-card" style={{ marginBottom: 16 }}>
+            <h3>Assinatura digital</h3>
+            {signatureInfo.signature.signed ? (
+              <p className="prop-muted">
+                Assinado por <strong>{signatureInfo.signature.signerName}</strong>
+                {signatureInfo.signature.signerEmail
+                  ? ` (${signatureInfo.signature.signerEmail})`
+                  : ''}
+                {signatureInfo.signature.signedAt
+                  ? ` em ${new Date(signatureInfo.signature.signedAt).toLocaleString('pt-BR')}`
+                  : ''}
+                {signatureInfo.signature.signerIp
+                  ? ` · IP ${signatureInfo.signature.signerIp}`
+                  : ''}
+              </p>
+            ) : (
+              <p className="prop-muted">
+                {signatureInfo.signature.hasActiveToken
+                  ? 'Aguardando assinatura do cliente.'
+                  : 'Ainda não enviado para assinatura.'}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="prop-editor__form">
           <section className="prop-card">
@@ -166,10 +288,13 @@ export default function ContractEditor() {
             </label>
             <div className="prop-form-row">
               <label>
-                Data de início
+                Início do contrato
                 <input
-                  value={contract.startDate}
-                  onChange={(e) => patch({ startDate: e.target.value })}
+                  type="date"
+                  value={toDateInputValue(contract.startDate)}
+                  onChange={(e) =>
+                    patch({ startDate: fromDateInputValue(e.target.value) })
+                  }
                 />
               </label>
               <label>
@@ -199,18 +324,58 @@ export default function ContractEditor() {
                 />
               </label>
               <label>
-                Dia pagamento fee
-                <input
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={contract.feePayDay ?? 5}
-                  onChange={(e) =>
-                    patch({ feePayDay: Number(e.target.value) })
-                  }
+                Forma de cobrança
+                <BillingTypeSelect
+                  value={contract.asaasBillingType}
+                  onChange={(asaasBillingType) => patch({ asaasBillingType })}
                 />
               </label>
             </div>
+            <div className="prop-form-row">
+              {contract.setupEnabled && (
+                <label>
+                  Vencimento do setup
+                  <input
+                    type="date"
+                    value={toDateInputValue(contract.setupDueDate)}
+                    onChange={(e) =>
+                      patch({
+                        setupDueDate: fromDateInputValue(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+              )}
+              {contract.feeEnabled && (
+                <label>
+                  1ª cobrança do fee
+                  <input
+                    type="date"
+                    value={toDateInputValue(contract.feeFirstDueDate)}
+                    onChange={(e) => {
+                      const feeFirstDueDate = fromDateInputValue(
+                        e.target.value,
+                      );
+                      const day = Number(
+                        toDateInputValue(feeFirstDueDate).split('-')[2] || 5,
+                      );
+                      patch({
+                        feeFirstDueDate,
+                        feePayDay: day || 5,
+                      });
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+            {contract.feeEnabled && contract.feeFirstDueDate && (
+              <p className="prop-muted">
+                Fee repete todo dia {contract.feePayDay || '—'} de cada mês.
+                {contract.asaasSyncedAt
+                  ? ` · Último sync Asaas: ${new Date(contract.asaasSyncedAt).toLocaleString('pt-BR')}`
+                  : ''}
+              </p>
+            )}
             <div className="prop-form-row">
               <label>
                 Reuniões a cada (dias)
@@ -312,7 +477,10 @@ export default function ContractEditor() {
 
         <div className="prop-editor__preview">
           <ContractPreview
-            contract={contract}
+            contract={{
+              ...contract,
+              signature: signatureInfo?.signature || contract.signature,
+            }}
             settings={settings}
             client={client}
           />

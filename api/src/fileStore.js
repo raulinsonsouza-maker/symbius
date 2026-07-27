@@ -101,12 +101,14 @@ function defaultDb() {
       key,
     })),
     financeEntries: [],
+    contractSignatureEvents: [],
   };
 }
 
 function ensureFinance(db) {
   if (!Array.isArray(db.clients)) db.clients = [];
   if (!Array.isArray(db.contracts)) db.contracts = [];
+  if (!Array.isArray(db.contractSignatureEvents)) db.contractSignatureEvents = [];
   if (!Array.isArray(db.financeCategories) || db.financeCategories.length === 0) {
     db.financeCategories = DEFAULT_FINANCE_CATEGORIES.map(({ key, ...rest }) => ({
       id: randomUUID(),
@@ -211,9 +213,9 @@ export const fileStore = {
   },
 
   async listProposals() {
-    return [...readDb().proposals].sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-    );
+    return [...readDb().proposals]
+      .filter((p) => p.status !== 'archived')
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   },
 
   async getProposal(id) {
@@ -289,13 +291,110 @@ export const fileStore = {
     return next;
   },
 
+  async archiveProposal(id) {
+    const db = readDb();
+    const idx = db.proposals.findIndex((p) => p.id === id);
+    if (idx < 0) return null;
+    const proposal = db.proposals[idx];
+    if (proposal.status === 'archived') return proposal;
+
+    const contract =
+      [...db.contracts]
+        .filter((c) => c.proposalId === id)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] ||
+      null;
+    const pipeline = resolvePipelineStatus(proposal, contract);
+    if (pipeline === 'active') {
+      const err = new Error(
+        'Oportunidade ativa: use Arquivar cliente ou marque como Churn.',
+      );
+      err.status = 400;
+      throw err;
+    }
+
+    const now = new Date().toISOString();
+    db.proposals[idx] = {
+      ...proposal,
+      status: 'archived',
+      pipelineStatus: 'lost',
+      updatedAt: now,
+    };
+    writeDb(db);
+    if (contract && this.applyPipelineToContract) {
+      await this.applyPipelineToContract(id, 'lost');
+    }
+    return db.proposals[idx];
+  },
+
   async listClients() {
+    return [...readDb().clients]
+      .filter((c) => !c.archivedAt)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  },
+
+  async listClientsIncludingArchived() {
     return [...readDb().clients].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
     );
   },
 
   async getClient(id) {
+    return readDb().clients.find((c) => c.id === id) || null;
+  },
+
+  async archiveClient(id) {
+    const db = readDb();
+    const idx = db.clients.findIndex((c) => c.id === id);
+    if (idx < 0) return null;
+    const already = Boolean(db.clients[idx].archivedAt);
+    if (!already) {
+      const now = new Date().toISOString();
+      db.clients[idx] = {
+        ...db.clients[idx],
+        archivedAt: now,
+        updatedAt: now,
+      };
+      for (let i = 0; i < db.proposals.length; i += 1) {
+        if (db.proposals[i].clientId === id) {
+          db.proposals[i] = {
+            ...db.proposals[i],
+            status: 'lost',
+            pipelineStatus: 'lost',
+            updatedAt: now,
+          };
+        }
+      }
+      const contractIds = new Set();
+      for (let i = 0; i < db.contracts.length; i += 1) {
+        if (
+          db.contracts[i].clientId === id &&
+          db.contracts[i].status !== 'cancelled'
+        ) {
+          db.contracts[i] = {
+            ...db.contracts[i],
+            status: 'cancelled',
+            updatedAt: now,
+          };
+          contractIds.add(db.contracts[i].id);
+        }
+      }
+      db.financeEntries = db.financeEntries.map((e) => {
+        const linked =
+          e.clientId === id || (e.contractId && contractIds.has(e.contractId));
+        if (!linked) return e;
+        if (['received', 'paid', 'cancelled'].includes(e.status)) return e;
+        return { ...e, status: 'cancelled', updatedAt: now };
+      });
+      writeDb(db);
+      const proposalIds = db.proposals
+        .filter((p) => p.clientId === id)
+        .map((p) => p.id);
+      for (const proposalId of proposalIds) {
+        if (this.applyPipelineToContract) {
+          await this.applyPipelineToContract(proposalId, 'lost');
+        }
+      }
+    }
     return readDb().clients.find((c) => c.id === id) || null;
   },
 
@@ -322,6 +421,8 @@ export const fileStore = {
       legalRepRole: input.legalRepRole || '',
       legalRepDocument: input.legalRepDocument || '',
       notes: input.notes || '',
+      archivedAt: null,
+      asaasCustomerId: input.asaasCustomerId || '',
       createdAt: now,
       updatedAt: now,
     };
@@ -334,10 +435,11 @@ export const fileStore = {
     const db = readDb();
     const idx = db.clients.findIndex((c) => c.id === id);
     if (idx < 0) return null;
+    const { archivedAt: _ignore, ...safePatch } = patch;
     const next = {
       ...db.clients[idx],
       ...Object.fromEntries(
-        Object.entries(patch).filter(([, v]) => v !== undefined),
+        Object.entries(safePatch).filter(([, v]) => v !== undefined),
       ),
       updatedAt: new Date().toISOString(),
     };
@@ -347,6 +449,19 @@ export const fileStore = {
   },
 
   async listContracts() {
+    const clients = Object.fromEntries(
+      readDb().clients.map((c) => [c.id, c]),
+    );
+    return [...readDb().contracts]
+      .filter((c) => {
+        if (!c.clientId) return true;
+        const client = clients[c.clientId];
+        return client && !client.archivedAt;
+      })
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  },
+
+  async listContractsIncludingArchived() {
     return [...readDb().contracts].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
     );
@@ -358,6 +473,58 @@ export const fileStore = {
 
   async getContractBySlug(slug) {
     return readDb().contracts.find((c) => c.publicSlug === slug) || null;
+  },
+
+  async getContractBySigningToken(token) {
+    if (!token) return null;
+    return readDb().contracts.find((c) => c.signingToken === token) || null;
+  },
+
+  async prepareContractForSend(id, { token, expiresAt }) {
+    return this.updateContract(id, {
+      signingToken: token,
+      signingTokenExpiresAt: expiresAt.toISOString(),
+      status: 'sent',
+    });
+  },
+
+  async applyContractSignature(id, data) {
+    const current = await this.getContract(id);
+    if (!current) return null;
+    return this.updateContract(id, {
+      status: 'signed',
+      signedAt: data.signedAt,
+      signerName: data.signerName || '',
+      signerEmail: data.signerEmail || '',
+      signerDocument: data.signerDocument || '',
+      signerIp: data.signerIp || '',
+      signerUserAgent: data.signerUserAgent || '',
+      contentHash: data.contentHash || '',
+      signedPdfPath: data.signedPdfPath || '',
+      acceptanceClientName: data.signerName || current.acceptanceClientName || '',
+      signingToken: null,
+      signingTokenExpiresAt: null,
+    });
+  },
+
+  async addSignatureEvent(contractId, eventType, meta = {}) {
+    const db = readDb();
+    const event = {
+      id: randomUUID(),
+      contractId,
+      eventType,
+      meta,
+      createdAt: new Date().toISOString(),
+    };
+    db.contractSignatureEvents.push(event);
+    writeDb(db);
+    return event;
+  },
+
+  async listSignatureEvents(contractId) {
+    return readDb()
+      .contractSignatureEvents.filter((e) => e.contractId === contractId)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   },
 
   async getContractByProposal(proposalId) {
@@ -415,6 +582,22 @@ export const fileStore = {
       feePayDay: input.feePayDay ?? 5,
       setupDueDays: input.setupDueDays ?? 0,
       commissionEstimate: Number(input.commissionEstimate ?? 0),
+      setupDueDate: input.setupDueDate || '',
+      feeFirstDueDate: input.feeFirstDueDate || '',
+      asaasBillingType: input.asaasBillingType || 'UNDEFINED',
+      asaasSubscriptionId: input.asaasSubscriptionId || '',
+      asaasSetupPaymentId: input.asaasSetupPaymentId || '',
+      asaasSyncedAt: input.asaasSyncedAt || null,
+      signingToken: null,
+      signingTokenExpiresAt: null,
+      signedAt: null,
+      signerName: '',
+      signerEmail: '',
+      signerDocument: '',
+      signerIp: '',
+      signerUserAgent: '',
+      contentHash: '',
+      signedPdfPath: '',
       createdAt: now,
       updatedAt: now,
     };
@@ -466,7 +649,38 @@ export const fileStore = {
   },
 
   async listFinanceEntries(filters = {}) {
-    let entries = [...readDb().financeEntries];
+    const db = readDb();
+    let entries = [...db.financeEntries];
+
+    if (!filters.includeClosed) {
+      const now = new Date().toISOString();
+      const archivedClientIds = new Set(
+        db.clients.filter((c) => c.archivedAt).map((c) => c.id),
+      );
+      const closedContractIds = new Set(
+        db.contracts
+          .filter((c) => ['cancelled', 'churn'].includes(c.status))
+          .map((c) => c.id),
+      );
+      let changed = false;
+      db.financeEntries = db.financeEntries.map((e) => {
+        const closed =
+          (e.clientId && archivedClientIds.has(e.clientId)) ||
+          (e.contractId && closedContractIds.has(e.contractId));
+        if (!closed || ['received', 'paid', 'cancelled'].includes(e.status)) {
+          return e;
+        }
+        changed = true;
+        return { ...e, status: 'cancelled', updatedAt: now };
+      });
+      if (changed) writeDb(db);
+      entries = [...readDb().financeEntries].filter((e) => {
+        if (e.clientId && archivedClientIds.has(e.clientId)) return false;
+        if (e.contractId && closedContractIds.has(e.contractId)) return false;
+        return true;
+      });
+    }
+
     if (filters.type) entries = entries.filter((e) => e.type === filters.type);
     if (filters.origin) {
       entries = entries.filter((e) => e.origin === filters.origin);
@@ -486,10 +700,17 @@ export const fileStore = {
         return true;
       });
     }
-    entries = entries.map((e) => ({
-      ...e,
-      status: resolveEntryStatus(e),
-    }));
+    entries = entries.map((e) => {
+      const c = e.clientId
+        ? db.clients.find((x) => x.id === e.clientId)
+        : null;
+      const clientName = c ? c.tradeName || c.legalName || '' : '';
+      return {
+        ...e,
+        status: resolveEntryStatus(e),
+        clientName,
+      };
+    });
     if (filters.status) {
       entries = entries.filter((e) => e.status === filters.status);
     }
@@ -518,12 +739,28 @@ export const fileStore = {
       proposalId: input.proposalId || null,
       recurrenceGroupId: input.recurrenceGroupId || null,
       notes: input.notes || '',
+      asaasPaymentId: input.asaasPaymentId || '',
+      invoiceUrl: input.invoiceUrl || '',
+      billingType: input.billingType || '',
       createdAt: now,
       updatedAt: now,
     };
     db.financeEntries.push(entry);
     writeDb(db);
     return entry;
+  },
+
+  async getFinanceEntry(id) {
+    const entry = readDb().financeEntries.find((e) => e.id === id);
+    return entry ? { ...entry, status: resolveEntryStatus(entry) } : null;
+  },
+
+  async getFinanceEntryByAsaasPaymentId(asaasPaymentId) {
+    if (!asaasPaymentId) return null;
+    const entry = readDb().financeEntries.find(
+      (e) => e.asaasPaymentId === asaasPaymentId,
+    );
+    return entry ? { ...entry, status: resolveEntryStatus(entry) } : null;
   },
 
   async updateFinanceEntry(id, patch) {
@@ -558,13 +795,14 @@ export const fileStore = {
     today.setHours(0, 0, 0, 0);
     const todayIso = toISODate(today);
 
-    // Cancel future scheduled contract-origin entries
+    // Cancel future scheduled contract-origin entries (keep ones already sent to Asaas)
     db.financeEntries = db.financeEntries.map((e) => {
       if (e.contractId !== contractId) return e;
-      if (!['contract_setup', 'contract_fee', 'contract_commission'].includes(e.origin)) {
+      if (!['contract_setup', 'contract_fee'].includes(e.origin)) {
         return e;
       }
       if (['received', 'paid'].includes(e.status)) return e;
+      if (e.asaasPaymentId) return e;
       const dueIso = toISODate(parseBRDate(e.dueDate));
       if (dueIso && dueIso >= todayIso) {
         return { ...e, status: 'cancelled', updatedAt: new Date().toISOString() };
@@ -572,17 +810,34 @@ export const fileStore = {
       return e;
     });
 
-    const schedule = buildContractSchedule(contract, cats, 12);
+    const scheduleClient = contract.clientId
+      ? db.clients.find((c) => c.id === contract.clientId)
+      : null;
+    const clientName =
+      scheduleClient?.tradeName || scheduleClient?.legalName || '';
+    const schedule = buildContractSchedule(contract, cats, 12, clientName);
     const now = new Date().toISOString();
+    const existing = db.financeEntries.filter(
+      (e) => e.contractId === contractId && e.status !== 'cancelled',
+    );
     for (const item of schedule) {
       const dueIso = toISODate(parseBRDate(item.dueDate));
       if (dueIso && dueIso < todayIso && item.origin !== 'contract_setup') {
-        // still create past fee months in current horizon? Skip past monthly except keep setup if past
         continue;
       }
+      const already = existing.some(
+        (e) =>
+          e.origin === item.origin &&
+          (e.asaasPaymentId ||
+            toISODate(parseBRDate(e.dueDate)) === dueIso),
+      );
+      if (already) continue;
       db.financeEntries.push({
         id: randomUUID(),
         ...item,
+        asaasPaymentId: item.asaasPaymentId || '',
+        invoiceUrl: item.invoiceUrl || '',
+        billingType: item.billingType || '',
         createdAt: now,
         updatedAt: now,
       });
@@ -592,12 +847,9 @@ export const fileStore = {
     return this.listFinanceEntries({ contractId });
   },
 
-  /** Cancela recebíveis futuros gerados pelo contrato (churn/perdido) */
+  /** Cancela recebíveis em aberto do contrato (churn/perdido/arquivado) */
   async cancelFutureContractEntries(contractId) {
     const db = readDb();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayIso = toISODate(today);
     const now = new Date().toISOString();
     let changed = 0;
 
@@ -605,12 +857,8 @@ export const fileStore = {
       if (e.contractId !== contractId) return e;
       if (!isContractOrigin(e.origin)) return e;
       if (['received', 'paid', 'cancelled'].includes(e.status)) return e;
-      const dueIso = toISODate(parseBRDate(e.dueDate));
-      if (dueIso && dueIso >= todayIso) {
-        changed += 1;
-        return { ...e, status: 'cancelled', updatedAt: now };
-      }
-      return e;
+      changed += 1;
+      return { ...e, status: 'cancelled', updatedAt: now };
     });
 
     if (changed) writeDb(db);
@@ -685,13 +933,16 @@ export const fileStore = {
 
     const today = new Date();
     const leads = [...db.proposals]
+      .filter((p) => p.status !== 'archived')
       .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
       .map((proposal) => {
         const contract = contractsByProposal[proposal.id] || null;
+        const linkedClientId = proposal.clientId || contract?.clientId || null;
+        const linkedClient = linkedClientId ? clients[linkedClientId] : null;
+        if (linkedClient?.archivedAt) return null;
+
         const client =
-          (proposal.clientId && clients[proposal.clientId]) ||
-          (contract?.clientId && clients[contract.clientId]) ||
-          null;
+          linkedClient && !linkedClient.archivedAt ? linkedClient : null;
 
         let stage = resolveLegacyStage(proposal, contract);
         const pipelineStatus = resolvePipelineStatus(proposal, contract);
@@ -724,7 +975,8 @@ export const fileStore = {
           nextReceivables,
           finance: summarizeLeadFinance(contractEntries, today),
         };
-      });
+      })
+      .filter(Boolean);
 
     return leads;
   },

@@ -1,4 +1,5 @@
 import { formatCurrency, resolveServiceNames } from '../../data/proposalTemplates';
+import { resolvePrintLogo } from '../../lib/printLogo';
 
 export default function ProposalPreview({
   proposal,
@@ -6,6 +7,7 @@ export default function ProposalPreview({
   services,
   printId = 'proposal-print',
 }) {
+  const logoSrc = resolvePrintLogo(settings?.logoUrl);
   const setupServices = resolveServiceNames(
     proposal.setupServiceIds,
     services,
@@ -31,18 +33,16 @@ export default function ProposalPreview({
     <div id={printId} className="proposal-sheet">
       <header className="proposal-sheet__header">
         <div className="proposal-sheet__brand">
-          {settings?.logoUrl ? (
-            <img src={settings.logoUrl} alt={settings.companyName || 'Symbius'} />
-          ) : (
-            <strong>Symbius</strong>
-          )}
+          <img src={logoSrc} alt={settings?.companyName || 'Symbius'} />
         </div>
         <div className="proposal-sheet__meta">
           <div className="proposal-sheet__date">{proposal.date}</div>
-          <p>{settings?.contactEmail}</p>
-          <p>{settings?.contactWebsite}</p>
-          <p>{settings?.contactPhone}</p>
-          {proposal.number && <p className="proposal-sheet__number">{proposal.number}</p>}
+          {settings?.contactEmail && <p>{settings.contactEmail}</p>}
+          {settings?.contactWebsite && <p>{settings.contactWebsite}</p>}
+          {settings?.contactPhone && <p>{settings.contactPhone}</p>}
+          {proposal.number && (
+            <p className="proposal-sheet__number">{proposal.number}</p>
+          )}
         </div>
       </header>
 
@@ -84,41 +84,47 @@ export default function ProposalPreview({
         <table className="proposal-sheet__table">
           <thead>
             <tr>
-              <th>Descrição</th>
-              <th>Condição</th>
-              <th>Valor</th>
+              <th className="proposal-sheet__col-desc">Descrição</th>
+              <th className="proposal-sheet__col-cond">Condição</th>
+              <th className="proposal-sheet__col-val">Valor</th>
             </tr>
           </thead>
           <tbody>
             {isBlank &&
               (proposal.blankItems || []).map((item) => (
                 <tr key={item.id}>
-                  <td>
+                  <td className="proposal-sheet__col-desc">
                     <strong>{item.description || 'Item'}</strong>
                     {item.footerDetail && <small>{item.footerDetail}</small>}
                   </td>
-                  <td>{item.unitDetail || '—'}</td>
-                  <td>{formatCurrency(item.totalValue)}</td>
+                  <td className="proposal-sheet__col-cond">
+                    {item.unitDetail || '—'}
+                  </td>
+                  <td className="proposal-sheet__col-val">
+                    {formatCurrency(item.totalValue)}
+                  </td>
                 </tr>
               ))}
 
             {!isBlank && proposal.setupEnabled && (
               <tr>
-                <td>
+                <td className="proposal-sheet__col-desc">
                   <strong>{proposal.setupTitle}</strong>
                   {setupServices.length > 0 && (
                     <small>Inclui: {setupServices.join(', ')}</small>
                   )}
                   {proposal.setupFooter && <small>{proposal.setupFooter}</small>}
                 </td>
-                <td>Único</td>
-                <td>{formatCurrency(proposal.setupPrice)}</td>
+                <td className="proposal-sheet__col-cond">Único</td>
+                <td className="proposal-sheet__col-val">
+                  {formatCurrency(proposal.setupPrice)}
+                </td>
               </tr>
             )}
 
             {!isBlank && proposal.operationEnabled && (
               <tr>
-                <td>
+                <td className="proposal-sheet__col-desc">
                   <strong>{proposal.operationTitle}</strong>
                   {operationServices.length > 0 && (
                     <small>Inclui: {operationServices.join(', ')}</small>
@@ -127,21 +133,25 @@ export default function ProposalPreview({
                     <small>{proposal.operationFooter}</small>
                   )}
                 </td>
-                <td>Mensal</td>
-                <td>{formatCurrency(proposal.operationPrice)}</td>
+                <td className="proposal-sheet__col-cond">Mensal</td>
+                <td className="proposal-sheet__col-val">
+                  {formatCurrency(proposal.operationPrice)}
+                </td>
               </tr>
             )}
 
             {!isBlank && proposal.trafficEnabled && (
               <tr>
-                <td>
+                <td className="proposal-sheet__col-desc">
                   <strong>Tráfego pago</strong>
                   {proposal.trafficFooter && (
                     <small>{proposal.trafficFooter}</small>
                   )}
                 </td>
-                <td>À parte</td>
-                <td>{formatCurrency(proposal.trafficPrice)}</td>
+                <td className="proposal-sheet__col-cond">À parte</td>
+                <td className="proposal-sheet__col-val">
+                  {formatCurrency(proposal.trafficPrice)}
+                </td>
               </tr>
             )}
           </tbody>
@@ -149,16 +159,16 @@ export default function ProposalPreview({
 
         <div className="proposal-sheet__totals">
           {uniqueTotal > 0 && (
-            <p>
+            <div className="proposal-sheet__total-row">
               <span>Total único</span>
               <strong>{formatCurrency(uniqueTotal)}</strong>
-            </p>
+            </div>
           )}
           {monthlyTotal > 0 && (
-            <p>
+            <div className="proposal-sheet__total-row">
               <span>Total mensal</span>
               <strong>{formatCurrency(monthlyTotal)}</strong>
-            </p>
+            </div>
           )}
         </div>
       </section>

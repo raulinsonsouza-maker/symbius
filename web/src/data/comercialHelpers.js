@@ -327,5 +327,113 @@ export function buildComercialDashboard(leads = []) {
     churnRate,
     activeFees,
     mix,
+    funnelStages,
+  };
+}
+
+/** Ordem do fluxo no painel do lead */
+export const LEAD_FLOW_STEPS = [
+  { id: 'proposta', label: 'Proposta', sec: 'proposta' },
+  { id: 'cliente', label: 'Cliente', sec: 'cliente' },
+  { id: 'contrato', label: 'Contrato', sec: 'contrato' },
+  { id: 'assinatura', label: 'Assinatura', sec: 'assinatura' },
+  { id: 'financeiro', label: 'Financeiro', sec: 'financeiro' },
+];
+
+/**
+ * Resolve progresso do lead e o próximo passo sugerido.
+ * @returns {{
+ *   steps: Array<{id:string,label:string,sec:string,done:boolean,current:boolean}>,
+ *   nextSec: string,
+ *   nextLabel: string,
+ *   nextHint: string,
+ *   currentStepId: string
+ * }}
+ */
+export function resolveLeadProgress(lead) {
+  const proposal = lead?.proposal;
+  const client = lead?.client;
+  const contract = lead?.contract;
+
+  const hasProposal = Boolean(
+    proposal?.id &&
+      (String(proposal.title || '').trim() ||
+        String(proposal.clientName || '').trim() ||
+        proposal.number),
+  );
+  const hasClient = Boolean(
+    client?.id && String(client.email || '').trim(),
+  );
+  const hasClientPartial = Boolean(client?.id);
+  const hasContract = Boolean(contract?.id);
+  const isSigned =
+    Boolean(contract?.signedAt) ||
+    contract?.status === 'signed' ||
+    Boolean(contract?.signature?.signed);
+  const isSent =
+    isSigned ||
+    contract?.status === 'sent' ||
+    Boolean(contract?.signingToken) ||
+    Boolean(contract?.signature?.hasActiveToken);
+
+  const doneMap = {
+    proposta: hasProposal,
+    cliente: hasClient,
+    contrato: hasContract,
+    assinatura: isSigned,
+    financeiro: hasContract,
+  };
+
+  let nextSec = 'proposta';
+  let nextLabel = 'Proposta';
+  let nextHint = 'Revise e finalize a proposta comercial.';
+  let currentStepId = 'proposta';
+
+  if (!hasProposal) {
+    nextSec = 'proposta';
+    nextLabel = 'Completar proposta';
+    nextHint = 'Preencha a proposta antes de cadastrar o cliente.';
+    currentStepId = 'proposta';
+  } else if (!hasClientPartial) {
+    nextSec = 'cliente';
+    nextLabel = 'Cadastrar cliente';
+    nextHint = 'Cadastre o cliente (com e-mail) para gerar o contrato.';
+    currentStepId = 'cliente';
+  } else if (!hasClient) {
+    nextSec = 'cliente';
+    nextLabel = 'Completar e-mail do cliente';
+    nextHint = 'O e-mail é necessário para enviar o contrato para assinatura.';
+    currentStepId = 'cliente';
+  } else if (!hasContract) {
+    nextSec = 'contrato';
+    nextLabel = 'Gerar contrato';
+    nextHint = 'Gere o contrato a partir da proposta e da remuneração.';
+    currentStepId = 'contrato';
+  } else if (!isSigned) {
+    nextSec = 'assinatura';
+    nextLabel = isSent ? 'Aguardando assinatura' : 'Enviar para assinatura';
+    nextHint = isSent
+      ? 'O contrato foi enviado. Acompanhe a assinatura do cliente.'
+      : 'Envie o contrato por e-mail para o cliente assinar.';
+    currentStepId = 'assinatura';
+  } else {
+    nextSec = 'financeiro';
+    nextLabel = 'Ver financeiro';
+    nextHint = 'Contrato assinado. Acompanhe a agenda de recebíveis.';
+    currentStepId = 'financeiro';
+  }
+
+  const steps = LEAD_FLOW_STEPS.map((step) => ({
+    ...step,
+    done: Boolean(doneMap[step.id]),
+    current: step.id === currentStepId,
+  }));
+
+  return {
+    steps,
+    nextSec,
+    nextLabel,
+    nextHint,
+    currentStepId,
   };
 }

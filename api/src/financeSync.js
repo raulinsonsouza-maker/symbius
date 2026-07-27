@@ -51,57 +51,75 @@ function addDays(date, days) {
   return d;
 }
 
-function monthsFrom(start, count) {
-  const out = [];
-  for (let i = 0; i < count; i += 1) {
-    out.push(new Date(start.getFullYear(), start.getMonth() + i, 1));
-  }
-  return out;
-}
-
 /**
  * Build scheduled finance entries from a contract (does not persist).
- * horizonMonths: how many monthly fee/commission entries to create.
+ * Setup + fee only. Commission is issued manually via Asaas.
  */
-export function buildContractSchedule(contract, categoriesByKey = {}, horizonMonths = 12) {
+export function buildContractSchedule(
+  contract,
+  categoriesByKey = {},
+  horizonMonths = 12,
+  clientName = '',
+) {
   const start = parseBRDate(contract.startDate) || new Date();
   const setupDueDays = Number(contract.setupDueDays) || 0;
   const feePayDay = Number(contract.feePayDay) || 5;
-  const commissionPayDay = Number(contract.commissionPayDay) || 6;
   const groupId = contract.id || randomUUID();
   const entries = [];
+  const who = String(clientName || '').trim();
+  const label = (title, number) =>
+    [who || null, title || null, number || null].filter(Boolean).join(' · ');
+
+  const setupDue =
+    parseBRDate(contract.setupDueDate) || addDays(start, setupDueDays);
+  const feeFirst =
+    parseBRDate(contract.feeFirstDueDate) ||
+    new Date(
+      start.getFullYear(),
+      start.getMonth(),
+      clampDay(start.getFullYear(), start.getMonth(), feePayDay),
+    );
 
   if (contract.setupEnabled && Number(contract.setupPrice) > 0) {
-    const due = addDays(start, setupDueDays);
     entries.push({
       type: 'income',
       origin: 'contract_setup',
       status: 'scheduled',
       amount: Number(contract.setupPrice) || 0,
-      dueDate: formatBRDate(due),
+      dueDate: formatBRDate(setupDue),
       paidAt: null,
-      description: `${contract.setupTitle || 'Setup'} — ${contract.number || ''}`.trim(),
+      description: label(
+        contract.setupTitle || 'Setup',
+        contract.number || '',
+      ),
       categoryId: categoriesByKey.setup || null,
       clientId: contract.clientId || null,
       contractId: contract.id || null,
       proposalId: contract.proposalId || null,
       recurrenceGroupId: `${groupId}:setup`,
       notes: '',
+      billingType: contract.asaasBillingType || '',
     });
   }
 
   if (contract.feeEnabled && Number(contract.feePrice) > 0) {
-    for (const monthStart of monthsFrom(start, horizonMonths)) {
+    const feeDay = feeFirst.getDate();
+    for (let i = 0; i < horizonMonths; i += 1) {
+      const monthStart = new Date(
+        feeFirst.getFullYear(),
+        feeFirst.getMonth() + i,
+        1,
+      );
       const day = clampDay(
         monthStart.getFullYear(),
         monthStart.getMonth(),
-        feePayDay,
+        feeDay,
       );
-      const due = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
-      // Skip fee in the start month if start day is after pay day? Keep inclusive from start month.
-      if (due < addDays(start, -0)) {
-        // still include if same month
-      }
+      const due = new Date(
+        monthStart.getFullYear(),
+        monthStart.getMonth(),
+        day,
+      );
       entries.push({
         type: 'income',
         origin: 'contract_fee',
@@ -109,40 +127,17 @@ export function buildContractSchedule(contract, categoriesByKey = {}, horizonMon
         amount: Number(contract.feePrice) || 0,
         dueDate: formatBRDate(due),
         paidAt: null,
-        description: `${contract.feeTitle || 'Fee mensal'} — ${contract.number || ''}`.trim(),
+        description: label(
+          contract.feeTitle || 'Fee mensal',
+          contract.number || '',
+        ),
         categoryId: categoriesByKey.fee || null,
         clientId: contract.clientId || null,
         contractId: contract.id || null,
         proposalId: contract.proposalId || null,
         recurrenceGroupId: `${groupId}:fee`,
         notes: '',
-      });
-    }
-  }
-
-  if (contract.commissionEnabled) {
-    const estimate = Number(contract.commissionEstimate) || 0;
-    for (const monthStart of monthsFrom(start, horizonMonths)) {
-      const day = clampDay(
-        monthStart.getFullYear(),
-        monthStart.getMonth(),
-        commissionPayDay,
-      );
-      const due = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
-      entries.push({
-        type: 'income',
-        origin: 'contract_commission',
-        status: 'scheduled',
-        amount: estimate,
-        dueDate: formatBRDate(due),
-        paidAt: null,
-        description: `Comissão — ${contract.number || ''}`.trim(),
-        categoryId: categoriesByKey.commission || null,
-        clientId: contract.clientId || null,
-        contractId: contract.id || null,
-        proposalId: contract.proposalId || null,
-        recurrenceGroupId: `${groupId}:commission`,
-        notes: 'Valor estimado — ajuste conforme faturamento real',
+        billingType: contract.asaasBillingType || '',
       });
     }
   }

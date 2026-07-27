@@ -1,23 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../../lib/api';
-import {
-  buildContractDraft,
-  emptyClient,
-} from '../../../data/contractTemplates';
-import ClientFields from '../../../components/clientes/ClientFields';
+import { buildContractDraft } from '../../../data/contractTemplates';
+import { formatCurrency } from '../../../data/proposalTemplates';
+import { proposalInvestmentSummary } from '../../../data/comercialHelpers';
 import RemunerationEditor from '../../../components/contratos/RemunerationEditor';
+import {
+  BillingTypeSelect,
+  fromDateInputValue,
+  toDateInputValue,
+} from '../../../components/contratos/AsaasBillingFields';
 
 export default function CloseLead() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [proposal, setProposal] = useState(null);
-  const [settings, setSettings] = useState(null);
-  const [clients, setClients] = useState([]);
+  const [client, setClient] = useState(null);
   const [contract, setContract] = useState(null);
-  const [clientMode, setClientMode] = useState('new');
-  const [selectedClientId, setSelectedClientId] = useState('');
-  const [newClient, setNewClient] = useState(emptyClient());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -26,33 +25,41 @@ export default function CloseLead() {
     let cancelled = false;
     (async () => {
       try {
-        const [proposalData, settingsData, servicesData, clientList, contracts] =
+        const [proposalData, settingsData, servicesData, contracts] =
           await Promise.all([
             api.getProposal(id),
             api.getSettings(),
             api.listServices(),
-            api.listClients(),
             api.listContracts(),
           ]);
         if (cancelled) return;
+
         const existing = contracts.find((c) => c.proposalId === id);
         if (existing) {
-          navigate(`/admin/comercial/${id}`, { replace: true });
+          navigate(`/admin/comercial/${id}?sec=contrato`, { replace: true });
           return;
         }
-        setProposal(proposalData);
-        setSettings(settingsData);
-        setClients(clientList);
-        setContract(buildContractDraft(proposalData, settingsData, servicesData));
-        setNewClient((prev) => ({
-          ...prev,
-          legalName: proposalData.clientName || '',
-          tradeName: proposalData.clientName || '',
-        }));
-        if (clientList.length) {
-          setClientMode('existing');
-          setSelectedClientId(clientList[0].id);
+
+        if (!proposalData.clientId) {
+          navigate(`/admin/comercial/${id}?sec=cliente`, { replace: true });
+          return;
         }
+
+        const clientData = await api.getClient(proposalData.clientId);
+        if (!clientData || clientData.archivedAt) {
+          navigate(`/admin/comercial/${id}?sec=cliente`, { replace: true });
+          return;
+        }
+
+        const draft = buildContractDraft(
+          proposalData,
+          settingsData,
+          servicesData,
+        );
+
+        setProposal(proposalData);
+        setClient(clientData);
+        setContract(draft);
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -64,16 +71,17 @@ export default function CloseLead() {
     };
   }, [id, navigate]);
 
-  const canSubmit = useMemo(() => {
-    if (clientMode === 'existing') return Boolean(selectedClientId);
-    return newClient.legalName.trim().length > 0;
-  }, [clientMode, selectedClientId, newClient]);
+  const canSubmit = useMemo(
+    () => Boolean(client?.id && contract),
+    [client, contract],
+  );
 
   async function finish() {
     setSaving(true);
     setError('');
     try {
       const payload = {
+        clientId: client.id,
         contract: {
           ...contract,
           feePayDay: contract.feePayDay ?? 5,
@@ -81,17 +89,15 @@ export default function CloseLead() {
           status: 'active',
         },
       };
-      if (clientMode === 'existing') payload.clientId = selectedClientId;
-      else payload.client = newClient;
       await api.convertProposal(id, payload);
-      navigate(`/admin/comercial/${id}`, { replace: true });
+      navigate(`/admin/comercial/${id}?sec=assinatura`, { replace: true });
     } catch (err) {
       setError(err.message);
       setSaving(false);
     }
   }
 
-  if (loading || !proposal || !contract) {
+  if (loading || !proposal || !contract || !client) {
     return (
       <div className="admin-shell prop-shell">
         <main className="admin-shell__main">
@@ -108,80 +114,139 @@ export default function CloseLead() {
           <Link to={`/admin/comercial/${id}`} className="prop-back">
             ← Painel
           </Link>
-          <span className="admin-shell__label">Fechar e gerar contrato</span>
+          <span className="admin-shell__label">Gerar contrato</span>
         </div>
       </header>
 
       <main className="admin-shell__main prop-single-col">
         {error && <p className="prop-error">{error}</p>}
 
-        <section className="prop-card">
-          <h3>1. Cliente</h3>
-          <div className="prop-template-row" style={{ marginBottom: 16 }}>
-            <button
-              type="button"
-              className={`prop-chip ${clientMode === 'existing' ? 'is-active' : ''}`}
-              onClick={() => setClientMode('existing')}
-              disabled={!clients.length}
-            >
-              Existente
-            </button>
-            <button
-              type="button"
-              className={`prop-chip ${clientMode === 'new' ? 'is-active' : ''}`}
-              onClick={() => setClientMode('new')}
-            >
-              Novo
-            </button>
+        <section className="prop-card close-lead__summary">
+          <h3>Resumo</h3>
+          <div className="close-lead__summary-grid">
+            <div>
+              <span>Proposta</span>
+              <strong>{proposal.number || '—'}</strong>
+            </div>
+            <div>
+              <span>Cliente</span>
+              <strong>
+                {client.legalName || client.tradeName || '—'}
+              </strong>
+            </div>
+            <div>
+              <span>E-mail</span>
+              <strong>{client.email || '—'}</strong>
+            </div>
+            <div>
+              <span>Investimento</span>
+              <strong>{proposalInvestmentSummary(proposal)}</strong>
+            </div>
           </div>
-          {clientMode === 'existing' ? (
-            <label className="prop-full">
-              Cliente
-              <select
-                value={selectedClientId}
-                onChange={(e) => setSelectedClientId(e.target.value)}
-              >
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.legalName || c.tradeName} — {c.document || 'sem doc.'}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <ClientFields client={newClient} onChange={setNewClient} />
-          )}
+          <p className="prop-muted" style={{ margin: '12px 0 0' }}>
+            Confirme a remuneração e gere o contrato. Em seguida, envie para
+            assinatura na etapa Assinatura.
+          </p>
         </section>
 
         <section className="prop-card">
-          <h3>2. Condições e remuneração</h3>
+          <h3>Condições e remuneração</h3>
           <div className="prop-form-row">
             <label>
-              Data de início
+              Início do contrato
               <input
-                value={contract.startDate}
-                onChange={(e) =>
-                  setContract({ ...contract, startDate: e.target.value })
-                }
-              />
-            </label>
-            <label>
-              Dia pagamento fee
-              <input
-                type="number"
-                min="1"
-                max="31"
-                value={contract.feePayDay ?? 5}
+                type="date"
+                value={toDateInputValue(contract.startDate)}
                 onChange={(e) =>
                   setContract({
                     ...contract,
-                    feePayDay: Number(e.target.value),
+                    startDate: fromDateInputValue(e.target.value),
                   })
                 }
               />
             </label>
+            <label>
+              Prazo mínimo (dias)
+              <input
+                type="number"
+                min="0"
+                value={contract.minTermDays ?? 90}
+                onChange={(e) =>
+                  setContract({
+                    ...contract,
+                    minTermDays: Number(e.target.value),
+                  })
+                }
+              />
+            </label>
+            <label>
+              Forma de cobrança
+              <BillingTypeSelect
+                value={contract.asaasBillingType}
+                onChange={(asaasBillingType) =>
+                  setContract({ ...contract, asaasBillingType })
+                }
+              />
+            </label>
           </div>
+          <div className="prop-form-row">
+            {contract.setupEnabled && (
+              <label>
+                Vencimento do setup
+                <input
+                  type="date"
+                  value={toDateInputValue(contract.setupDueDate)}
+                  onChange={(e) =>
+                    setContract({
+                      ...contract,
+                      setupDueDate: fromDateInputValue(e.target.value),
+                    })
+                  }
+                />
+              </label>
+            )}
+            {contract.feeEnabled && (
+              <label>
+                1ª cobrança do fee
+                <input
+                  type="date"
+                  value={toDateInputValue(contract.feeFirstDueDate)}
+                  onChange={(e) => {
+                    const feeFirstDueDate = fromDateInputValue(e.target.value);
+                    const day = Number(
+                      toDateInputValue(feeFirstDueDate).split('-')[2] || 5,
+                    );
+                    setContract({
+                      ...contract,
+                      feeFirstDueDate,
+                      feePayDay: day || 5,
+                    });
+                  }}
+                />
+              </label>
+            )}
+          </div>
+          {contract.feeEnabled && contract.feeFirstDueDate && (
+            <p className="prop-muted" style={{ margin: '0 0 12px' }}>
+              Fee repete todo dia {contract.feePayDay || '—'} de cada mês.
+            </p>
+          )}
           <RemunerationEditor contract={contract} onChange={setContract} />
+          {(contract.setupEnabled || contract.feeEnabled) && (
+            <p className="prop-muted" style={{ marginTop: 12 }}>
+              Resumo:{' '}
+              {[
+                contract.setupEnabled
+                  ? `Setup ${formatCurrency(contract.setupPrice)}`
+                  : null,
+                contract.feeEnabled
+                  ? `Fee ${formatCurrency(contract.feePrice)}/mês`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          )}
         </section>
 
         <div className="wizard-actions">

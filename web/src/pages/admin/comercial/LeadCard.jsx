@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../../lib/api';
 import {
   leadDisplayName,
   resolvePipelineStatus,
   proposalStatusFromPipeline,
+  resolveLeadProgress,
 } from '../../../data/comercialHelpers';
 import ClientPanelShell from './client-panel/ClientPanelShell';
 import ClientPanelHome from './client-panel/ClientPanelHome';
@@ -12,6 +13,7 @@ import {
   ClientPanelProposta,
   ClientPanelCliente,
   ClientPanelContrato,
+  ClientPanelAssinatura,
   ClientPanelFinanceiro,
 } from './client-panel/ClientPanelSections';
 
@@ -20,6 +22,7 @@ const SECTIONS = new Set([
   'proposta',
   'cliente',
   'contrato',
+  'assinatura',
   'financeiro',
 ]);
 
@@ -69,6 +72,11 @@ export default function LeadCard() {
     load();
   }, [id]);
 
+  const progress = useMemo(
+    () => (lead ? resolveLeadProgress(lead) : null),
+    [lead],
+  );
+
   function setSection(next) {
     const params = new URLSearchParams(searchParams);
     if (next === 'inicio') params.delete('sec');
@@ -80,8 +88,44 @@ export default function LeadCard() {
     navigate(`/admin/comercial/${id}/${tool}`);
   }
 
+  function goGenerateContract() {
+    if (!lead?.client?.id) {
+      setSection('cliente');
+      return;
+    }
+    navigate(`/admin/comercial/${id}/fechar`);
+  }
+
   function onClientSaved(updated) {
-    setLead((prev) => (prev ? { ...prev, client: updated } : prev));
+    setLead((prev) =>
+      prev
+        ? {
+            ...prev,
+            client: updated,
+            proposal: {
+              ...prev.proposal,
+              clientId: updated.id,
+              clientName:
+                updated.legalName ||
+                updated.tradeName ||
+                prev.proposal.clientName,
+            },
+          }
+        : prev,
+    );
+    load();
+  }
+
+  function onClientArchived() {
+    navigate('/admin/comercial');
+  }
+
+  function onProposalArchived() {
+    navigate('/admin/comercial');
+  }
+
+  function onContractUpdate(updated) {
+    setLead((prev) => (prev ? { ...prev, contract: updated } : prev));
   }
 
   async function onPipelineChange(pipeline) {
@@ -93,7 +137,6 @@ export default function LeadCard() {
         status,
         pipelineStatus: pipeline,
       });
-      // O backend ajusta o contrato e a agenda de recebíveis junto do pipeline
       await load();
     } catch (err) {
       setError(err.message);
@@ -137,9 +180,21 @@ export default function LeadCard() {
       section={section}
       onSectionChange={setSection}
       onPipelineChange={onPipelineChange}
+      progress={progress}
     >
       {section === 'inicio' && (
-        <ClientPanelHome lead={lead} entries={entries} />
+        <ClientPanelHome
+          lead={lead}
+          entries={entries}
+          progress={progress}
+          onContinue={(sec) => {
+            if (sec === 'contrato' && !lead.contract) {
+              goGenerateContract();
+              return;
+            }
+            setSection(sec);
+          }}
+        />
       )}
       {section === 'proposta' && (
         <ClientPanelProposta
@@ -147,13 +202,16 @@ export default function LeadCard() {
           settings={settings}
           services={services}
           onEdit={() => goTool('proposta')}
+          onArchived={onProposalArchived}
+          canArchive={pipelineStatus !== 'active'}
         />
       )}
       {section === 'cliente' && (
         <ClientPanelCliente
           client={client}
+          proposal={proposal}
           onSaved={onClientSaved}
-          onClose={() => goTool('fechar')}
+          onArchived={onClientArchived}
         />
       )}
       {section === 'contrato' && (
@@ -162,7 +220,15 @@ export default function LeadCard() {
           client={client}
           settings={settings}
           onEdit={() => goTool('contrato')}
-          onClose={() => goTool('fechar')}
+          onGenerate={goGenerateContract}
+        />
+      )}
+      {section === 'assinatura' && (
+        <ClientPanelAssinatura
+          contract={contract}
+          client={client}
+          onContractUpdate={onContractUpdate}
+          onGenerate={goGenerateContract}
         />
       )}
       {section === 'financeiro' && (
@@ -170,6 +236,14 @@ export default function LeadCard() {
           contract={contract}
           entries={entries}
           clientId={clientId}
+          onContractUpdate={onContractUpdate}
+          onEntriesRefresh={async () => {
+            if (contract?.id) {
+              setEntries(
+                await api.listFinanceEntries({ contractId: contract.id }),
+              );
+            }
+          }}
         />
       )}
     </ClientPanelShell>

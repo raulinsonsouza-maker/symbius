@@ -1,62 +1,57 @@
 import { formatCurrency, resolveServiceNames } from './proposalTemplates';
 
 export const DEFAULT_OBJECTIVE =
-  'O objetivo desta parceria é estruturar, otimizar e escalar os resultados de marketing e crescimento do contratante por meio da metodologia BrandGrowth da Symbius — unindo análise, marca, performance e acompanhamento contínuo da operação digital. O trabalho será orientado por otimização contínua, testes, melhoria de campanhas, análise de resultados e tomada de decisão baseada em dados.';
+  'Prestação de serviços de planejamento, configuração, gestão, monitoramento e otimização de campanhas de tráfego pago nas plataformas Meta Ads e Google Ads, com análise de aquisição, direcionamento de criativos e acompanhamento do funil comercial, em regime de obrigação de meio.';
 
 export const DEFAULT_SCOPE = [
-  'Planejamento estratégico de marca, mídia e crescimento conforme o escopo contratado',
-  'Gestão, criação, otimização e acompanhamento de campanhas e canais digitais relevantes para o projeto',
-  'Estruturação e acompanhamento de ações de prospecção, remarketing e escalonamento, quando aplicável',
-  'Monitoramento contínuo de performance e análise de oportunidades de otimização',
-  'Reuniões de alinhamento estratégico no intervalo definido neste contrato',
-  'Recomendações estratégicas para melhoria da performance comercial digital',
+  'Análise inicial da operação de aquisição e mensuração (contas, pixels, tags, CRM/BI quando existentes)',
+  'Planejamento e gestão de mídia paga (estratégia, configuração, monitoramento e otimizações)',
+  'Direcionamento de criativos via briefings ao time interno da CONTRATANTE',
+  'Análise do fluxo de leads e vendas no CRM/BI para orientar ajustes de mídia',
+  'Reunião de acompanhamento no intervalo definido neste contrato',
 ];
 
 export const DEFAULT_PROVIDER_RESPONSIBILITIES = [
-  'Planejamento, gestão e otimização das entregas e campanhas nos canais digitais relevantes para o projeto, conforme escopo contratado',
-  'Monitoramento contínuo da performance das ações e canais sob gestão da Symbius',
-  'Análise de dados e recomendações estratégicas para crescimento',
-  'Realização de reuniões de alinhamento no intervalo definido neste contrato para acompanhamento dos resultados e definição de próximos passos',
-  'Comunicação clara sobre progresso, riscos e oportunidades identificadas ao longo da operação',
+  'Executar os serviços com diligência técnica, observando escopo, orçamento aprovado e políticas das plataformas',
+  'Fornecer briefings e direcionamentos de criativos ao time indicado pela CONTRATANTE',
+  'Informar, em prazo razoável, problemas de rastreamento, contas, anúncios, verba ou criativos',
+  'Manter sigilo sobre acessos, informações estratégicas e dados pessoais',
 ];
 
 export const DEFAULT_CLIENT_RESPONSIBILITIES = [
-  'Disponibilizar acesso às plataformas, contas, materiais e informações necessárias para a execução do trabalho e acompanhamento dos resultados',
-  'Investir na verba de mídia acordada, quando aplicável, paga diretamente às plataformas utilizadas',
-  'Gerenciar toda a operação comercial, incluindo atendimento, pedidos, entregas, estoque, preços, promoções e pós-venda',
-  'Garantir o funcionamento adequado do site, produto, estoque, preços, promoções e condições comerciais',
-  'Participar das reuniões de alinhamento e colaborar com as decisões estratégicas do projeto',
-  'Fornecer feedback e aprovações em tempo hábil para não comprometer prazos e resultados',
+  'Disponibilizar acessos administrativos às contas e dados necessários à operação',
+  'Investir a verba de mídia acordada, paga diretamente às plataformas',
+  'Produzir e entregar criativos solicitados nos briefings, nos prazos acordados',
+  'Manter CRM e relatórios comerciais atualizados para atribuição de resultados',
+  'Gerenciar integralmente a operação comercial e operacional do negócio',
 ];
 
 export const DEFAULT_OUT_OF_SCOPE = [
-  'Atendimento comercial ou fechamento de vendas',
-  'Gestão de pedidos, logística, entrega ou pós-venda',
-  'Operação do negócio do contratante, incluindo estoque, preços, promoções ou condições comerciais',
-  'Produção operacional de fotos, vídeos ou materiais criativos fora do que estiver explicitamente incluído no escopo',
-  'Garantia de faturamento mínimo, ROI mínimo ou resultado comercial específico',
+  'Diagnóstico completo de marca, pesquisa formal de público ou reposicionamento',
+  'Produção final de criativos, fotos, vídeos ou landing pages',
+  'Gestão de redes sociais orgânicas, influenciadores ou assessoria de imprensa',
+  'Desenvolvimento ou correção de site, CRM, BI, ERP, integrações ou automações',
+  'Atendimento comercial, fechamento de vendas, cobrança ou pós-venda',
+  'Verba de mídia e garantia de resultados comerciais específicos',
 ];
 
 export const DEFAULT_MEETING_TOPICS = [
-  'Revisão dos indicadores de performance',
-  'Discussão de oportunidades de crescimento',
-  'Ajustes de estratégia',
-  'Revisão de resultados e próximos passos',
+  'Revisão de indicadores de desempenho',
+  'Análise do funil e qualidade das oportunidades',
+  'Definição de prioridades e próximos testes',
+  'Alinhamento de criativos, verba e hipóteses',
 ];
 
 export const DEFAULT_IMPORTANT_NOTES = [
-  'O desempenho do projeto depende diretamente da combinação entre qualidade da operação comercial do contratante, disponibilidade de estoque, experiência de compra do cliente, investimento em mídia e execução estratégica das ações.',
-  'A Symbius atua na estruturação de marca, geração de demanda qualificada, gestão de campanhas e otimização de resultados — não havendo garantia de faturamento mínimo, volume de leads, ROI ou qualquer resultado comercial específico.',
-  'A Symbius não se responsabiliza por decisões comerciais, operacionais ou financeiras tomadas exclusivamente pelo contratante, nem por falhas em plataformas de terceiros, indisponibilidade de estoque, problemas no site ou qualidade do atendimento comercial.',
-  'Alterações relevantes de escopo, canais, prazos ou entregáveis fora do acordado neste contrato poderão gerar revisão de investimento e cronograma.',
-  'A verba de mídia, quando houver, não está incluída na remuneração da gestão e é de responsabilidade integral do contratante.',
+  'O serviço constitui obrigação de meio, e não de resultado.',
+  'A verba de mídia, quando houver, não integra a remuneração da CONTRATADA.',
+  'Alterações relevantes de escopo, canais ou modelo de remuneração dependem de aditivo ou aceite escrito.',
 ];
 
 export const DEFAULT_COMMISSION_TIERS = [
   { from: 0, to: 30000, percent: 10 },
   { from: 30000, to: 60000, percent: 8 },
-  { from: 60000, to: 100000, percent: 6 },
-  { from: 100000, to: null, percent: 5 },
+  { from: 60000, to: null, percent: 6 },
 ];
 
 export const DEFAULT_COMMISSION_EXAMPLE_REVENUES = [25000, 50000, 80000, 120000];
@@ -91,10 +86,8 @@ export function buildContractDraft(proposal, settings = {}, services = []) {
 
   const scopeItems = Array.from(new Set(scopeFromProposal));
 
-  const setupEnabled = Boolean(proposal?.setupEnabled && proposal?.setupPrice);
-  const feeEnabled = Boolean(
-    proposal?.operationEnabled && proposal?.operationPrice,
-  );
+  const setupEnabled = Boolean(proposal?.setupEnabled);
+  const feeEnabled = Boolean(proposal?.operationEnabled);
   const mediaEnabled = Boolean(proposal?.trafficEnabled);
 
   const company = settings?.legalName || settings?.companyName || 'Symbius';
@@ -103,15 +96,14 @@ export function buildContractDraft(proposal, settings = {}, services = []) {
   return {
     title:
       proposal?.title ||
-      'Proposta comercial e contrato de prestação de serviços',
-    subtitle: proposal?.subtitle || 'Parceria BrandGrowth',
+      'INSTRUMENTO PARTICULAR DE PRESTAÇÃO DE SERVIÇOS',
+    subtitle:
+      proposal?.subtitle ||
+      'GESTÃO DE TRÁFEGO PAGO, PERFORMANCE E REMUNERAÇÃO CONTRATUAL',
     startDate: todayBR(),
     minTermDays: 90,
     meetingCadenceDays: 15,
-    objective: DEFAULT_OBJECTIVE.replace(
-      'do contratante',
-      `de ${clientLabel}`,
-    ),
+    objective: DEFAULT_OBJECTIVE,
     scopeItems: scopeItems.length ? scopeItems : [...DEFAULT_SCOPE],
     providerResponsibilities: [...DEFAULT_PROVIDER_RESPONSIBILITIES],
     clientResponsibilities: [...DEFAULT_CLIENT_RESPONSIBILITIES],
@@ -134,7 +126,7 @@ export function buildContractDraft(proposal, settings = {}, services = []) {
       'Remuneração mensal pela operação contínua contratada.',
 
     commissionEnabled: false,
-    commissionBaseLabel: 'faturamento bruto mensal',
+    commissionBaseLabel: 'Receita Bruta Atribuída',
     commissionTiers: [...DEFAULT_COMMISSION_TIERS],
     commissionCloseDay: 5,
     commissionPayDay: 6,
@@ -142,11 +134,14 @@ export function buildContractDraft(proposal, settings = {}, services = []) {
 
     mediaEnabled,
     mediaMonthlyBudget: Number(proposal?.trafficPrice) || 0,
-    mediaNotes: `O investimento previsto para mídia será pago diretamente por ${clientLabel} às plataformas utilizadas. Este valor poderá ser ajustado futuramente conforme resultados, maturidade do projeto e oportunidade de escala. O valor de mídia não está incluído na remuneração da ${company} e é de responsabilidade integral do contratante.`,
+    mediaNotes: `A verba de mídia será paga diretamente por ${clientLabel} às plataformas utilizadas e não integra a remuneração da ${company}.`,
 
     feePayDay: 5,
     setupDueDays: 0,
     commissionEstimate: 0,
+    setupDueDate: todayBR(),
+    feeFirstDueDate: todayBR(),
+    asaasBillingType: 'UNDEFINED',
 
     acceptanceProviderName: company,
     acceptanceClientName: proposal?.clientName || '',

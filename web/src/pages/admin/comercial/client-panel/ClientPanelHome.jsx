@@ -6,7 +6,12 @@ import {
   ledgerFee,
 } from '../../../../data/comercialHelpers';
 
-export default function ClientPanelHome({ lead, entries }) {
+export default function ClientPanelHome({
+  lead,
+  entries,
+  progress,
+  onContinue,
+}) {
   const { contract } = lead;
   const startDate = contract?.startDate || null;
   const lt = contract ? clientLifetimeMonths(startDate) : null;
@@ -34,7 +39,12 @@ export default function ClientPanelHome({ lead, entries }) {
     {
       id: 'lt',
       label: 'LT do cliente',
-      value: lt == null ? '—' : lt === 0 ? '0 meses' : `${lt} ${lt === 1 ? 'mês' : 'meses'}`,
+      value:
+        lt == null
+          ? '—'
+          : lt === 0
+            ? '0 meses'
+            : `${lt} ${lt === 1 ? 'mês' : 'meses'}`,
       sub: 'Tempo desde o início',
     },
     {
@@ -56,6 +66,21 @@ export default function ClientPanelHome({ lead, entries }) {
       <div className="cp-home__head">
         <h1>Início</h1>
       </div>
+
+      {progress && (
+        <div className="cp-card cp-next-step">
+          <p className="cp-sign-panel__label">Próximo passo</p>
+          <h2>{progress.nextLabel}</h2>
+          <p className="cp-muted">{progress.nextHint}</p>
+          <button
+            type="button"
+            className="lp-btn lp-btn--solid lp-btn--sm"
+            onClick={() => onContinue?.(progress.nextSec)}
+          >
+            Continuar
+          </button>
+        </div>
+      )}
 
       <div className="cp-kpi-grid">
         {cards.map((card) => (

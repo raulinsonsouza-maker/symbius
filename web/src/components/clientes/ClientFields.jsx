@@ -1,3 +1,10 @@
+import {
+  maskCep,
+  maskCpf,
+  maskDocument,
+  maskPhone,
+} from '../../lib/masks';
+
 const BR_STATES = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS',
   'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
@@ -6,6 +13,7 @@ const BR_STATES = [
 
 export default function ClientFields({ client, onChange }) {
   const set = (partial) => onChange({ ...client, ...partial });
+  const docType = client.documentType === 'cpf' ? 'cpf' : 'cnpj';
 
   return (
     <div className="client-fields">
@@ -33,22 +41,31 @@ export default function ClientFields({ client, onChange }) {
           <label>
             Tipo de documento
             <select
-              value={client.documentType}
-              onChange={(e) => set({ documentType: e.target.value })}
+              value={docType}
+              onChange={(e) => {
+                const documentType = e.target.value;
+                set({
+                  documentType,
+                  document: maskDocument(client.document, documentType),
+                });
+              }}
             >
               <option value="cnpj">CNPJ</option>
               <option value="cpf">CPF</option>
             </select>
           </label>
           <label>
-            {client.documentType === 'cpf' ? 'CPF' : 'CNPJ'}
+            {docType === 'cpf' ? 'CPF' : 'CNPJ'}
             <input
-              value={client.document}
-              onChange={(e) => set({ document: e.target.value })}
+              value={maskDocument(client.document, docType)}
+              onChange={(e) =>
+                set({ document: maskDocument(e.target.value, docType) })
+              }
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={docType === 'cpf' ? 14 : 18}
               placeholder={
-                client.documentType === 'cpf'
-                  ? '000.000.000-00'
-                  : '00.000.000/0000-00'
+                docType === 'cpf' ? '000.000.000-00' : '00.000.000/0000-00'
               }
             />
           </label>
@@ -69,16 +86,22 @@ export default function ClientFields({ client, onChange }) {
           <label>
             Telefone
             <input
-              value={client.phone}
-              onChange={(e) => set({ phone: e.target.value })}
+              value={maskPhone(client.phone)}
+              onChange={(e) => set({ phone: maskPhone(e.target.value) })}
+              inputMode="tel"
+              autoComplete="tel"
+              maxLength={15}
+              placeholder="(11) 99999-9999"
             />
           </label>
         </div>
         <label className="prop-full">
           WhatsApp
           <input
-            value={client.whatsapp}
-            onChange={(e) => set({ whatsapp: e.target.value })}
+            value={maskPhone(client.whatsapp)}
+            onChange={(e) => set({ whatsapp: maskPhone(e.target.value) })}
+            inputMode="tel"
+            maxLength={15}
             placeholder="(11) 99999-9999"
           />
         </label>
@@ -143,8 +166,10 @@ export default function ClientFields({ client, onChange }) {
           <label>
             CEP
             <input
-              value={client.zip}
-              onChange={(e) => set({ zip: e.target.value })}
+              value={maskCep(client.zip)}
+              onChange={(e) => set({ zip: maskCep(e.target.value) })}
+              inputMode="numeric"
+              maxLength={9}
               placeholder="00000-000"
             />
           </label>
@@ -173,8 +198,13 @@ export default function ClientFields({ client, onChange }) {
         <label className="prop-full">
           CPF do representante
           <input
-            value={client.legalRepDocument}
-            onChange={(e) => set({ legalRepDocument: e.target.value })}
+            value={maskCpf(client.legalRepDocument)}
+            onChange={(e) =>
+              set({ legalRepDocument: maskCpf(e.target.value) })
+            }
+            inputMode="numeric"
+            maxLength={14}
+            placeholder="000.000.000-00"
           />
         </label>
       </fieldset>

@@ -10,6 +10,22 @@ import { downloadProposalPdf } from '../../../lib/proposalPdf';
 import ProposalPreview from '../../../components/propostas/ProposalPreview';
 import SettingsModal from '../../../components/propostas/SettingsModal';
 
+/** Evita que a roda do mouse altere o valor quando o campo está focado. */
+function moneyInputProps(value, onNumber) {
+  return {
+    type: 'number',
+    min: '0',
+    step: '1',
+    inputMode: 'numeric',
+    value: value ?? 0,
+    onChange: (e) => {
+      const raw = e.target.value;
+      onNumber(raw === '' ? 0 : Number(raw));
+    },
+    onWheel: (e) => e.currentTarget.blur(),
+  };
+}
+
 function BlockEditor({
   enabled,
   onToggle,
@@ -47,13 +63,7 @@ function BlockEditor({
             </label>
             <label>
               Preço da linha
-              <input
-                type="number"
-                min="0"
-                step="100"
-                value={price}
-                onChange={(e) => onPrice(Number(e.target.value))}
-              />
+              <input {...moneyInputProps(price, onPrice)} />
             </label>
           </div>
           <label className="prop-full">
@@ -88,6 +98,7 @@ export default function ProposalEditor() {
   const isNew = !id || id === 'nova';
   const navigate = useNavigate();
   const previewRef = useRef(null);
+  const okTimerRef = useRef(null);
 
   const [proposal, setProposal] = useState(null);
   const [settings, setSettings] = useState(null);
@@ -96,8 +107,22 @@ export default function ProposalEditor() {
   const [saving, setSaving] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [savedId, setSavedId] = useState(isNew ? null : id);
+
+  function showOk(message) {
+    setOk(message);
+    if (okTimerRef.current) clearTimeout(okTimerRef.current);
+    okTimerRef.current = setTimeout(() => setOk(''), 3500);
+  }
+
+  useEffect(
+    () => () => {
+      if (okTimerRef.current) clearTimeout(okTimerRef.current);
+    },
+    [],
+  );
 
   const setupServices = useMemo(
     () => services.filter((s) => s.block === 'setup' && s.active),
@@ -177,6 +202,7 @@ export default function ProposalEditor() {
     if (!proposal) return null;
     setSaving(true);
     setError('');
+    setOk('');
     try {
       let saved;
       if (savedId) {
@@ -188,6 +214,7 @@ export default function ProposalEditor() {
         navigate(`/admin/propostas/${saved.id}${leadQs}`, { replace: true });
       }
       setProposal(saved);
+      showOk('Proposta salva');
       return saved;
     } catch (err) {
       setError(err.message);
@@ -230,6 +257,11 @@ export default function ProposalEditor() {
 
   return (
     <div className="admin-shell prop-shell">
+      {ok && (
+        <div className="prop-toast" role="status" aria-live="polite">
+          {ok}
+        </div>
+      )}
       <header className="admin-shell__header">
         <div className="admin-shell__brand">
           <Link
@@ -448,13 +480,9 @@ export default function ProposalEditor() {
                       <label>
                         Valor
                         <input
-                          type="number"
-                          min="0"
-                          step="100"
-                          value={proposal.trafficPrice}
-                          onChange={(e) =>
-                            patch({ trafficPrice: Number(e.target.value) })
-                          }
+                          {...moneyInputProps(proposal.trafficPrice, (trafficPrice) =>
+                            patch({ trafficPrice }),
+                          )}
                         />
                       </label>
                       <label>
@@ -503,17 +531,12 @@ export default function ProposalEditor() {
                     }}
                   />
                   <input
-                    type="number"
                     placeholder="Valor"
-                    value={item.totalValue}
-                    onChange={(e) => {
+                    {...moneyInputProps(item.totalValue, (totalValue) => {
                       const blankItems = [...proposal.blankItems];
-                      blankItems[index] = {
-                        ...item,
-                        totalValue: Number(e.target.value),
-                      };
+                      blankItems[index] = { ...item, totalValue };
                       patch({ blankItems });
-                    }}
+                    })}
                   />
                   <button
                     type="button"

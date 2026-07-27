@@ -30,6 +30,8 @@ export const api = {
     request('/proposals', { method: 'POST', body: JSON.stringify(data) }),
   updateProposal: (id, data) =>
     request(`/proposals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  archiveProposal: (id) =>
+    request(`/proposals/${id}/archive`, { method: 'POST' }),
   getPublicProposal: (slug) =>
     request(`/public/proposals/${slug}`, { auth: false }),
   convertProposal: (id, data) =>
@@ -44,6 +46,8 @@ export const api = {
     request('/clients', { method: 'POST', body: JSON.stringify(data) }),
   updateClient: (id, data) =>
     request(`/clients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  archiveClient: (id) =>
+    request(`/clients/${id}/archive`, { method: 'POST' }),
   listContracts: () => request('/contracts'),
   getContract: (id) => request(`/contracts/${id}`),
   createContract: (data) =>
@@ -76,10 +80,40 @@ export const api = {
     }),
   syncContractFinance: (id) =>
     request(`/finance/contracts/${id}/sync`, { method: 'POST' }),
+  sendContract: (id) =>
+    request(`/contracts/${id}/send`, { method: 'POST' }),
+  chargeContractAsaas: (id) =>
+    request(`/contracts/${id}/asaas/charge`, { method: 'POST' }),
+  chargeContractCommission: (id, data) =>
+    request(`/contracts/${id}/asaas/commission`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getContractSignature: (id) => request(`/contracts/${id}/signature`),
+  getPublicSign: (token) =>
+    request(`/public/sign/${token}`, { auth: false }),
+  postPublicSign: (token, data) =>
+    request(`/public/sign/${token}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      auth: false,
+    }),
   getCashflow: (params = {}) => {
     const q = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v != null && v !== ''),
     ).toString();
     return request(`/finance/cashflow${q ? `?${q}` : ''}`);
   },
+  getAsaasFinanceOverview: () => request('/finance/asaas/overview'),
+  listAsaasFinancePayments: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== ''),
+    ).toString();
+    return request(`/finance/asaas/payments${q ? `?${q}` : ''}`);
+  },
+  syncAsaasFinance: (data = {}) =>
+    request('/finance/asaas/sync', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };

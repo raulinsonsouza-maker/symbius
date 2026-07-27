@@ -76,6 +76,26 @@ export default function ClientForm() {
           </span>
         </div>
         <div className="prop-header-actions">
+          {!isNew && (
+            <button
+              type="button"
+              className="lp-btn lp-btn--ghost lp-btn--sm"
+              onClick={async () => {
+                const okConfirm = window.confirm(
+                  'Arquivar este cliente? Ele some do Comercial, Clientes e Contratos. Os dados ficam no banco.',
+                );
+                if (!okConfirm) return;
+                try {
+                  await api.archiveClient(id);
+                  navigate('/admin/comercial');
+                } catch (err) {
+                  setError(err.message);
+                }
+              }}
+            >
+              Arquivar
+            </button>
+          )}
           <button
             type="button"
             className="lp-btn lp-btn--solid lp-btn--sm"

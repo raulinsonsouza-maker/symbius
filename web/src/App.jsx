@@ -9,6 +9,7 @@ import ProposalPublicPage from './pages/ProposalPublicPage';
 import ClientForm from './pages/admin/clientes/ClientForm';
 import ContractEditor from './pages/admin/contratos/ContractEditor';
 import ContractPublicPage from './pages/ContractPublicPage';
+import ContractSignPage from './pages/ContractSignPage';
 import ComercialList from './pages/admin/comercial/ComercialList';
 import LeadCard from './pages/admin/comercial/LeadCard';
 import CloseLead from './pages/admin/comercial/CloseLead';
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/p/:slug" element={<ProposalPublicPage />} />
         <Route path="/c/:slug" element={<ContractPublicPage />} />
+        <Route path="/assinar/:token" element={<ContractSignPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route
           path="/admin"

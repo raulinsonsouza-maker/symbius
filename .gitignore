@@ -38,3 +38,6 @@ api/.env
 Gerador de Proposta/
 
 # Local tooling outside project intent
+.deploy-tmp/
+secrets.json
+release/

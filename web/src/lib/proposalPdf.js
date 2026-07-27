@@ -13,10 +13,20 @@ async function withPdfCaptureLayout(element, run) {
   element.style.width = '794px';
   element.style.maxWidth = '794px';
   element.style.minWidth = '794px';
-  element.style.padding = '48px 52px 64px';
+  element.style.padding = '48px 48px 56px';
   try {
     await document.fonts.ready;
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await Promise.all(
+      [...element.querySelectorAll('img')].map(
+        (img) =>
+          img.complete ||
+          new Promise((resolve) => {
+            img.addEventListener('load', resolve, { once: true });
+            img.addEventListener('error', resolve, { once: true });
+          }),
+      ),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 300));
     return await run();
   } finally {
     element.classList.remove('is-pdf-capture');
