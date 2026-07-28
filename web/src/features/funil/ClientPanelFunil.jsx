@@ -11,14 +11,6 @@ const FunnelBuilder = lazy(() =>
 
 const PROJECTS_COLLAPSE_KEY = 'ops-funil-projects-collapsed';
 
-const NAME_SUGGESTIONS = [
-  'Meta Ads',
-  'Google Ads',
-  'Orgânico',
-  'Remarketing',
-  'Lançamento',
-];
-
 function formatProjectDate(value) {
   if (!value) return '';
   return new Date(value).toLocaleDateString('pt-BR', {
@@ -28,20 +20,7 @@ function formatProjectDate(value) {
   });
 }
 
-function defaultDraftName(client, proposal, projects) {
-  const used = new Set(
-    (projects || []).map((item) => String(item.name || '').toLowerCase()),
-  );
-  for (const suggestion of NAME_SUGGESTIONS) {
-    if (!used.has(suggestion.toLowerCase())) return suggestion;
-  }
-  const base =
-    client?.tradeName ||
-    client?.legalName ||
-    proposal?.clientName ||
-    'Funil';
-  return `Funil ${base}`.trim();
-}
+const EMPTY_FUNNEL_GRAPH = { nodes: [], edges: [] };
 
 export default function ClientPanelFunil({
   client,
@@ -100,7 +79,6 @@ export default function ClientPanelFunil({
   useEffect(() => {
     if (composerOpen) {
       nameInputRef.current?.focus();
-      nameInputRef.current?.select();
     }
   }, [composerOpen]);
 
@@ -133,7 +111,7 @@ export default function ClientPanelFunil({
 
   const openComposer = () => {
     if (projectsCollapsed) setProjectsCollapsed(false);
-    setDraftName(defaultDraftName(client, proposal, projects));
+    setDraftName('');
     setComposerOpen(true);
     setError('');
   };
@@ -159,6 +137,7 @@ export default function ClientPanelFunil({
         clientId,
         proposalId: proposal?.id || null,
         name,
+        graph: EMPTY_FUNNEL_GRAPH,
       });
       setComposerOpen(false);
       setDraftName('');
@@ -278,29 +257,11 @@ export default function ClientPanelFunil({
                       onKeyDown={(event) => {
                         if (event.key === 'Escape') closeComposer();
                       }}
-                      placeholder="Ex.: Meta Ads"
+                      placeholder="Ex.: Google Ads"
                       maxLength={80}
                       disabled={creating}
                     />
                   </label>
-                  <div className="funil-projects__chips">
-                    {NAME_SUGGESTIONS.map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        className={`funil-projects__chip ${
-                          draftName.trim().toLowerCase() ===
-                          suggestion.toLowerCase()
-                            ? 'is-active'
-                            : ''
-                        }`}
-                        onClick={() => setDraftName(suggestion)}
-                        disabled={creating}
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
                   <div className="funil-projects__composer-actions">
                     <button
                       type="button"
@@ -362,18 +323,8 @@ export default function ClientPanelFunil({
               <p className="cp-muted" style={{ margin: 0 }}>
                 {projects.length
                   ? 'Selecione um funil na lista ao lado para abrir o editor.'
-                  : 'Crie o primeiro funil deste cliente — por exemplo Meta Ads — para começar o planejamento.'}
+                  : 'Use Novo funil na lista ao lado para criar o primeiro projeto deste cliente.'}
               </p>
-              {!composerOpen ? (
-                <button
-                  type="button"
-                  className="lp-btn"
-                  onClick={openComposer}
-                  style={{ marginTop: 14 }}
-                >
-                  <Plus size={14} strokeWidth={1.6} /> Novo funil
-                </button>
-              ) : null}
             </div>
           )}
         </div>
