@@ -87,7 +87,7 @@ export default function CloseLead() {
           ...contract,
           feePayDay: contract.feePayDay ?? 5,
           setupDueDays: contract.setupDueDays ?? 0,
-          status: 'active',
+          status: 'draft',
         },
       };
       await api.convertProposal(id, payload);
@@ -146,7 +146,8 @@ export default function CloseLead() {
           </div>
           <p className="prop-muted" style={{ margin: '12px 0 0' }}>
             Revise remuneração, condições e textos do contrato antes de gerar.
-            Depois envie para assinatura na etapa Assinatura.
+            O lead permanece em negociação até o cliente assinar; só então vira
+            ativo e as cobranças Asaas são programadas.
           </p>
         </section>
 

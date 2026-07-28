@@ -200,25 +200,22 @@ export async function convertProposal(req, res) {
       .json({ error: 'Informe clientId ou os dados do cliente (client)' });
   }
 
+  // Contrato gerado fica em rascunho; só vira ativo após assinatura.
   const contract = await store.createContract({
     ...(body.contract || {}),
     proposalId: proposal.id,
     clientId: client.id,
-    status: body.contract?.status || 'active',
+    status: 'draft',
   });
 
   const updatedProposal = await store.updateProposal(proposal.id, {
-    status: 'won',
     clientId: client.id,
-    pipelineStatus: 'active',
+    pipelineStatus: 'negotiating',
+    ...(proposal.status === 'won' ? { status: 'sent' } : {}),
   });
 
   if (store.applyPipelineToContract) {
-    await store.applyPipelineToContract(proposal.id, 'active');
-  }
-
-  if (store.syncContractFinance) {
-    await store.syncContractFinance(contract.id);
+    await store.applyPipelineToContract(proposal.id, 'negotiating');
   }
 
   return res.status(201).json({
@@ -688,17 +685,31 @@ export async function postPublicSign(req, res) {
     contentHash,
   });
 
+  // Assinatura → cliente ativo + agenda financeira + cobrança Asaas
   if (signed.proposalId) {
-    const proposal = await store.getProposal(signed.proposalId);
-    if (proposal && proposal.pipelineStatus !== 'active') {
-      await store.updateProposal(signed.proposalId, {
-        status: 'won',
-        pipelineStatus: 'active',
-      });
-      if (store.applyPipelineToContract) {
-        await store.applyPipelineToContract(signed.proposalId, 'active');
-      }
+    await store.updateProposal(signed.proposalId, {
+      status: 'won',
+      pipelineStatus: 'active',
+    });
+    if (store.applyPipelineToContract) {
+      await store.applyPipelineToContract(signed.proposalId, 'active');
     }
+  } else if (store.syncContractFinance) {
+    await store.syncContractFinance(signed.id);
+  }
+
+  try {
+    const asaasResult = await chargeContractSetupAndFee(store, signed.id);
+    await store.addSignatureEvent(contract.id, 'asaas_charged', {
+      customerId: asaasResult?.customerId || null,
+      setupPaymentId: asaasResult?.setupPayment?.id || null,
+      subscriptionId: asaasResult?.subscription?.id || null,
+    });
+  } catch (err) {
+    console.error('Asaas pós-assinatura falhou:', err);
+    await store.addSignatureEvent(contract.id, 'asaas_failed', {
+      message: err.message,
+    });
   }
 
   const company =
@@ -742,8 +753,10 @@ export async function postPublicSign(req, res) {
     }
   }
 
+  const fresh = (await store.getContract(signed.id)) || signed;
+
   return res.json({
-    contract: stripSigningSecrets(signed),
+    contract: stripSigningSecrets(fresh),
     viewUrl,
     downloadUrl: signedPdfPath
       ? `/api/public/contracts/${signed.publicSlug}/signed-pdf`

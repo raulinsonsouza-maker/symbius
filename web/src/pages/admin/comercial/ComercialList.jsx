@@ -13,6 +13,7 @@ import {
   proposalStatusFromPipeline,
   clientLifetimeMonths,
   buildComercialDashboard,
+  isAwaitingSignature,
 } from '../../../data/comercialHelpers';
 
 function leadPipeline(lead) {
@@ -340,6 +341,7 @@ export default function ComercialList() {
               <tbody>
                 {filtered.map((lead) => {
                   const status = leadPipeline(lead);
+                  const awaiting = isAwaitingSignature(lead);
                   const lt = lead.contract
                     ? clientLifetimeMonths(lead.contract.startDate)
                     : null;
@@ -363,6 +365,11 @@ export default function ComercialList() {
                         <strong className="crm-table__name">
                           {leadDisplayName(lead)}
                         </strong>
+                        {awaiting ? (
+                          <span className="crm-tag crm-tag--awaiting">
+                            Aguardando assinatura
+                          </span>
+                        ) : null}
                       </td>
                       <td>
                         <span className="crm-table__meta">
@@ -410,6 +417,7 @@ export default function ComercialList() {
           <div className="crm-grid">
             {filtered.map((lead) => {
               const status = leadPipeline(lead);
+              const awaiting = isAwaitingSignature(lead);
               const lt = lead.contract
                 ? clientLifetimeMonths(lead.contract.startDate)
                 : null;
@@ -438,6 +446,11 @@ export default function ComercialList() {
                           ? ` · ${lead.proposal.title}`
                           : ''}
                       </span>
+                      {awaiting ? (
+                        <span className="crm-tag crm-tag--awaiting">
+                          Aguardando assinatura
+                        </span>
+                      ) : null}
                     </div>
                     <select
                       className={`crm-status crm-status--${status}`}

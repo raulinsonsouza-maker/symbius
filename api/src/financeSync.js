@@ -161,23 +161,32 @@ export function resolveEntryStatus(entry, today = new Date()) {
 /** Pipeline comercial: negotiating | active | lost | churn */
 export function resolvePipelineStatus(proposal, contract) {
   const explicit = proposal?.pipelineStatus;
+  const ps = proposal?.status;
+
+  if (explicit === 'lost' || ps === 'lost' || ps === 'archived') return 'lost';
+  if (
+    explicit === 'churn' ||
+    ps === 'churn' ||
+    contract?.status === 'churn'
+  ) {
+    return 'churn';
+  }
+  if (contract?.status === 'cancelled') return 'lost';
+
+  // Cliente ativo só após assinatura do contrato
+  const signed =
+    Boolean(contract?.signedAt) || contract?.status === 'signed';
+  if (signed) return 'active';
+
+  // Contrato gerado/enviado, ainda sem assinatura → permanece em negociação
+  if (contract?.id) return 'negotiating';
+
   if (
     explicit &&
     ['negotiating', 'active', 'lost', 'churn'].includes(explicit)
   ) {
-    return explicit;
+    return explicit === 'active' ? 'negotiating' : explicit;
   }
-  const ps = proposal?.status;
-  if (ps === 'lost') return 'lost';
-  if (ps === 'churn') return 'churn';
-  if (ps === 'archived') return 'lost';
-  if (contract?.status === 'cancelled' || contract?.status === 'churn') {
-    return 'churn';
-  }
-  if (contract && ['active', 'signed'].includes(contract.status)) {
-    return 'active';
-  }
-  if (ps === 'won') return 'active';
   return 'negotiating';
 }
 

@@ -186,6 +186,7 @@ export default function LeadCard() {
       onSectionChange={setSection}
       onPipelineChange={onPipelineChange}
       progress={progress}
+      contract={contract}
     >
       {section === 'inicio' && (
         <ClientPanelHome

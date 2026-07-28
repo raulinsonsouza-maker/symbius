@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom';
-import { pipelineLabel } from '../../../../data/comercialHelpers';
+import {
+  pipelineLabel,
+  isAwaitingSignature,
+} from '../../../../data/comercialHelpers';
 
 const NAV = [
   { id: 'inicio', label: 'Início' },
@@ -25,9 +28,11 @@ export default function ClientPanelShell({
   onSectionChange,
   onPipelineChange,
   progress,
+  contract,
   children,
 }) {
   const status = pipelineStatus || 'negotiating';
+  const awaiting = isAwaitingSignature(contract);
 
   return (
     <div className="cp">
@@ -82,6 +87,11 @@ export default function ClientPanelShell({
         <header className="cp-top">
           <div className="cp-top__search">
             <span className="cp-top__chip">{proposalNumber || 'Lead'}</span>
+            {awaiting ? (
+              <span className="crm-tag crm-tag--awaiting">
+                Aguardando assinatura
+              </span>
+            ) : null}
             <input
               type="search"
               className="cp-top__input"

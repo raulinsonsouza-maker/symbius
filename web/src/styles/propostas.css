@@ -2631,6 +2631,32 @@
   white-space: nowrap;
 }
 
+.crm-tag {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.crm-tag--awaiting {
+  color: #8a5a12;
+  background: rgba(212, 160, 64, 0.18);
+  border: 1px solid rgba(212, 160, 64, 0.35);
+}
+
+.crm-card__identity .crm-tag {
+  margin-top: 6px;
+}
+
+.cp-top__search .crm-tag {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
 .crm-table__meta {
   color: var(--symbius-muted-light);
   font-size: 0.88rem;
