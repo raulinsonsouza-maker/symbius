@@ -418,6 +418,36 @@ export async function updateFunnelProject(req, res) {
   return res.json(project);
 }
 
+export async function duplicateFunnelProject(req, res) {
+  const store = getStore();
+  const existing = await store.getFunnelProject(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Projeto de funil não encontrado' });
+  }
+  const requestedName = String(req.body?.name || '').trim();
+  const name =
+    requestedName.length >= 2
+      ? requestedName
+      : `Cópia de ${existing.name}`.slice(0, 80);
+  const project = await store.createFunnelProject({
+    clientId: existing.clientId,
+    proposalId: existing.proposalId || null,
+    name,
+    graph: existing.graph || { nodes: [], edges: [] },
+  });
+  return res.status(201).json(project);
+}
+
+export async function deleteFunnelProject(req, res) {
+  const store = getStore();
+  const existing = await store.getFunnelProject(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Projeto de funil não encontrado' });
+  }
+  await store.deleteFunnelProject(req.params.id);
+  return res.status(204).end();
+}
+
 export async function listFinanceCategories(_req, res) {
   return res.json(await getStore().listFinanceCategories());
 }

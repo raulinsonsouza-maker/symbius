@@ -16,10 +16,13 @@ const withInteractiveEdges = (graph) => ({
   edges: (graph.edges || []).map((edge) => {
     const path = (edge.data?.path ?? edge.sourceHandle) === 'no' ? 'no' : 'yes';
     const color = path === 'yes' ? '#4e8cff' : '#c4a574';
+    const weightRaw = Number(edge.data?.weight);
+    const weight =
+      Number.isFinite(weightRaw) && weightRaw > 0 ? weightRaw : undefined;
     return {
       ...edge,
       type: 'deletable',
-      data: { path },
+      data: weight != null ? { path, weight } : { path },
       markerEnd: {
         type: MarkerType.ArrowClosed,
         width: 16,
@@ -75,6 +78,7 @@ export const useFunnelStore = create((set, get) => ({
   nodes: initialGraph.nodes,
   edges: initialGraph.edges,
   selectedNodeId: null,
+  selectedEdgeId: null,
   simulation: simulateFunnel(initialGraph.nodes, initialGraph.edges),
   saveStatus: 'loading',
   hydrated: false,
@@ -87,6 +91,7 @@ export const useFunnelStore = create((set, get) => ({
     set({
       projectId,
       selectedNodeId: null,
+      selectedEdgeId: null,
       saveStatus: 'loading',
       hydrated: false,
       revision: 0,
@@ -101,6 +106,7 @@ export const useFunnelStore = create((set, get) => ({
       nodes: graph.nodes,
       edges: graph.edges,
       selectedNodeId: null,
+      selectedEdgeId: null,
       simulation: simulateFunnel(graph.nodes, graph.edges),
       saveStatus: 'saved',
       hydrated: true,
@@ -114,6 +120,7 @@ export const useFunnelStore = create((set, get) => ({
       nodes: graph.nodes,
       edges: graph.edges,
       selectedNodeId: null,
+      selectedEdgeId: null,
       simulation: simulateFunnel(graph.nodes, graph.edges),
       revision: state.revision + 1,
     }));
@@ -165,6 +172,8 @@ export const useFunnelStore = create((set, get) => ({
       const edges = addEdge(edge, state.edges);
       return {
         edges,
+        selectedEdgeId: edge.id,
+        selectedNodeId: null,
         simulation: simulateFunnel(state.nodes, edges),
         revision: state.revision + 1,
       };
@@ -176,7 +185,12 @@ export const useFunnelStore = create((set, get) => ({
       const updatedEdge = {
         ...oldEdge,
         type: 'deletable',
-        data: { path },
+        data: {
+          path,
+          ...(Number(oldEdge.data?.weight) > 0
+            ? { weight: Number(oldEdge.data.weight) }
+            : {}),
+        },
         markerEnd: {
           type: MarkerType.ArrowClosed,
           width: 16,
@@ -201,27 +215,53 @@ export const useFunnelStore = create((set, get) => ({
       const edges = state.edges.filter((edge) => edge.id !== id);
       return {
         edges,
+        selectedEdgeId: state.selectedEdgeId === id ? null : state.selectedEdgeId,
         simulation: simulateFunnel(state.nodes, edges),
         revision: state.revision + 1,
       };
     }),
-  addNode: (kind, position) =>
+  updateEdgeData: (id, patch) =>
     set((state) => {
+      const edges = state.edges.map((edge) => {
+        if (edge.id !== id) return edge;
+        const nextData = { ...edge.data, ...patch };
+        const weightRaw = Number(nextData.weight);
+        if (!Number.isFinite(weightRaw) || weightRaw <= 0) {
+          delete nextData.weight;
+        } else {
+          nextData.weight = weightRaw;
+        }
+        return { ...edge, data: nextData };
+      });
+      return {
+        edges,
+        simulation: simulateFunnel(state.nodes, edges),
+        revision: state.revision + 1,
+      };
+    }),
+  addNode: (kind, position, patch = {}) =>
+    set((state) => {
+      const defaults = DEFAULT_NODE_DATA[kind];
+      if (!defaults) return state;
       const node = {
         id: `${kind}-${crypto.randomUUID()}`,
         type: 'funnel',
         position,
-        data: { ...DEFAULT_NODE_DATA[kind] },
+        data: { ...defaults, ...patch, kind },
       };
       const nodes = [...state.nodes, node];
       return {
         nodes,
         selectedNodeId: node.id,
+        selectedEdgeId: null,
         simulation: simulateFunnel(nodes, state.edges),
         revision: state.revision + 1,
       };
     }),
-  selectNode: (selectedNodeId) => set({ selectedNodeId }),
+  selectNode: (selectedNodeId) =>
+    set({ selectedNodeId, selectedEdgeId: null }),
+  selectEdge: (selectedEdgeId) =>
+    set({ selectedEdgeId, selectedNodeId: null }),
   updateNodeData: (id, patch) =>
     set((state) => {
       const nodes = state.nodes.map((node) =>
@@ -235,6 +275,17 @@ export const useFunnelStore = create((set, get) => ({
     }),
   deleteSelected: () =>
     set((state) => {
+      if (state.selectedEdgeId) {
+        const edges = state.edges.filter(
+          (edge) => edge.id !== state.selectedEdgeId,
+        );
+        return {
+          edges,
+          selectedEdgeId: null,
+          simulation: simulateFunnel(state.nodes, edges),
+          revision: state.revision + 1,
+        };
+      }
       if (!state.selectedNodeId) return state;
       const nodes = state.nodes.filter(
         (node) => node.id !== state.selectedNodeId,

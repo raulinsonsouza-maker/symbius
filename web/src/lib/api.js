@@ -57,6 +57,13 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+  duplicateFunnelProject: (id, data = {}) =>
+    request(`/funnel-projects/${id}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteFunnelProject: (id) =>
+    request(`/funnel-projects/${id}`, { method: 'DELETE' }),
   listClients: () => request('/clients'),
   getClient: (id) => request(`/clients/${id}`),
   createClient: (data) =>

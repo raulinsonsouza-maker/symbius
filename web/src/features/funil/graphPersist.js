@@ -13,6 +13,9 @@ export function sanitizeFunnelGraph(graph = {}) {
   const edges = (graph.edges || []).map((edge) => {
     const path =
       (edge.data?.path ?? edge.sourceHandle) === 'no' ? 'no' : 'yes';
+    const weightRaw = Number(edge.data?.weight);
+    const weight =
+      Number.isFinite(weightRaw) && weightRaw > 0 ? weightRaw : undefined;
     return {
       id: edge.id,
       source: edge.source,
@@ -20,7 +23,7 @@ export function sanitizeFunnelGraph(graph = {}) {
       sourceHandle: edge.sourceHandle || path,
       targetHandle: edge.targetHandle || undefined,
       type: edge.type || 'deletable',
-      data: { path },
+      data: weight != null ? { path, weight } : { path },
     };
   });
 

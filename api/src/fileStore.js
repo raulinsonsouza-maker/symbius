@@ -1042,4 +1042,13 @@ export const fileStore = {
     writeDb(db);
     return db.funnelProjects[idx];
   },
+
+  async deleteFunnelProject(id) {
+    const db = readDb();
+    const before = db.funnelProjects.length;
+    db.funnelProjects = db.funnelProjects.filter((item) => item.id !== id);
+    if (db.funnelProjects.length === before) return false;
+    writeDb(db);
+    return true;
+  },
 };

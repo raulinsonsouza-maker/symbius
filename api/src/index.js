@@ -37,6 +37,8 @@ import {
   createFunnelProject,
   getFunnelProject,
   updateFunnelProject,
+  duplicateFunnelProject,
+  deleteFunnelProject,
   listFinanceCategories,
   createFinanceCategory,
   listFinanceEntries,
@@ -80,6 +82,8 @@ app.get('/api/funnel-projects', listFunnelProjects);
 app.post('/api/funnel-projects', createFunnelProject);
 app.get('/api/funnel-projects/:id', getFunnelProject);
 app.put('/api/funnel-projects/:id', updateFunnelProject);
+app.post('/api/funnel-projects/:id/duplicate', duplicateFunnelProject);
+app.delete('/api/funnel-projects/:id', deleteFunnelProject);
 app.get('/api/proposals', listProposals);
 app.post('/api/proposals', createProposal);
 app.get('/api/proposals/:id', getProposal);

@@ -37,6 +37,22 @@ export const SOURCE_OPTIONS = [
   },
 ];
 
+export const DESTINATION_OPTIONS = [
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'ecommerce', label: 'E-commerce' },
+  { value: 'site', label: 'Site / landing' },
+];
+
+export function getDestinationOption(destinationType) {
+  return (
+    DESTINATION_OPTIONS.find((option) => option.value === destinationType) ||
+    DESTINATION_OPTIONS[DESTINATION_OPTIONS.length - 1]
+  );
+}
+
 export const NODE_META = {
   traffic: {
     label: 'Tráfego',
@@ -72,6 +88,16 @@ export const NODE_META = {
     label: 'Obrigado',
     description: 'Encerramento do fluxo',
     tone: 'thankyou',
+  },
+  destination: {
+    label: 'Destino',
+    description: 'Para onde o tráfego vai',
+    tone: 'destination',
+  },
+  note: {
+    label: 'Texto',
+    description: 'Título ou anotação no mapa',
+    tone: 'note',
   },
 };
 
@@ -146,6 +172,28 @@ export const DEFAULT_NODE_DATA = {
   thankyou: {
     label: 'Página de obrigado',
     kind: 'thankyou',
+    conversionRate: 100,
+    visitors: 0,
+    cpc: 0,
+    price: 0,
+    productCost: 0,
+    refundRate: 0,
+  },
+  destination: {
+    label: 'Destino',
+    kind: 'destination',
+    destinationType: 'site',
+    conversionRate: 40,
+    visitors: 0,
+    cpc: 0,
+    price: 0,
+    productCost: 0,
+    refundRate: 0,
+  },
+  note: {
+    label: 'Título do funil',
+    kind: 'note',
+    noteText: '',
     conversionRate: 100,
     visitors: 0,
     cpc: 0,

@@ -19,6 +19,40 @@ const safePercent = (value) =>
 const cohortKey = ({ sourceId, isLead, isCustomer }) =>
   `${sourceId}:${isLead ? 1 : 0}:${isCustomer ? 1 : 0}`;
 
+function isMoneyNode(node) {
+  if (moneyNodeKinds.has(node.data.kind)) return true;
+  return (
+    node.data.kind === 'destination' &&
+    normalizeDestinationType(node.data.destinationType) === 'ecommerce'
+  );
+}
+
+function normalizeDestinationType(value) {
+  const known = [
+    'instagram',
+    'tiktok',
+    'youtube',
+    'whatsapp',
+    'ecommerce',
+    'site',
+  ];
+  return known.includes(String(value)) ? value : 'site';
+}
+
+function getEdgeShares(edges) {
+  if (!edges.length) return [];
+  const weights = edges.map((edge) => {
+    const value = Number(edge.data?.weight);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  });
+  const sum = weights.reduce((total, weight) => total + weight, 0);
+  if (sum <= 0) {
+    const equal = 1 / edges.length;
+    return edges.map(() => equal);
+  }
+  return weights.map((weight) => weight / sum);
+}
+
 function getTrafficForecast(node) {
   const model =
     node.data.acquisitionModel === 'source'
@@ -65,17 +99,112 @@ function getTrafficForecast(node) {
   return { model, sourceType, budget, impressions: visitors, visitors };
 }
 
-export function simulateFunnel(nodes, edges) {
+function collectValidationWarnings(nodes, edges, resultByNode) {
+  const warnings = [];
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
-  const incomingCount = new Map(nodes.map((node) => [node.id, 0]));
+  const incoming = new Map(nodes.map((node) => [node.id, 0]));
   const outgoing = new Map();
 
   edges.forEach((edge) => {
+    incoming.set(edge.target, (incoming.get(edge.target) ?? 0) + 1);
+    outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge]);
+  });
+
+  for (const node of nodes) {
+    if (node.data.kind === 'traffic' || node.data.kind === 'note') continue;
+    if ((incoming.get(node.id) ?? 0) === 0) {
+      warnings.push(
+        `"${node.data.label || node.id}" não recebe tráfego (sem conexão de entrada).`,
+      );
+    }
+  }
+
+  for (const node of nodes) {
+    if (!isMoneyNode(node)) continue;
+    if (!(Number(node.data.price) > 0)) {
+      warnings.push(
+        `"${node.data.label || node.id}" é etapa comercial sem preço definido.`,
+      );
+    }
+  }
+
+  for (const node of nodes) {
+    if (node.data.kind === 'traffic' || node.data.kind === 'note' || node.data.kind === 'thankyou') {
+      continue;
+    }
+    const nodeEdges = outgoing.get(node.id) ?? [];
+    const yesEdges = nodeEdges.filter(
+      (edge) => (edge.data?.path ?? edge.sourceHandle) !== 'no',
+    );
+    const noEdges = nodeEdges.filter(
+      (edge) => (edge.data?.path ?? edge.sourceHandle) === 'no',
+    );
+    const rate = Number(node.data.conversionRate);
+    if (yesEdges.length === 0 && rate > 0) {
+      warnings.push(
+        `"${node.data.label || node.id}" tem conversão, mas a saída SIM está desconectada.`,
+      );
+    }
+    if (noEdges.length === 0 && rate < 100 && isMoneyNode(node)) {
+      warnings.push(
+        `"${node.data.label || node.id}" não tem saída NÃO para o volume rejeitado.`,
+      );
+    }
+
+    for (const group of [yesEdges, noEdges]) {
+      if (group.length < 2) continue;
+      const weights = group.map((edge) => {
+        const value = Number(edge.data?.weight);
+        return Number.isFinite(value) && value > 0 ? value : 0;
+      });
+      const defined = weights.filter((weight) => weight > 0);
+      if (!defined.length) continue;
+      const sum = weights.reduce((total, weight) => total + weight, 0);
+      if (Math.abs(sum - 100) > 0.5) {
+        const pathLabel =
+          (group[0].data?.path ?? group[0].sourceHandle) === 'no' ? 'NÃO' : 'SIM';
+        warnings.push(
+          `Pesos da saída ${pathLabel} em "${node.data.label || node.id}" somam ${sum.toFixed(0)}% (esperado 100%).`,
+        );
+      }
+    }
+  }
+
+  for (const node of nodes) {
+    if (node.data.kind === 'downsell') {
+      const parents = edges
+        .filter((edge) => edge.target === node.id)
+        .map((edge) => nodeById.get(edge.source))
+        .filter(Boolean);
+      if (parents.some((parent) => parent.data.kind === 'optin')) {
+        warnings.push(
+          `"${node.data.label || node.id}" (downsell) está ligado diretamente a uma captura.`,
+        );
+      }
+    }
+  }
+
+  // Evita avisos duplicados se a simulação já apontou ciclo
+  void resultByNode;
+  return warnings;
+}
+
+export function simulateFunnel(nodes, edges) {
+  const flowNodes = nodes.filter((node) => node.data.kind !== 'note');
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const incomingCount = new Map(flowNodes.map((node) => [node.id, 0]));
+  const outgoing = new Map();
+
+  edges.forEach((edge) => {
+    if (!nodeById.has(edge.target) || nodeById.get(edge.target)?.data.kind === 'note') {
+      return;
+    }
+    if (nodeById.get(edge.source)?.data.kind === 'note') return;
     incomingCount.set(edge.target, (incomingCount.get(edge.target) ?? 0) + 1);
     outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge]);
   });
 
-  const queue = nodes
+  const queue = flowNodes
     .filter((node) => (incomingCount.get(node.id) ?? 0) === 0)
     .map((node) => node.id);
   const ordered = [];
@@ -92,7 +221,7 @@ export function simulateFunnel(nodes, edges) {
   }
 
   const warnings = [];
-  if (ordered.length !== nodes.length) {
+  if (ordered.length !== flowNodes.length) {
     warnings.push(
       'Há um ciclo no mapa. A simulação considerou apenas o trecho anterior ao ciclo.',
     );
@@ -140,6 +269,7 @@ export function simulateFunnel(nodes, edges) {
 
   const addPending = (target, slice, amount) => {
     if (amount <= 0) return;
+    if (nodeById.get(target)?.data.kind === 'note') return;
     const cohort = pendingInput.get(target) ?? new Map();
     const nextSlice = { ...slice, amount };
     const key = cohortKey(nextSlice);
@@ -150,7 +280,12 @@ export function simulateFunnel(nodes, edges) {
 
   for (const id of ordered) {
     const node = nodeById.get(id);
-    if (!node) continue;
+    if (!node || node.data.kind === 'note') continue;
+
+    const destinationType =
+      node.data.kind === 'destination'
+        ? normalizeDestinationType(node.data.destinationType)
+        : null;
 
     const result = resultByNode[id];
     const trafficForecast =
@@ -186,7 +321,7 @@ export function simulateFunnel(nodes, edges) {
       result.trafficCost = trafficForecast.budget;
     }
 
-    if (moneyNodeKinds.has(node.data.kind)) {
+    if (isMoneyNode(node)) {
       const gross = result.converted * Math.max(0, Number(node.data.price) || 0);
       result.transactions = result.converted;
       result.revenue = gross;
@@ -214,7 +349,7 @@ export function simulateFunnel(nodes, edges) {
         convertedSlice.isLead = true;
       }
 
-      if (moneyNodeKinds.has(node.data.kind)) {
+      if (isMoneyNode(node)) {
         const sourceRevenue =
           sourceConverted * Math.max(0, Number(node.data.price) || 0);
         campaign.orders += sourceConverted;
@@ -224,6 +359,10 @@ export function simulateFunnel(nodes, edges) {
         }
         if (node.data.kind === 'upsell') campaign.upsellOrders += sourceConverted;
         if (node.data.kind === 'downsell') campaign.downsellOrders += sourceConverted;
+        if (destinationType === 'ecommerce') {
+          campaign.primaryOrders += sourceConverted;
+          campaign.primaryDeclines += sourceRejected;
+        }
         if (!slice.isCustomer) {
           result.newCustomers += sourceConverted;
           campaign.buyers += sourceConverted;
@@ -250,19 +389,19 @@ export function simulateFunnel(nodes, edges) {
     const noEdges = nodeEdges.filter(
       (edge) => (edge.data?.path ?? edge.sourceHandle) === 'no',
     );
+    const yesShares = getEdgeShares(yesEdges);
+    const noShares = getEdgeShares(noEdges);
 
-    for (const edge of yesEdges) {
+    yesEdges.forEach((edge, index) => {
       for (const slice of convertedSlices) {
-        const share = yesEdges.length ? slice.amount / yesEdges.length : 0;
-        addPending(edge.target, slice, share);
+        addPending(edge.target, slice, slice.amount * yesShares[index]);
       }
-    }
-    for (const edge of noEdges) {
+    });
+    noEdges.forEach((edge, index) => {
       for (const slice of rejectedSlices) {
-        const share = noEdges.length ? slice.amount / noEdges.length : 0;
-        addPending(edge.target, slice, share);
+        addPending(edge.target, slice, slice.amount * noShares[index]);
       }
-    }
+    });
   }
 
   for (const campaign of Object.values(campaignResults)) {
@@ -295,10 +434,20 @@ export function simulateFunnel(nodes, edges) {
   const buyers = all.reduce((sum, result) => sum + result.newCustomers, 0);
   const orders = all.reduce((sum, result) => sum + result.transactions, 0);
   const primaryOrders = nodes
-    .filter((node) => node.data.kind === 'checkout')
+    .filter(
+      (node) =>
+        node.data.kind === 'checkout' ||
+        (node.data.kind === 'destination' &&
+          node.data.destinationType === 'ecommerce'),
+    )
     .reduce((sum, node) => sum + resultByNode[node.id].transactions, 0);
   const primaryDeclines = nodes
-    .filter((node) => node.data.kind === 'checkout')
+    .filter(
+      (node) =>
+        node.data.kind === 'checkout' ||
+        (node.data.kind === 'destination' &&
+          node.data.destinationType === 'ecommerce'),
+    )
     .reduce((sum, node) => sum + resultByNode[node.id].rejected, 0);
   const upsellOrders = nodes
     .filter((node) => node.data.kind === 'upsell')
@@ -314,6 +463,8 @@ export function simulateFunnel(nodes, edges) {
   const productCost = all.reduce((sum, result) => sum + result.productCost, 0);
   const refunds = all.reduce((sum, result) => sum + result.refunds, 0);
   const profit = revenue - trafficCost - productCost - refunds;
+
+  warnings.push(...collectValidationWarnings(nodes, edges, resultByNode));
 
   return {
     visitors,

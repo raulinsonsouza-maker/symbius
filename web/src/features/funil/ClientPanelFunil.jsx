@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { PanelLeft, PanelLeftClose, Plus } from 'lucide-react';
+import { Copy, PanelLeft, PanelLeftClose, Plus, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
 
 const FunnelBuilder = lazy(() =>
@@ -32,6 +32,7 @@ export default function ClientPanelFunil({
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [busyProjectId, setBusyProjectId] = useState('');
   const [error, setError] = useState('');
   const [composerOpen, setComposerOpen] = useState(false);
   const [draftName, setDraftName] = useState('');
@@ -150,6 +151,44 @@ export default function ClientPanelFunil({
     }
   };
 
+  const duplicateProject = async (project, event) => {
+    event?.stopPropagation?.();
+    if (!project?.id || busyProjectId) return;
+    setBusyProjectId(project.id);
+    setError('');
+    try {
+      const created = await api.duplicateFunnelProject(project.id);
+      await loadProjects();
+      selectProject(created.id);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyProjectId('');
+    }
+  };
+
+  const deleteProject = async (project, event) => {
+    event?.stopPropagation?.();
+    if (!project?.id || busyProjectId) return;
+    const confirmed = window.confirm(
+      `Excluir o funil "${project.name}"? Esta ação não pode ser desfeita.`,
+    );
+    if (!confirmed) return;
+    setBusyProjectId(project.id);
+    setError('');
+    try {
+      await api.deleteFunnelProject(project.id);
+      if (selectedProjectId === project.id) {
+        selectProject('');
+      }
+      await loadProjects();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyProjectId('');
+    }
+  };
+
   if (!clientId) {
     return (
       <section className="cp-section__body">
@@ -226,20 +265,47 @@ export default function ClientPanelFunil({
           ) : (
             <div className="funil-projects__list">
               {projects.map((project) => (
-                <button
+                <div
                   key={project.id}
-                  type="button"
                   className={`funil-projects__item ${
                     project.id === selectedProjectId ? 'is-active' : ''
                   }`}
-                  onClick={() => selectProject(project.id)}
-                  title={project.name}
                 >
-                  <strong>{project.name}</strong>
-                  <span>
-                    Atualizado {formatProjectDate(project.updatedAt || project.createdAt)}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    className="funil-projects__item-main"
+                    onClick={() => selectProject(project.id)}
+                    title={project.name}
+                  >
+                    <strong>{project.name}</strong>
+                    <span>
+                      Atualizado{' '}
+                      {formatProjectDate(project.updatedAt || project.createdAt)}
+                    </span>
+                  </button>
+                  <div className="funil-projects__item-actions">
+                    <button
+                      type="button"
+                      className="funil-projects__icon-btn"
+                      title="Duplicar funil"
+                      aria-label={`Duplicar ${project.name}`}
+                      disabled={busyProjectId === project.id}
+                      onClick={(event) => duplicateProject(project, event)}
+                    >
+                      <Copy size={13} strokeWidth={1.7} />
+                    </button>
+                    <button
+                      type="button"
+                      className="funil-projects__icon-btn funil-projects__icon-btn--danger"
+                      title="Excluir funil"
+                      aria-label={`Excluir ${project.name}`}
+                      disabled={busyProjectId === project.id}
+                      onClick={(event) => deleteProject(project, event)}
+                    >
+                      <Trash2 size={13} strokeWidth={1.7} />
+                    </button>
+                  </div>
+                </div>
               ))}
 
               {composerOpen ? (

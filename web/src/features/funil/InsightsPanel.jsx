@@ -12,7 +12,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { SOURCE_OPTIONS } from './funnelTypes';
+import { DESTINATION_OPTIONS, SOURCE_OPTIONS } from './funnelTypes';
 import { useFunnelStore } from './useFunnelStore';
 
 const money = new Intl.NumberFormat('pt-BR', {
@@ -22,6 +22,15 @@ const money = new Intl.NumberFormat('pt-BR', {
 });
 const number = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
 const moneyNodeKinds = new Set(['checkout', 'upsell', 'downsell']);
+
+function isMoneyEditor(node) {
+  if (!node) return false;
+  if (moneyNodeKinds.has(node.data.kind)) return true;
+  return (
+    node.data.kind === 'destination' &&
+    node.data.destinationType === 'ecommerce'
+  );
+}
 
 function NumberField({
   label,
@@ -133,6 +142,59 @@ export function InsightsPanel({ onCollapse }) {
               onChange={(event) => update({ label: event.target.value })}
             />
           </label>
+
+          {node.data.kind === 'note' ? (
+            <label className="funil-field">
+              <span>Texto / anotação</span>
+              <textarea
+                rows={4}
+                value={node.data.noteText || ''}
+                onChange={(event) => update({ noteText: event.target.value })}
+                placeholder="Observações sobre este trecho do funil"
+              />
+            </label>
+          ) : null}
+
+          {node.data.kind === 'destination' ? (
+            <label className="funil-field">
+              <span>Destino</span>
+              <select
+                value={
+                  DESTINATION_OPTIONS.some(
+                    (option) => option.value === node.data.destinationType,
+                  )
+                    ? node.data.destinationType
+                    : 'site'
+                }
+                onChange={(event) => {
+                  const destinationType = event.target.value;
+                  const option = DESTINATION_OPTIONS.find(
+                    (item) => item.value === destinationType,
+                  );
+                  update({
+                    destinationType,
+                    label:
+                      node.data.label === 'Destino' ||
+                      DESTINATION_OPTIONS.some(
+                        (item) => item.label === node.data.label,
+                      )
+                        ? option?.label || node.data.label
+                        : node.data.label,
+                    ...(destinationType === 'ecommerce' &&
+                    !(Number(node.data.price) > 0)
+                      ? { price: 197, productCost: 40, refundRate: 5 }
+                      : {}),
+                  });
+                }}
+              >
+                {DESTINATION_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
 
           {node.data.kind === 'traffic' ? (
             <>
@@ -250,7 +312,7 @@ export function InsightsPanel({ onCollapse }) {
                 </>
               )}
             </>
-          ) : (
+          ) : node.data.kind !== 'note' ? (
             <NumberField
               label="Taxa de conversão"
               value={node.data.conversionRate}
@@ -259,9 +321,9 @@ export function InsightsPanel({ onCollapse }) {
               step={0.5}
               onChange={(value) => update({ conversionRate: value })}
             />
-          )}
+          ) : null}
 
-          {moneyNodeKinds.has(node.data.kind) ? (
+          {isMoneyEditor(node) ? (
             <>
               <div className="funil-field-grid">
                 <NumberField
@@ -377,18 +439,27 @@ export function InsightsPanel({ onCollapse }) {
             </div>
           ) : (
             <div className="funil-mini-grid">
-              <div>
-                <span>Entrada</span>
-                <strong>
-                  {number.format(selectedNodeResult?.incoming ?? 0)}
-                </strong>
-              </div>
-              <div>
-                <span>Conversões</span>
-                <strong>
-                  {number.format(selectedNodeResult?.converted ?? 0)}
-                </strong>
-              </div>
+              {node.data.kind !== 'note' ? (
+                <>
+                  <div>
+                    <span>Entrada</span>
+                    <strong>
+                      {number.format(selectedNodeResult?.incoming ?? 0)}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Conversões</span>
+                    <strong>
+                      {number.format(selectedNodeResult?.converted ?? 0)}
+                    </strong>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <span>Bloco anotativo</span>
+                  <strong>Fora da simulação</strong>
+                </div>
+              )}
               {node.data.kind === 'optin' ? (
                 <div>
                   <span>Novos leads</span>
@@ -397,7 +468,7 @@ export function InsightsPanel({ onCollapse }) {
                   </strong>
                 </div>
               ) : null}
-              {moneyNodeKinds.has(node.data.kind) ? (
+              {isMoneyEditor(node) ? (
                 <>
                   <div>
                     <span>Novos compradores</span>
@@ -427,7 +498,8 @@ export function InsightsPanel({ onCollapse }) {
             className="lp-btn lp-btn--ghost funil-danger"
             onClick={deleteSelected}
           >
-            <Trash2 size={13} strokeWidth={1.6} /> Excluir etapa
+            <Trash2 size={13} strokeWidth={1.6} />{' '}
+            {node.data.kind === 'note' ? 'Excluir texto' : 'Excluir etapa'}
           </button>
         </section>
       ) : (

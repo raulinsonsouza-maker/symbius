@@ -1347,6 +1347,14 @@ const pgStore = {
     return mapFunnelProject(rows[0]);
   },
 
+  async deleteFunnelProject(id) {
+    const { rowCount } = await pool.query(
+      'DELETE FROM funnel_projects WHERE id = $1',
+      [id],
+    );
+    return rowCount > 0;
+  },
+
   /** Cancela recebíveis em aberto do contrato (churn/perdido/arquivado) */
   async cancelFutureContractEntries(contractId) {
     const { rowCount } = await pool.query(

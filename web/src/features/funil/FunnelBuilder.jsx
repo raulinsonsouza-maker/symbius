@@ -76,6 +76,7 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
   const reconnect = useFunnelStore((state) => state.reconnect);
   const addNode = useFunnelStore((state) => state.addNode);
   const selectNode = useFunnelStore((state) => state.selectNode);
+  const selectEdge = useFunnelStore((state) => state.selectEdge);
   const loadProject = useFunnelStore((state) => state.loadProject);
   const startProjectLoad = useFunnelStore((state) => state.startProjectLoad);
   const setSaveStatus = useFunnelStore((state) => state.setSaveStatus);
@@ -164,25 +165,45 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
     return () => window.clearTimeout(timer);
   }, [hydrated, currentProjectId, revision, setSaveStatus, onProjectUpdated]);
 
+  const parsePalettePayload = (raw) => {
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.kind) {
+        return { kind: parsed.kind, patch: parsed.patch || {} };
+      }
+    } catch {
+      /* payload legado: só o kind */
+    }
+    return { kind: raw, patch: {} };
+  };
+
   const onDrop = useCallback(
     (event) => {
       event.preventDefault();
-      const kind = event.dataTransfer.getData('application/funnel-node');
-      if (!kind) return;
+      const payload = parsePalettePayload(
+        event.dataTransfer.getData('application/funnel-node'),
+      );
+      if (!payload?.kind) return;
       addNode(
-        kind,
+        payload.kind,
         screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+        payload.patch,
       );
     },
     [addNode, screenToFlowPosition],
   );
 
   const onQuickAdd = useCallback(
-    (kind) => {
-      addNode(kind, {
-        x: 180 + (nodes.length % 4) * 250,
-        y: 130 + (nodes.length % 3) * 190,
-      });
+    (kind, patch = {}) => {
+      addNode(
+        kind,
+        {
+          x: 180 + (nodes.length % 4) * 250,
+          y: 130 + (nodes.length % 3) * 190,
+        },
+        patch,
+      );
     },
     [addNode, nodes.length],
   );
@@ -292,8 +313,11 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
             onReconnect={reconnect}
             isValidConnection={isValidConnection}
             onNodeClick={(_, node) => selectNode(node.id)}
-            onEdgeClick={() => selectNode(null)}
-            onPaneClick={() => selectNode(null)}
+            onEdgeClick={(_, edge) => selectEdge(edge.id)}
+            onPaneClick={() => {
+              selectNode(null);
+              selectEdge(null);
+            }}
             onDragOver={(event) => {
               event.preventDefault();
               event.dataTransfer.dropEffect = 'move';

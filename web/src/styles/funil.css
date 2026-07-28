@@ -106,12 +106,28 @@
   background: #141414;
   color: inherit;
   border-radius: 14px;
-  padding: 14px;
+  padding: 10px 10px 10px 12px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+}
+
+.funil-projects__item-main {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 4px 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
   text-align: left;
   cursor: pointer;
+  flex: 1;
+  min-width: 0;
+  font: inherit;
 }
 
 .funil-projects__item strong {
@@ -126,6 +142,42 @@
 .funil-projects__item.is-active {
   border-color: rgba(78, 140, 255, 0.55);
   background: rgba(78, 140, 255, 0.08);
+}
+
+.funil-projects__item-actions {
+  display: inline-flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.funil-projects__icon-btn {
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--symbius-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.funil-projects__icon-btn:hover:not(:disabled) {
+  border-color: var(--symbius-border);
+  color: var(--symbius-white);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.funil-projects__icon-btn--danger:hover:not(:disabled) {
+  border-color: rgba(255, 110, 110, 0.35);
+  color: #ff9b9b;
+  background: rgba(255, 110, 110, 0.08);
+}
+
+.funil-projects__icon-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .funil-projects__add {
@@ -270,7 +322,8 @@
 
 .funil-builder__title input,
 .funil-field input,
-.funil-field select {
+.funil-field select,
+.funil-field textarea {
   width: 100%;
   min-width: 0;
   background: #101010;
@@ -279,6 +332,12 @@
   border-radius: 10px;
   padding: 11px 12px;
   font: inherit;
+}
+
+.funil-field textarea {
+  resize: vertical;
+  min-height: 96px;
+  line-height: 1.45;
 }
 
 .funil-builder__actions {
@@ -521,6 +580,34 @@
   color: #cfd4df;
 }
 
+.funil-palette__item--destination .funil-palette__icon,
+.funil-node--destination .funil-node__icon {
+  background: rgba(64, 196, 180, 0.16);
+  color: #7de0d4;
+}
+
+.funil-palette__item--note .funil-palette__icon,
+.funil-node--note .funil-node__icon {
+  background: rgba(232, 200, 120, 0.14);
+  color: #edd58a;
+}
+
+.funil-node--note-card {
+  min-height: auto;
+  background: linear-gradient(180deg, rgba(40, 36, 24, 0.95), rgba(22, 20, 16, 0.98));
+  border-color: rgba(232, 200, 120, 0.28);
+}
+
+.funil-node--note-card .funil-node__label {
+  font-size: 1.05rem;
+}
+
+.funil-node--note-card .funil-node__desc {
+  white-space: pre-wrap;
+  max-height: 4.5em;
+  overflow: hidden;
+}
+
 .funil-canvas {
   min-width: 0;
   min-height: 0;
@@ -712,6 +799,41 @@
 
 .funil-node__handle--no {
   background: #c4a574 !important;
+}
+
+.funil-edge-toolbar {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: all;
+  z-index: 2;
+}
+
+.funil-edge-weight {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--symbius-border);
+  background: #0f0f10;
+  color: var(--symbius-muted-light);
+  font-size: 0.72rem;
+}
+
+.funil-edge-weight input {
+  width: 42px;
+  border: 0;
+  background: transparent;
+  color: var(--symbius-white);
+  font: inherit;
+  text-align: right;
+  outline: none;
+}
+
+.funil-edge-toolbar.is-selected .funil-edge-weight {
+  border-color: rgba(78, 140, 255, 0.45);
 }
 
 .funil-edge-delete {
