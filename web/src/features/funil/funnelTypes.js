@@ -308,6 +308,69 @@ export function isPurchaseDestinationOutcome(outcome) {
   return ['purchase'].includes(String(outcome));
 }
 
+/** Modos de operação do bloco CRM no funil. */
+export const CRM_MODES = [
+  {
+    value: 'qualify',
+    label: 'Qualificação',
+    description: 'Triagem e lead score',
+    rateLabel: 'Taxa de qualificação',
+    metricLabel: 'Qualificados',
+  },
+  {
+    value: 'nurture',
+    label: 'Nutrição',
+    description: 'Sequências e relacionamento',
+    rateLabel: 'Taxa de avanço',
+    metricLabel: 'Avanços',
+  },
+  {
+    value: 'followup',
+    label: 'Follow-up',
+    description: 'Contato comercial ativo',
+    rateLabel: 'Taxa de resposta',
+    metricLabel: 'Respostas',
+  },
+];
+
+export function getCrmMode(value) {
+  return (
+    CRM_MODES.find((option) => option.value === value) ||
+    CRM_MODES.find((option) => option.value === 'qualify')
+  );
+}
+
+/** Formatos de criativo no funil. */
+export const CREATIVE_FORMATS = [
+  {
+    value: 'static',
+    label: 'Estático',
+    description: 'Imagens e carrosséis',
+    defaultQuantity: 3,
+    defaultAspects: '1:1, 4:5, 9:16',
+  },
+  {
+    value: 'video',
+    label: 'Vídeo',
+    description: 'Reels, stories e anúncios em vídeo',
+    defaultQuantity: 2,
+    defaultAspects: '9:16, 1:1',
+  },
+];
+
+export function getCreativeFormat(value) {
+  return (
+    CREATIVE_FORMATS.find((option) => option.value === value) ||
+    CREATIVE_FORMATS.find((option) => option.value === 'static')
+  );
+}
+
+export const OPS_TASK_STATUSES = [
+  { value: 'todo', label: 'A fazer' },
+  { value: 'doing', label: 'Em andamento' },
+  { value: 'done', label: 'Concluído' },
+];
+
 export const NODE_META = {
   traffic: {
     label: 'Tráfego',
@@ -318,6 +381,16 @@ export const NODE_META = {
     label: 'Captura',
     description: 'Geração de leads',
     tone: 'optin',
+  },
+  crm: {
+    label: 'CRM',
+    description: 'Qualificação e follow-up',
+    tone: 'crm',
+  },
+  creatives: {
+    label: 'Criativos',
+    description: 'Peças estáticas ou vídeo',
+    tone: 'creatives',
   },
   sales: {
     label: 'Página de vendas',
@@ -379,6 +452,31 @@ export const DEFAULT_NODE_DATA = {
     label: 'Landing page',
     kind: 'optin',
     conversionRate: 35,
+    visitors: 0,
+    cpc: 0,
+    price: 0,
+    productCost: 0,
+    refundRate: 0,
+  },
+  crm: {
+    label: 'CRM / Qualificação',
+    kind: 'crm',
+    conversionRate: 40,
+    crmMode: 'qualify',
+    visitors: 0,
+    cpc: 0,
+    price: 0,
+    productCost: 0,
+    refundRate: 0,
+  },
+  creatives: {
+    label: 'Criativos estáticos',
+    kind: 'creatives',
+    conversionRate: 100,
+    creativeFormat: 'static',
+    quantity: 3,
+    formats: '1:1, 4:5, 9:16',
+    brief: '',
     visitors: 0,
     cpc: 0,
     price: 0,

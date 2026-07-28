@@ -8,6 +8,7 @@ const emptyResult = () => ({
   converted: 0,
   rejected: 0,
   newLeads: 0,
+  qualified: 0,
   newCustomers: 0,
   transactions: 0,
   revenue: 0,
@@ -412,6 +413,15 @@ export function simulateFunnel(nodes, edges) {
         convertedSlice.isLead = true;
       }
 
+      if (node.data.kind === 'crm') {
+        result.qualified += sourceConverted;
+        if (!slice.isLead) {
+          result.newLeads += sourceConverted;
+          campaign.leads += sourceConverted;
+        }
+        convertedSlice.isLead = true;
+      }
+
       if (
         node.data.kind === 'destination' &&
         LEAD_OUTCOMES.has(destinationOutcome)
@@ -505,6 +515,7 @@ export function simulateFunnel(nodes, edges) {
     .filter((node) => node.data.kind === 'traffic')
     .reduce((sum, node) => sum + resultByNode[node.id].incoming, 0);
   const leads = all.reduce((sum, result) => sum + result.newLeads, 0);
+  const qualified = all.reduce((sum, result) => sum + result.qualified, 0);
   const buyers = all.reduce((sum, result) => sum + result.newCustomers, 0);
   const orders = all.reduce((sum, result) => sum + result.transactions, 0);
   const primaryOrders = nodes
@@ -551,6 +562,7 @@ export function simulateFunnel(nodes, edges) {
   return {
     visitors,
     leads,
+    qualified,
     buyers,
     orders,
     primaryOrders,

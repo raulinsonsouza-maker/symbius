@@ -3,12 +3,13 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import ClientPanelFunil from '../../../features/funil/ClientPanelFunil';
 import { api } from '../../../lib/api';
+import OpsProductionSection from './OpsProductionSection';
 
 const NAV = [
   { id: 'funil', label: 'Funil', short: 'Fu', available: true },
+  { id: 'producao', label: 'Produção', short: 'Pr', available: true },
   { id: 'arquivos', label: 'Arquivos', short: 'Ar', available: false },
   { id: 'atas', label: 'Atas', short: 'At', available: false },
-  { id: 'solicitacoes', label: 'Solicitações', short: 'So', available: false },
   { id: 'aprovacoes', label: 'Aprovações', short: 'Ap', available: false },
 ];
 
@@ -215,6 +216,8 @@ export default function OperacaoClient() {
         <div className="cp-content">
           {section === 'funil' ? (
             <ClientPanelFunil client={client} sectionActive />
+          ) : section === 'producao' ? (
+            <OpsProductionSection client={client} />
           ) : (
             <PlaceholderSection
               title={NAV.find((item) => item.id === section)?.label || 'Módulo'}

@@ -7,6 +7,12 @@ import {
 } from '@xyflow/react';
 import { create } from 'zustand';
 import { defaultProject } from './defaultProject';
+import {
+  createManualOpsTask,
+  deriveOpsTasks,
+  mergeOpsTasks,
+  sanitizeOpsTasks,
+} from './deriveOpsTasks';
 import { DEFAULT_NODE_DATA } from './funnelTypes';
 import { parseFunnelGraph } from './graphPersist';
 import { simulateFunnel } from './simulation';
@@ -39,6 +45,7 @@ const cloneDefaultGraph = () =>
 
 const normalizeGraph = (graph) => ({
   ...withInteractiveEdges(graph),
+  opsTasks: sanitizeOpsTasks(graph.opsTasks || []),
   nodes: (graph.nodes || []).map((node) => {
     if (node.data.kind !== 'traffic') return node;
     const legacyBudget =
@@ -77,6 +84,7 @@ export const useFunnelStore = create((set, get) => ({
   projectName: defaultProject.name,
   nodes: initialGraph.nodes,
   edges: initialGraph.edges,
+  opsTasks: sanitizeOpsTasks(initialGraph.opsTasks || []),
   selectedNodeId: null,
   selectedEdgeId: null,
   simulation: simulateFunnel(initialGraph.nodes, initialGraph.edges),
@@ -98,13 +106,14 @@ export const useFunnelStore = create((set, get) => ({
     }),
   loadProject: (project) => {
     const graph = normalizeGraph(
-      parseFunnelGraph(project.graph || { nodes: [], edges: [] }),
+      parseFunnelGraph(project.graph || { nodes: [], edges: [], opsTasks: [] }),
     );
     set({
       projectId: project.id,
       projectName: project.name,
       nodes: graph.nodes,
       edges: graph.edges,
+      opsTasks: graph.opsTasks,
       selectedNodeId: null,
       selectedEdgeId: null,
       simulation: simulateFunnel(graph.nodes, graph.edges),
@@ -119,6 +128,7 @@ export const useFunnelStore = create((set, get) => ({
       projectName: defaultProject.name,
       nodes: graph.nodes,
       edges: graph.edges,
+      opsTasks: sanitizeOpsTasks(graph.opsTasks || []),
       selectedNodeId: null,
       selectedEdgeId: null,
       simulation: simulateFunnel(graph.nodes, graph.edges),
@@ -303,8 +313,44 @@ export const useFunnelStore = create((set, get) => ({
         revision: state.revision + 1,
       };
     }),
+  regenerateOpsTasks: () =>
+    set((state) => {
+      const generated = deriveOpsTasks(
+        state.nodes,
+        state.edges,
+        state.simulation,
+      );
+      return {
+        opsTasks: mergeOpsTasks(state.opsTasks, generated),
+        revision: state.revision + 1,
+      };
+    }),
+  updateOpsTask: (id, patch) =>
+    set((state) => ({
+      opsTasks: state.opsTasks.map((task) =>
+        task.id === id ? { ...task, ...patch, id: task.id } : task,
+      ),
+      revision: state.revision + 1,
+    })),
+  setOpsTaskStatus: (id, status) =>
+    set((state) => ({
+      opsTasks: state.opsTasks.map((task) =>
+        task.id === id ? { ...task, status } : task,
+      ),
+      revision: state.revision + 1,
+    })),
+  addManualOpsTask: (partial = {}) =>
+    set((state) => ({
+      opsTasks: [...state.opsTasks, createManualOpsTask(partial)],
+      revision: state.revision + 1,
+    })),
+  deleteOpsTask: (id) =>
+    set((state) => ({
+      opsTasks: state.opsTasks.filter((task) => task.id !== id),
+      revision: state.revision + 1,
+    })),
   getGraph: () => {
-    const { nodes, edges } = get();
-    return { nodes, edges };
+    const { nodes, edges, opsTasks } = get();
+    return { nodes, edges, opsTasks };
   },
 }));

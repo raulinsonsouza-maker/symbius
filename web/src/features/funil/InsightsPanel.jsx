@@ -14,9 +14,13 @@ import {
 } from 'lucide-react';
 import {
   CAMPAIGN_OBJECTIVES,
+  CREATIVE_FORMATS,
+  CRM_MODES,
   DEFAULT_DESTINATION_OUTCOME,
   DESTINATION_OPTIONS,
   getCampaignObjective,
+  getCreativeFormat,
+  getCrmMode,
   getDestinationOutcome,
   getDestinationOutcomes,
   isPurchaseDestinationOutcome,
@@ -24,6 +28,7 @@ import {
   NOTE_STROKE_PRESETS,
   SOURCE_OPTIONS,
 } from './funnelTypes';
+import { OpsTasksPanel } from './OpsTasksPanel';
 import { useFunnelStore } from './useFunnelStore';
 
 const money = new Intl.NumberFormat('pt-BR', {
@@ -108,6 +113,11 @@ export function InsightsPanel({ onCollapse }) {
     : 'other';
   const sourceOption = getSourceOption(sourceType);
   const campaignObjective = getCampaignObjective(node?.data.campaignObjective);
+  const crmMode = node?.data.kind === 'crm' ? getCrmMode(node.data.crmMode) : null;
+  const creativeFormat =
+    node?.data.kind === 'creatives'
+      ? getCreativeFormat(node.data.creativeFormat)
+      : null;
   const destinationOutcomes =
     node?.data.kind === 'destination'
       ? getDestinationOutcomes(node.data.destinationType)
@@ -350,6 +360,111 @@ export function InsightsPanel({ onCollapse }) {
             </>
           ) : null}
 
+          {node.data.kind === 'crm' ? (
+            <label className="funil-field">
+              <span>Modo do CRM</span>
+              <select
+                value={crmMode?.value || 'qualify'}
+                onChange={(event) => {
+                  const next = getCrmMode(event.target.value);
+                  update({
+                    crmMode: next.value,
+                    label:
+                      node.data.label === 'CRM / Qualificação' ||
+                      CRM_MODES.some(
+                        (item) =>
+                          node.data.label === `CRM · ${item.label}` ||
+                          node.data.label === item.label,
+                      )
+                        ? `CRM · ${next.label}`
+                        : node.data.label,
+                  });
+                }}
+              >
+                {CRM_MODES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <small className="funil-field__hint">{crmMode?.description}</small>
+            </label>
+          ) : null}
+
+          {node.data.kind === 'creatives' ? (
+            <>
+              <label className="funil-field">
+                <span>Tipo de criativo</span>
+                <select
+                  value={creativeFormat?.value || 'static'}
+                  onChange={(event) => {
+                    const next = getCreativeFormat(event.target.value);
+                    update({
+                      creativeFormat: next.value,
+                      formats: node.data.formats || next.defaultAspects,
+                      quantity:
+                        Number(node.data.quantity) > 0
+                          ? node.data.quantity
+                          : next.defaultQuantity,
+                      label:
+                        node.data.label === 'Criativos estáticos' ||
+                        node.data.label === 'Criativos em vídeo' ||
+                        CREATIVE_FORMATS.some(
+                          (item) =>
+                            node.data.label === `Criativos ${item.label.toLowerCase()}s` ||
+                            node.data.label === `Criativos ${item.label.toLowerCase()}`,
+                        )
+                          ? next.value === 'video'
+                            ? 'Criativos em vídeo'
+                            : 'Criativos estáticos'
+                          : node.data.label,
+                    });
+                  }}
+                >
+                  {CREATIVE_FORMATS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <small className="funil-field__hint">
+                  {creativeFormat?.description}
+                </small>
+              </label>
+              <div className="funil-field-grid">
+                <NumberField
+                  label="Quantidade de peças"
+                  value={Math.max(1, Number(node.data.quantity) || 1)}
+                  min={1}
+                  step={1}
+                  onChange={(value) =>
+                    update({ quantity: Math.max(1, value || 1) })
+                  }
+                />
+                <label className="funil-field">
+                  <span>Formatos</span>
+                  <input
+                    type="text"
+                    value={node.data.formats || ''}
+                    placeholder="1:1, 4:5, 9:16"
+                    onChange={(event) =>
+                      update({ formats: event.target.value })
+                    }
+                  />
+                </label>
+              </div>
+              <label className="funil-field">
+                <span>Brief de produção</span>
+                <textarea
+                  rows={3}
+                  value={node.data.brief || ''}
+                  placeholder="Ex.: oferta principal, prova social, CTA claro"
+                  onChange={(event) => update({ brief: event.target.value })}
+                />
+              </label>
+            </>
+          ) : null}
+
           {node.data.kind === 'traffic' ? (
             <>
               {acquisitionModel !== 'source' ? (
@@ -491,10 +606,12 @@ export function InsightsPanel({ onCollapse }) {
                 </>
               )}
             </>
-          ) : node.data.kind !== 'note' ? (
+          ) : node.data.kind !== 'note' && node.data.kind !== 'creatives' ? (
             <NumberField
               label={
-                destinationOutcome?.rateLabel || 'Taxa de conversão'
+                crmMode?.rateLabel ||
+                destinationOutcome?.rateLabel ||
+                'Taxa de conversão'
               }
               value={node.data.conversionRate}
               suffix="%"
@@ -642,14 +759,23 @@ export function InsightsPanel({ onCollapse }) {
                 </div>
               )}
               {node.data.kind === 'optin' ||
+              node.data.kind === 'crm' ||
               (node.data.kind === 'destination' &&
                 ['lead', 'dm', 'chat_start', 'reply'].includes(
                   destinationOutcome?.value,
                 )) ? (
                 <div>
-                  <span>Novos leads</span>
+                  <span>
+                    {node.data.kind === 'crm'
+                      ? crmMode?.metricLabel || 'Qualificados'
+                      : 'Novos leads'}
+                  </span>
                   <strong>
-                    {number.format(selectedNodeResult?.newLeads ?? 0)}
+                    {number.format(
+                      node.data.kind === 'crm'
+                        ? selectedNodeResult?.qualified ?? 0
+                        : selectedNodeResult?.newLeads ?? 0,
+                    )}
                   </strong>
                 </div>
               ) : null}
@@ -715,10 +841,8 @@ export function InsightsPanel({ onCollapse }) {
           <BarChart3 size={13} strokeWidth={1.6} /> Simulação mensal
         </div>
         <div className="funil-hero">
-          <small>Lucro projetado</small>
-          <strong className={result.profit < 0 ? 'is-negative' : ''}>
-            {money.format(result.profit)}
-          </strong>
+          <small>Faturamento projetado</small>
+          <strong>{money.format(result.revenue)}</strong>
           <span>
             <TrendingUp size={12} strokeWidth={1.6} />
             {result.visitors
@@ -732,8 +856,10 @@ export function InsightsPanel({ onCollapse }) {
             <span className="funil-summary-grid__icon funil-summary-grid__icon--purple">
               <DollarSign size={13} strokeWidth={1.6} />
             </span>
-            <small>Receita</small>
-            <strong>{money.format(result.revenue)}</strong>
+            <small>Lucro projetado</small>
+            <strong className={result.profit < 0 ? 'is-negative' : ''}>
+              {money.format(result.profit)}
+            </strong>
           </div>
           <div>
             <span className="funil-summary-grid__icon funil-summary-grid__icon--blue">
@@ -741,6 +867,13 @@ export function InsightsPanel({ onCollapse }) {
             </span>
             <small>Leads</small>
             <strong>{number.format(result.leads)}</strong>
+          </div>
+          <div>
+            <span className="funil-summary-grid__icon funil-summary-grid__icon--indigo">
+              <GitBranch size={13} strokeWidth={1.6} />
+            </span>
+            <small>Qualificados CRM</small>
+            <strong>{number.format(result.qualified ?? 0)}</strong>
           </div>
           <div>
             <span className="funil-summary-grid__icon funil-summary-grid__icon--green">
@@ -885,10 +1018,8 @@ export function InsightsPanel({ onCollapse }) {
 
                 <span className="funil-result-card__highlight">
                   <span>
-                    <small>Lucro projetado</small>
-                    <strong className={funnel.profit < 0 ? 'is-negative' : ''}>
-                      {money.format(funnel.profit)}
-                    </strong>
+                    <small>Faturamento</small>
+                    <strong>{money.format(funnel.revenue)}</strong>
                   </span>
                   <span>
                     <small>Conv. compradores</small>
@@ -914,8 +1045,10 @@ export function InsightsPanel({ onCollapse }) {
                     <strong>{number.format(funnel.orders)}</strong>
                   </span>
                   <span>
-                    <small>Receita</small>
-                    <strong>{money.format(funnel.revenue)}</strong>
+                    <small>Lucro projetado</small>
+                    <strong className={funnel.profit < 0 ? 'is-negative' : ''}>
+                      {money.format(funnel.profit)}
+                    </strong>
                   </span>
                   <span>
                     <small>CAC</small>
@@ -959,6 +1092,8 @@ export function InsightsPanel({ onCollapse }) {
           </div>
         </section>
       ) : null}
+
+      <OpsTasksPanel />
     </aside>
   );
 }

@@ -2,21 +2,28 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Camera,
-  Check,
-  CircleDot,
+  CircleCheck,
+  Clapperboard,
+  ContactRound,
   CreditCard,
   Ellipsis,
   FileText,
   Globe,
+  Image,
+  Mail,
+  Megaphone,
   MessageCircle,
-  MousePointer2,
+  MousePointerClick,
   Music2,
   Play,
   ShoppingBag,
+  Users,
 } from 'lucide-react';
 import { Handle, Position } from '@xyflow/react';
 import {
   getCampaignObjective,
+  getCreativeFormat,
+  getCrmMode,
   getDestinationOption,
   getDestinationOutcome,
   NODE_META,
@@ -24,14 +31,22 @@ import {
 import { useFunnelStore } from './useFunnelStore';
 
 const icons = {
-  traffic: CircleDot,
-  optin: MousePointer2,
+  traffic: Megaphone,
+  optin: MousePointerClick,
+  crm: ContactRound,
+  creatives: Image,
   sales: FileText,
   checkout: CreditCard,
   upsell: ArrowUpRight,
   downsell: ArrowDownRight,
-  thankyou: Check,
+  thankyou: CircleCheck,
   destination: Globe,
+};
+
+const trafficSourceIcons = {
+  email: Mail,
+  event: Users,
+  referral: Users,
 };
 
 const destinationIcons = {
@@ -65,10 +80,17 @@ export function FunnelNodeCard({ id, data, selected }) {
     data.kind === 'traffic'
       ? getCampaignObjective(data.campaignObjective)
       : null;
+  const crmMode = data.kind === 'crm' ? getCrmMode(data.crmMode) : null;
+  const creativeFormat =
+    data.kind === 'creatives' ? getCreativeFormat(data.creativeFormat) : null;
   const Icon =
     data.kind === 'destination'
-      ? destinationIcons[destination.value] || Globe
-      : icons[data.kind] || CircleDot;
+      ? destinationIcons[destination?.value] || Globe
+      : data.kind === 'traffic' && data.acquisitionModel === 'source'
+        ? trafficSourceIcons[data.sourceType] || Megaphone
+        : data.kind === 'creatives' && creativeFormat?.value === 'video'
+          ? Clapperboard
+          : icons[data.kind] || Megaphone;
   const isNote = data.kind === 'note';
 
   if (isNote) {
@@ -107,8 +129,8 @@ export function FunnelNodeCard({ id, data, selected }) {
         position={Position.Left}
       />
       <div className="funil-node__head">
-        <span className="funil-node__icon">
-          <Icon size={15} strokeWidth={1.6} />
+        <span className="funil-node__icon" aria-hidden="true">
+          <Icon size={15} strokeWidth={2} absoluteStrokeWidth />
         </span>
         <span className="funil-node__kind">{meta.label}</span>
         <Ellipsis className="funil-node__more" size={14} strokeWidth={1.5} />
@@ -117,11 +139,15 @@ export function FunnelNodeCard({ id, data, selected }) {
       <span className="funil-node__desc">
         {destination
           ? `${destination.label} · ${destinationOutcome.label}`
-          : campaignObjective
-            ? data.acquisitionModel === 'source'
-              ? meta.description
-              : `Objetivo: ${campaignObjective.label}`
-            : meta.description}
+          : creativeFormat
+            ? `${creativeFormat.label} · ${Math.max(1, Number(data.quantity) || 1)} peças`
+            : crmMode
+              ? `${crmMode.label} · ${crmMode.description}`
+              : campaignObjective
+                ? data.acquisitionModel === 'source'
+                  ? meta.description
+                  : `Objetivo: ${campaignObjective.label}`
+                : meta.description}
       </span>
       <div className="funil-node__metrics">
         <span>
@@ -132,13 +158,19 @@ export function FunnelNodeCard({ id, data, selected }) {
           <small>
             {data.kind === 'traffic'
               ? 'Conv. fonte'
-              : destinationOutcome
-                ? destinationOutcome.metricLabel
-                : 'Conversão'}
+              : creativeFormat
+                ? 'Peças'
+                : crmMode
+                  ? crmMode.metricLabel
+                  : destinationOutcome
+                    ? destinationOutcome.metricLabel
+                    : 'Conversão'}
           </small>
           {data.kind === 'traffic'
             ? `${(campaign?.conversionRate ?? 0).toFixed(1)}%`
-            : `${data.conversionRate}%`}
+            : data.kind === 'creatives'
+              ? String(Math.max(1, Number(data.quantity) || 1))
+              : `${data.conversionRate}%`}
         </span>
       </div>
       <div className="funil-node__path funil-node__path--yes">SIM</div>

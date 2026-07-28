@@ -1,3 +1,5 @@
+import { sanitizeOpsTasks } from './deriveOpsTasks';
+
 /** Remove campos transitórios do React Flow antes de persistir. */
 export function sanitizeFunnelGraph(graph = {}) {
   const nodes = (graph.nodes || []).map((node) => ({
@@ -27,20 +29,24 @@ export function sanitizeFunnelGraph(graph = {}) {
     };
   });
 
-  return { nodes, edges };
+  return {
+    nodes,
+    edges,
+    opsTasks: sanitizeOpsTasks(graph.opsTasks || []),
+  };
 }
 
 export function parseFunnelGraph(raw) {
-  if (!raw) return { nodes: [], edges: [] };
+  if (!raw) return { nodes: [], edges: [], opsTasks: [] };
   if (typeof raw === 'string') {
     try {
       return parseFunnelGraph(JSON.parse(raw));
     } catch {
-      return { nodes: [], edges: [] };
+      return { nodes: [], edges: [], opsTasks: [] };
     }
   }
   if (!Array.isArray(raw.nodes) || !Array.isArray(raw.edges)) {
-    return { nodes: [], edges: [] };
+    return { nodes: [], edges: [], opsTasks: [] };
   }
   return sanitizeFunnelGraph(raw);
 }

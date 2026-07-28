@@ -2,15 +2,18 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Camera,
-  Check,
-  CircleDot,
+  CircleCheck,
+  Clapperboard,
+  ContactRound,
   CreditCard,
   FileText,
   Globe,
   GripVertical,
+  Image,
   Mail,
+  Megaphone,
   MessageCircle,
-  MousePointer2,
+  MousePointerClick,
   Music2,
   PanelLeftClose,
   Play,
@@ -24,7 +27,7 @@ const items = [
   {
     key: 'traffic',
     kind: 'traffic',
-    icon: CircleDot,
+    icon: Megaphone,
     label: NODE_META.traffic.label,
     description: NODE_META.traffic.description,
     tone: 'traffic',
@@ -173,12 +176,43 @@ const items = [
     description: NODE_META.note.description,
     tone: 'note',
   },
-  { key: 'optin', kind: 'optin', icon: MousePointer2 },
+  { key: 'optin', kind: 'optin', icon: MousePointerClick },
+  { key: 'crm', kind: 'crm', icon: ContactRound },
+  {
+    key: 'creatives-static',
+    kind: 'creatives',
+    icon: Image,
+    label: 'Criativo estático',
+    description: 'Imagens e carrosséis para produção',
+    tone: 'creatives',
+    patch: {
+      label: 'Criativos estáticos',
+      creativeFormat: 'static',
+      quantity: 3,
+      formats: '1:1, 4:5, 9:16',
+      conversionRate: 100,
+    },
+  },
+  {
+    key: 'creatives-video',
+    kind: 'creatives',
+    icon: Clapperboard,
+    label: 'Criativo vídeo',
+    description: 'Reels e anúncios em vídeo',
+    tone: 'creatives',
+    patch: {
+      label: 'Criativos em vídeo',
+      creativeFormat: 'video',
+      quantity: 2,
+      formats: '9:16, 1:1',
+      conversionRate: 100,
+    },
+  },
   { key: 'sales', kind: 'sales', icon: FileText },
   { key: 'checkout', kind: 'checkout', icon: CreditCard },
   { key: 'upsell', kind: 'upsell', icon: ArrowUpRight },
   { key: 'downsell', kind: 'downsell', icon: ArrowDownRight },
-  { key: 'thankyou', kind: 'thankyou', icon: Check },
+  { key: 'thankyou', kind: 'thankyou', icon: CircleCheck },
 ];
 
 function palettePayload(item) {
@@ -229,8 +263,8 @@ export function NodePalette({ onQuickAdd, onCollapse }) {
               onDragStart={(event) => handleDragStart(event, item)}
               onClick={() => onQuickAdd(item.kind, item.patch || {})}
             >
-              <span className="funil-palette__icon">
-                <Icon size={15} strokeWidth={1.6} />
+              <span className="funil-palette__icon" aria-hidden="true">
+                <Icon size={15} strokeWidth={2} absoluteStrokeWidth />
               </span>
               <span className="funil-palette__copy">
                 <strong>{label}</strong>

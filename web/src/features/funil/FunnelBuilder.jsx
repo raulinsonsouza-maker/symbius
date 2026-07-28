@@ -317,6 +317,14 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
           />
         </div>
         <div className="funil-builder__actions">
+          <button
+            type="button"
+            className="lp-btn lp-btn--ghost funil-builder__ops-btn"
+            onClick={() => useFunnelStore.getState().regenerateOpsTasks()}
+            title="Gerar lista de produção a partir do funil"
+          >
+            Gerar produção
+          </button>
           <SaveIndicator />
         </div>
       </div>
