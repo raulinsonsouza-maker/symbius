@@ -1,5 +1,8 @@
 const moneyNodeKinds = new Set(['checkout', 'upsell', 'downsell']);
 
+const LEAD_OUTCOMES = new Set(['lead', 'dm', 'chat_start', 'reply', 'messages']);
+const PURCHASE_OUTCOMES = new Set(['purchase']);
+
 const emptyResult = () => ({
   incoming: 0,
   converted: 0,
@@ -19,14 +22,6 @@ const safePercent = (value) =>
 const cohortKey = ({ sourceId, isLead, isCustomer }) =>
   `${sourceId}:${isLead ? 1 : 0}:${isCustomer ? 1 : 0}`;
 
-function isMoneyNode(node) {
-  if (moneyNodeKinds.has(node.data.kind)) return true;
-  return (
-    node.data.kind === 'destination' &&
-    normalizeDestinationType(node.data.destinationType) === 'ecommerce'
-  );
-}
-
 function normalizeDestinationType(value) {
   const known = [
     'instagram',
@@ -37,6 +32,63 @@ function normalizeDestinationType(value) {
     'site',
   ];
   return known.includes(String(value)) ? value : 'site';
+}
+
+function normalizeDestinationOutcome(destinationType, outcome) {
+  const defaults = {
+    instagram: 'followers',
+    tiktok: 'followers',
+    youtube: 'subscribers',
+    whatsapp: 'chat_start',
+    site: 'page_view',
+    ecommerce: 'purchase',
+  };
+  const allowed = {
+    instagram: [
+      'profile_visit',
+      'followers',
+      'link_click',
+      'dm',
+      'engagement',
+      'purchase',
+    ],
+    tiktok: [
+      'profile_visit',
+      'followers',
+      'link_click',
+      'video_view',
+      'engagement',
+      'purchase',
+    ],
+    youtube: ['views', 'subscribers', 'link_click', 'engagement'],
+    whatsapp: ['chat_start', 'reply', 'lead'],
+    site: ['page_view', 'lead', 'click', 'purchase'],
+    ecommerce: ['product_view', 'add_to_cart', 'purchase'],
+  };
+  const type = normalizeDestinationType(destinationType);
+  const list = allowed[type];
+  return list.includes(String(outcome)) ? outcome : defaults[type];
+}
+
+function normalizeCampaignObjective(value) {
+  const known = [
+    'awareness',
+    'engagement',
+    'traffic',
+    'leads',
+    'messages',
+    'sales',
+  ];
+  return known.includes(String(value)) ? value : 'traffic';
+}
+
+function isMoneyNode(node) {
+  if (moneyNodeKinds.has(node.data.kind)) return true;
+  if (node.data.kind !== 'destination') return false;
+  const type = normalizeDestinationType(node.data.destinationType);
+  const outcome = normalizeDestinationOutcome(type, node.data.destinationOutcome);
+  if (type === 'ecommerce' && outcome === 'purchase') return true;
+  return PURCHASE_OUTCOMES.has(outcome) && Number(node.data.price) > 0;
 }
 
 function getEdgeShares(edges) {
@@ -242,6 +294,7 @@ export function simulateFunnel(nodes, edges) {
       label: node.data.label,
       acquisitionModel: forecast.model,
       sourceType: forecast.sourceType,
+      campaignObjective: normalizeCampaignObjective(node.data.campaignObjective),
       budget: forecast.budget,
       impressions: forecast.impressions,
       visitors: forecast.visitors,
@@ -286,6 +339,13 @@ export function simulateFunnel(nodes, edges) {
       node.data.kind === 'destination'
         ? normalizeDestinationType(node.data.destinationType)
         : null;
+    const destinationOutcome =
+      destinationType != null
+        ? normalizeDestinationOutcome(
+            destinationType,
+            node.data.destinationOutcome,
+          )
+        : null;
 
     const result = resultByNode[id];
     const trafficForecast =
@@ -316,6 +376,9 @@ export function simulateFunnel(nodes, edges) {
     result.incoming = incoming;
     result.converted = incoming * rate;
     result.rejected = Math.max(0, incoming - result.converted);
+    if (destinationOutcome) {
+      result.destinationOutcome = destinationOutcome;
+    }
 
     if (trafficForecast) {
       result.trafficCost = trafficForecast.budget;
@@ -349,6 +412,17 @@ export function simulateFunnel(nodes, edges) {
         convertedSlice.isLead = true;
       }
 
+      if (
+        node.data.kind === 'destination' &&
+        LEAD_OUTCOMES.has(destinationOutcome)
+      ) {
+        if (!slice.isLead) {
+          result.newLeads += sourceConverted;
+          campaign.leads += sourceConverted;
+        }
+        convertedSlice.isLead = true;
+      }
+
       if (isMoneyNode(node)) {
         const sourceRevenue =
           sourceConverted * Math.max(0, Number(node.data.price) || 0);
@@ -359,7 +433,7 @@ export function simulateFunnel(nodes, edges) {
         }
         if (node.data.kind === 'upsell') campaign.upsellOrders += sourceConverted;
         if (node.data.kind === 'downsell') campaign.downsellOrders += sourceConverted;
-        if (destinationType === 'ecommerce') {
+        if (destinationOutcome === 'purchase') {
           campaign.primaryOrders += sourceConverted;
           campaign.primaryDeclines += sourceRejected;
         }
@@ -434,20 +508,28 @@ export function simulateFunnel(nodes, edges) {
   const buyers = all.reduce((sum, result) => sum + result.newCustomers, 0);
   const orders = all.reduce((sum, result) => sum + result.transactions, 0);
   const primaryOrders = nodes
-    .filter(
-      (node) =>
-        node.data.kind === 'checkout' ||
-        (node.data.kind === 'destination' &&
-          node.data.destinationType === 'ecommerce'),
-    )
+    .filter((node) => {
+      if (node.data.kind === 'checkout') return true;
+      if (node.data.kind !== 'destination') return false;
+      const type = normalizeDestinationType(node.data.destinationType);
+      const outcome = normalizeDestinationOutcome(
+        type,
+        node.data.destinationOutcome,
+      );
+      return outcome === 'purchase';
+    })
     .reduce((sum, node) => sum + resultByNode[node.id].transactions, 0);
   const primaryDeclines = nodes
-    .filter(
-      (node) =>
-        node.data.kind === 'checkout' ||
-        (node.data.kind === 'destination' &&
-          node.data.destinationType === 'ecommerce'),
-    )
+    .filter((node) => {
+      if (node.data.kind === 'checkout') return true;
+      if (node.data.kind !== 'destination') return false;
+      const type = normalizeDestinationType(node.data.destinationType);
+      const outcome = normalizeDestinationOutcome(
+        type,
+        node.data.destinationOutcome,
+      );
+      return outcome === 'purchase';
+    })
     .reduce((sum, node) => sum + resultByNode[node.id].rejected, 0);
   const upsellOrders = nodes
     .filter((node) => node.data.kind === 'upsell')

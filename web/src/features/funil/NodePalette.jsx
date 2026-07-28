@@ -18,7 +18,7 @@ import {
   Type,
   Users,
 } from 'lucide-react';
-import { DEFAULT_NODE_DATA, NODE_META } from './funnelTypes';
+import { DEFAULT_DESTINATION_OUTCOME, DEFAULT_NODE_DATA, NODE_META } from './funnelTypes';
 
 const items = [
   {
@@ -87,7 +87,8 @@ const items = [
     patch: {
       label: 'Instagram',
       destinationType: 'instagram',
-      conversionRate: 35,
+      destinationOutcome: DEFAULT_DESTINATION_OUTCOME.instagram,
+      conversionRate: 8,
     },
   },
   {
@@ -100,7 +101,8 @@ const items = [
     patch: {
       label: 'TikTok',
       destinationType: 'tiktok',
-      conversionRate: 30,
+      destinationOutcome: DEFAULT_DESTINATION_OUTCOME.tiktok,
+      conversionRate: 6,
     },
   },
   {
@@ -113,7 +115,8 @@ const items = [
     patch: {
       label: 'YouTube',
       destinationType: 'youtube',
-      conversionRate: 25,
+      destinationOutcome: DEFAULT_DESTINATION_OUTCOME.youtube,
+      conversionRate: 4,
     },
   },
   {
@@ -126,6 +129,7 @@ const items = [
     patch: {
       label: 'WhatsApp',
       destinationType: 'whatsapp',
+      destinationOutcome: DEFAULT_DESTINATION_OUTCOME.whatsapp,
       conversionRate: 45,
     },
   },
@@ -140,6 +144,7 @@ const items = [
       ...DEFAULT_NODE_DATA.destination,
       label: 'E-commerce',
       destinationType: 'ecommerce',
+      destinationOutcome: DEFAULT_DESTINATION_OUTCOME.ecommerce,
       conversionRate: 2.5,
       price: 197,
       productCost: 40,
@@ -156,6 +161,7 @@ const items = [
     patch: {
       label: 'Site / landing',
       destinationType: 'site',
+      destinationOutcome: DEFAULT_DESTINATION_OUTCOME.site,
       conversionRate: 40,
     },
   },

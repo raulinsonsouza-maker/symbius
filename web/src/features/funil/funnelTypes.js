@@ -37,6 +37,53 @@ export const SOURCE_OPTIONS = [
   },
 ];
 
+/** Objetivos de campanha paga (Meta/Google-like). */
+export const CAMPAIGN_OBJECTIVES = [
+  {
+    value: 'awareness',
+    label: 'Reconhecimento',
+    description: 'Alcance e impressões',
+    suggestedModel: 'cpm',
+  },
+  {
+    value: 'engagement',
+    label: 'Engajamento',
+    description: 'Curtidas, comentários e interações',
+    suggestedModel: 'cpm',
+  },
+  {
+    value: 'traffic',
+    label: 'Tráfego',
+    description: 'Cliques para o destino',
+    suggestedModel: 'cpc',
+  },
+  {
+    value: 'leads',
+    label: 'Leads',
+    description: 'Cadastros e formulários',
+    suggestedModel: 'cpc',
+  },
+  {
+    value: 'messages',
+    label: 'Mensagens',
+    description: 'Conversas iniciadas',
+    suggestedModel: 'cpc',
+  },
+  {
+    value: 'sales',
+    label: 'Vendas',
+    description: 'Compras e conversões',
+    suggestedModel: 'cpc',
+  },
+];
+
+export function getCampaignObjective(value) {
+  return (
+    CAMPAIGN_OBJECTIVES.find((option) => option.value === value) ||
+    CAMPAIGN_OBJECTIVES.find((option) => option.value === 'traffic')
+  );
+}
+
 export const DESTINATION_OPTIONS = [
   { value: 'instagram', label: 'Instagram' },
   { value: 'tiktok', label: 'TikTok' },
@@ -46,11 +93,219 @@ export const DESTINATION_OPTIONS = [
   { value: 'site', label: 'Site / landing' },
 ];
 
+/** Resultados de conversão por destino. */
+export const DESTINATION_OUTCOMES = {
+  instagram: [
+    {
+      value: 'profile_visit',
+      label: 'Visita ao perfil',
+      rateLabel: 'Taxa de visita ao perfil',
+      metricLabel: 'Visitas',
+    },
+    {
+      value: 'followers',
+      label: 'Seguidores',
+      rateLabel: 'Taxa de seguidores',
+      metricLabel: 'Seguidores',
+    },
+    {
+      value: 'link_click',
+      label: 'Clique no link',
+      rateLabel: 'Taxa de clique no link',
+      metricLabel: 'Cliques',
+    },
+    {
+      value: 'dm',
+      label: 'Mensagem (DM)',
+      rateLabel: 'Taxa de mensagem',
+      metricLabel: 'DMs',
+    },
+    {
+      value: 'engagement',
+      label: 'Engajamento',
+      rateLabel: 'Taxa de engajamento',
+      metricLabel: 'Interações',
+    },
+    {
+      value: 'purchase',
+      label: 'Compra',
+      rateLabel: 'Taxa de compra',
+      metricLabel: 'Compras',
+    },
+  ],
+  tiktok: [
+    {
+      value: 'profile_visit',
+      label: 'Visita ao perfil',
+      rateLabel: 'Taxa de visita ao perfil',
+      metricLabel: 'Visitas',
+    },
+    {
+      value: 'followers',
+      label: 'Seguidores',
+      rateLabel: 'Taxa de seguidores',
+      metricLabel: 'Seguidores',
+    },
+    {
+      value: 'link_click',
+      label: 'Clique no link',
+      rateLabel: 'Taxa de clique no link',
+      metricLabel: 'Cliques',
+    },
+    {
+      value: 'video_view',
+      label: 'Visualização',
+      rateLabel: 'Taxa de visualização',
+      metricLabel: 'Views',
+    },
+    {
+      value: 'engagement',
+      label: 'Engajamento',
+      rateLabel: 'Taxa de engajamento',
+      metricLabel: 'Interações',
+    },
+    {
+      value: 'purchase',
+      label: 'Compra',
+      rateLabel: 'Taxa de compra',
+      metricLabel: 'Compras',
+    },
+  ],
+  youtube: [
+    {
+      value: 'views',
+      label: 'Visualizações',
+      rateLabel: 'Taxa de visualização',
+      metricLabel: 'Views',
+    },
+    {
+      value: 'subscribers',
+      label: 'Inscritos',
+      rateLabel: 'Taxa de inscritos',
+      metricLabel: 'Inscritos',
+    },
+    {
+      value: 'link_click',
+      label: 'Clique no link',
+      rateLabel: 'Taxa de clique no link',
+      metricLabel: 'Cliques',
+    },
+    {
+      value: 'engagement',
+      label: 'Engajamento',
+      rateLabel: 'Taxa de engajamento',
+      metricLabel: 'Interações',
+    },
+  ],
+  whatsapp: [
+    {
+      value: 'chat_start',
+      label: 'Conversa iniciada',
+      rateLabel: 'Taxa de conversa',
+      metricLabel: 'Conversas',
+    },
+    {
+      value: 'reply',
+      label: 'Resposta',
+      rateLabel: 'Taxa de resposta',
+      metricLabel: 'Respostas',
+    },
+    {
+      value: 'lead',
+      label: 'Lead qualificado',
+      rateLabel: 'Taxa de lead',
+      metricLabel: 'Leads',
+    },
+  ],
+  site: [
+    {
+      value: 'page_view',
+      label: 'Visualização de página',
+      rateLabel: 'Taxa de acesso',
+      metricLabel: 'Acessos',
+    },
+    {
+      value: 'lead',
+      label: 'Lead / cadastro',
+      rateLabel: 'Taxa de captura',
+      metricLabel: 'Leads',
+    },
+    {
+      value: 'click',
+      label: 'Clique em CTA',
+      rateLabel: 'Taxa de clique',
+      metricLabel: 'Cliques',
+    },
+    {
+      value: 'purchase',
+      label: 'Compra',
+      rateLabel: 'Taxa de compra',
+      metricLabel: 'Compras',
+    },
+  ],
+  ecommerce: [
+    {
+      value: 'product_view',
+      label: 'Visita ao produto',
+      rateLabel: 'Taxa de visita',
+      metricLabel: 'Visitas',
+    },
+    {
+      value: 'add_to_cart',
+      label: 'Add to cart',
+      rateLabel: 'Taxa de carrinho',
+      metricLabel: 'Carrinhos',
+    },
+    {
+      value: 'purchase',
+      label: 'Compra',
+      rateLabel: 'Taxa de compra',
+      metricLabel: 'Compras',
+    },
+  ],
+};
+
+export const DEFAULT_DESTINATION_OUTCOME = {
+  instagram: 'followers',
+  tiktok: 'followers',
+  youtube: 'subscribers',
+  whatsapp: 'chat_start',
+  site: 'page_view',
+  ecommerce: 'purchase',
+};
+
 export function getDestinationOption(destinationType) {
   return (
     DESTINATION_OPTIONS.find((option) => option.value === destinationType) ||
     DESTINATION_OPTIONS[DESTINATION_OPTIONS.length - 1]
   );
+}
+
+export function getDestinationOutcomes(destinationType) {
+  const key = DESTINATION_OUTCOMES[destinationType] ? destinationType : 'site';
+  return DESTINATION_OUTCOMES[key];
+}
+
+export function getDestinationOutcome(destinationType, outcomeValue) {
+  const type = DESTINATION_OUTCOMES[destinationType] ? destinationType : 'site';
+  const outcomes = getDestinationOutcomes(type);
+  return (
+    outcomes.find((option) => option.value === outcomeValue) ||
+    outcomes.find(
+      (option) => option.value === DEFAULT_DESTINATION_OUTCOME[type],
+    ) ||
+    outcomes[0]
+  );
+}
+
+export function isLeadDestinationOutcome(outcome) {
+  return ['lead', 'dm', 'chat_start', 'reply', 'messages'].includes(
+    String(outcome),
+  );
+}
+
+export function isPurchaseDestinationOutcome(outcome) {
+  return ['purchase'].includes(String(outcome));
 }
 
 export const NODE_META = {
@@ -109,6 +364,7 @@ export const DEFAULT_NODE_DATA = {
     visitors: 1000,
     monthlyBudget: 1500,
     acquisitionModel: 'cpc',
+    campaignObjective: 'traffic',
     sourceType: 'other',
     audienceSize: 1000,
     engagementRate: 10,
@@ -183,6 +439,7 @@ export const DEFAULT_NODE_DATA = {
     label: 'Destino',
     kind: 'destination',
     destinationType: 'site',
+    destinationOutcome: 'page_view',
     conversionRate: 40,
     visitors: 0,
     cpc: 0,
@@ -194,6 +451,8 @@ export const DEFAULT_NODE_DATA = {
     label: 'Título do funil',
     kind: 'note',
     noteText: '',
+    noteFill: 'none',
+    noteStroke: 'none',
     conversionRate: 100,
     visitors: 0,
     cpc: 0,
@@ -202,3 +461,21 @@ export const DEFAULT_NODE_DATA = {
     refundRate: 0,
   },
 };
+
+export const NOTE_FILL_PRESETS = [
+  { value: 'none', label: 'Transparente' },
+  { value: '#1a1a1a', label: 'Escuro' },
+  { value: '#2a2418', label: 'Âmbar' },
+  { value: '#142033', label: 'Azul' },
+  { value: '#14261c', label: 'Verde' },
+  { value: '#2a1818', label: 'Vermelho' },
+];
+
+export const NOTE_STROKE_PRESETS = [
+  { value: 'none', label: 'Transparente' },
+  { value: '#4e8cff', label: 'Azul' },
+  { value: '#c4a574', label: 'Dourado' },
+  { value: '#7de0d4', label: 'Turquesa' },
+  { value: '#8fd6a6', label: 'Verde' },
+  { value: '#ffffff', label: 'Branco' },
+];

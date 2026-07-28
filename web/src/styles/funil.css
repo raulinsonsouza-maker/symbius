@@ -334,10 +334,18 @@
   font: inherit;
 }
 
-.funil-field textarea {
-  resize: vertical;
-  min-height: 96px;
-  line-height: 1.45;
+.funil-field input[type='color'] {
+  height: 40px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.funil-field__hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--symbius-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .funil-builder__actions {
@@ -593,19 +601,45 @@
 }
 
 .funil-node--note-card {
+  width: auto;
   min-height: auto;
-  background: linear-gradient(180deg, rgba(40, 36, 24, 0.95), rgba(22, 20, 16, 0.98));
-  border-color: rgba(232, 200, 120, 0.28);
+  min-width: 120px;
+  max-width: 320px;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.funil-node--note-card .funil-node__label {
+.funil-node--note-card.is-fill-none {
+  background: transparent !important;
+}
+
+.funil-node--note-card.is-stroke-none {
+  border-color: transparent !important;
+}
+
+.funil-node--note-card.is-selected {
+  box-shadow: 0 0 0 1px rgba(78, 140, 255, 0.45);
+}
+
+.funil-node--note-card.is-selected.is-stroke-none {
+  border-color: rgba(78, 140, 255, 0.55) !important;
+}
+
+.funil-node__note-text {
+  display: block;
+  margin: 0;
   font-size: 1.05rem;
-}
-
-.funil-node--note-card .funil-node__desc {
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--symbius-white);
   white-space: pre-wrap;
-  max-height: 4.5em;
-  overflow: hidden;
+  word-break: break-word;
+  text-align: center;
 }
 
 .funil-canvas {
@@ -703,6 +737,47 @@
 
 .funil-canvas__dot--no {
   background: #c4a574;
+}
+
+.funil-canvas__hint {
+  margin-left: auto;
+  color: var(--symbius-muted-light);
+}
+
+.funil-canvas__hint kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  font: inherit;
+  font-size: 0.74rem;
+}
+
+.funil-align-guide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.funil-align-guide--vertical {
+  width: 1px;
+  height: 10000px;
+  background: rgba(78, 140, 255, 0.85);
+  box-shadow: 0 0 0 1px rgba(78, 140, 255, 0.2);
+}
+
+.funil-align-guide--horizontal {
+  height: 1px;
+  width: 10000px;
+  background: rgba(78, 140, 255, 0.85);
+  box-shadow: 0 0 0 1px rgba(78, 140, 255, 0.2);
+}
+
+.funil-canvas .react-flow.is-shift-align {
+  cursor: crosshair;
 }
 
 .funil-node {

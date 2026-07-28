@@ -12,7 +12,18 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { DESTINATION_OPTIONS, SOURCE_OPTIONS } from './funnelTypes';
+import {
+  CAMPAIGN_OBJECTIVES,
+  DEFAULT_DESTINATION_OUTCOME,
+  DESTINATION_OPTIONS,
+  getCampaignObjective,
+  getDestinationOutcome,
+  getDestinationOutcomes,
+  isPurchaseDestinationOutcome,
+  NOTE_FILL_PRESETS,
+  NOTE_STROKE_PRESETS,
+  SOURCE_OPTIONS,
+} from './funnelTypes';
 import { useFunnelStore } from './useFunnelStore';
 
 const money = new Intl.NumberFormat('pt-BR', {
@@ -26,9 +37,15 @@ const moneyNodeKinds = new Set(['checkout', 'upsell', 'downsell']);
 function isMoneyEditor(node) {
   if (!node) return false;
   if (moneyNodeKinds.has(node.data.kind)) return true;
+  if (node.data.kind !== 'destination') return false;
+  const outcome = getDestinationOutcome(
+    node.data.destinationType,
+    node.data.destinationOutcome,
+  );
   return (
-    node.data.kind === 'destination' &&
-    node.data.destinationType === 'ecommerce'
+    isPurchaseDestinationOutcome(outcome.value) ||
+    (node.data.destinationType === 'ecommerce' &&
+      outcome.value === 'purchase')
   );
 }
 
@@ -90,6 +107,18 @@ export function InsightsPanel({ onCollapse }) {
     ? node.data.sourceType
     : 'other';
   const sourceOption = getSourceOption(sourceType);
+  const campaignObjective = getCampaignObjective(node?.data.campaignObjective);
+  const destinationOutcomes =
+    node?.data.kind === 'destination'
+      ? getDestinationOutcomes(node.data.destinationType)
+      : [];
+  const destinationOutcome =
+    node?.data.kind === 'destination'
+      ? getDestinationOutcome(
+          node.data.destinationType,
+          node.data.destinationOutcome,
+        )
+      : null;
   const audienceSize =
     Number(node?.data.audienceSize) || Number(node?.data.visitors) || 0;
   const engagementRate = Number.isFinite(Number(node?.data.engagementRate))
@@ -134,70 +163,220 @@ export function InsightsPanel({ onCollapse }) {
             </button>
           </div>
 
-          <label className="funil-field">
-            <span>Nome da etapa</span>
-            <input
-              type="text"
-              value={node.data.label}
-              onChange={(event) => update({ label: event.target.value })}
-            />
-          </label>
-
           {node.data.kind === 'note' ? (
+            <>
+              <label className="funil-field">
+                <span>Texto</span>
+                <textarea
+                  rows={4}
+                  value={node.data.label || ''}
+                  onChange={(event) => update({ label: event.target.value })}
+                  placeholder="Escreva o título ou anotação"
+                />
+              </label>
+              <label className="funil-field">
+                <span>Fundo</span>
+                <select
+                  value={
+                    NOTE_FILL_PRESETS.some(
+                      (option) => option.value === (node.data.noteFill || 'none'),
+                    )
+                      ? node.data.noteFill || 'none'
+                      : 'custom'
+                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    update({
+                      noteFill:
+                        value === 'custom'
+                          ? node.data.noteFill &&
+                            node.data.noteFill !== 'none'
+                            ? node.data.noteFill
+                            : '#1a1a1a'
+                          : value,
+                    });
+                  }}
+                >
+                  {NOTE_FILL_PRESETS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                  <option value="custom">Cor personalizada</option>
+                </select>
+              </label>
+              {(node.data.noteFill || 'none') !== 'none' ? (
+                <label className="funil-field">
+                  <span>Cor do fundo</span>
+                  <input
+                    type="color"
+                    value={
+                      /^#[0-9a-fA-F]{6}$/.test(String(node.data.noteFill))
+                        ? node.data.noteFill
+                        : '#1a1a1a'
+                    }
+                    onChange={(event) =>
+                      update({ noteFill: event.target.value })
+                    }
+                  />
+                </label>
+              ) : null}
+              <label className="funil-field">
+                <span>Borda</span>
+                <select
+                  value={
+                    NOTE_STROKE_PRESETS.some(
+                      (option) =>
+                        option.value === (node.data.noteStroke || 'none'),
+                    )
+                      ? node.data.noteStroke || 'none'
+                      : 'custom'
+                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    update({
+                      noteStroke:
+                        value === 'custom'
+                          ? node.data.noteStroke &&
+                            node.data.noteStroke !== 'none'
+                            ? node.data.noteStroke
+                            : '#4e8cff'
+                          : value,
+                    });
+                  }}
+                >
+                  {NOTE_STROKE_PRESETS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                  <option value="custom">Cor personalizada</option>
+                </select>
+              </label>
+              {(node.data.noteStroke || 'none') !== 'none' ? (
+                <label className="funil-field">
+                  <span>Cor da borda</span>
+                  <input
+                    type="color"
+                    value={
+                      /^#[0-9a-fA-F]{6}$/.test(String(node.data.noteStroke))
+                        ? node.data.noteStroke
+                        : '#4e8cff'
+                    }
+                    onChange={(event) =>
+                      update({ noteStroke: event.target.value })
+                    }
+                  />
+                </label>
+              ) : null}
+            </>
+          ) : (
             <label className="funil-field">
-              <span>Texto / anotação</span>
-              <textarea
-                rows={4}
-                value={node.data.noteText || ''}
-                onChange={(event) => update({ noteText: event.target.value })}
-                placeholder="Observações sobre este trecho do funil"
+              <span>Nome da etapa</span>
+              <input
+                type="text"
+                value={node.data.label}
+                onChange={(event) => update({ label: event.target.value })}
               />
             </label>
-          ) : null}
+          )}
 
           {node.data.kind === 'destination' ? (
-            <label className="funil-field">
-              <span>Destino</span>
-              <select
-                value={
-                  DESTINATION_OPTIONS.some(
-                    (option) => option.value === node.data.destinationType,
-                  )
-                    ? node.data.destinationType
-                    : 'site'
-                }
-                onChange={(event) => {
-                  const destinationType = event.target.value;
-                  const option = DESTINATION_OPTIONS.find(
-                    (item) => item.value === destinationType,
-                  );
-                  update({
-                    destinationType,
-                    label:
-                      node.data.label === 'Destino' ||
-                      DESTINATION_OPTIONS.some(
-                        (item) => item.label === node.data.label,
-                      )
-                        ? option?.label || node.data.label
-                        : node.data.label,
-                    ...(destinationType === 'ecommerce' &&
-                    !(Number(node.data.price) > 0)
-                      ? { price: 197, productCost: 40, refundRate: 5 }
-                      : {}),
-                  });
-                }}
-              >
-                {DESTINATION_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <>
+              <label className="funil-field">
+                <span>Destino</span>
+                <select
+                  value={
+                    DESTINATION_OPTIONS.some(
+                      (option) => option.value === node.data.destinationType,
+                    )
+                      ? node.data.destinationType
+                      : 'site'
+                  }
+                  onChange={(event) => {
+                    const destinationType = event.target.value;
+                    const option = DESTINATION_OPTIONS.find(
+                      (item) => item.value === destinationType,
+                    );
+                    const nextOutcome =
+                      DEFAULT_DESTINATION_OUTCOME[destinationType] ||
+                      'page_view';
+                    update({
+                      destinationType,
+                      destinationOutcome: nextOutcome,
+                      label:
+                        node.data.label === 'Destino' ||
+                        DESTINATION_OPTIONS.some(
+                          (item) => item.label === node.data.label,
+                        )
+                          ? option?.label || node.data.label
+                          : node.data.label,
+                      ...(destinationType === 'ecommerce' &&
+                      !(Number(node.data.price) > 0)
+                        ? { price: 197, productCost: 40, refundRate: 5 }
+                        : {}),
+                    });
+                  }}
+                >
+                  {DESTINATION_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="funil-field">
+                <span>Resultado da conversão</span>
+                <select
+                  value={destinationOutcome?.value || 'page_view'}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    update({
+                      destinationOutcome: next,
+                      ...(isPurchaseDestinationOutcome(next) &&
+                      !(Number(node.data.price) > 0)
+                        ? { price: 97, productCost: 20, refundRate: 3 }
+                        : {}),
+                    });
+                  }}
+                >
+                  {destinationOutcomes.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
           ) : null}
 
           {node.data.kind === 'traffic' ? (
             <>
+              {acquisitionModel !== 'source' ? (
+                <label className="funil-field">
+                  <span>Objetivo da campanha</span>
+                  <select
+                    value={campaignObjective.value}
+                    onChange={(event) => {
+                      const next = getCampaignObjective(event.target.value);
+                      update({
+                        campaignObjective: next.value,
+                        acquisitionModel:
+                          next.suggestedModel || acquisitionModel,
+                      });
+                    }}
+                  >
+                    {CAMPAIGN_OBJECTIVES.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <small className="funil-field__hint">
+                    {campaignObjective.description}
+                  </small>
+                </label>
+              ) : null}
               <label className="funil-field">
                 <span>Modelo de aquisição</span>
                 <select
@@ -314,7 +493,9 @@ export function InsightsPanel({ onCollapse }) {
             </>
           ) : node.data.kind !== 'note' ? (
             <NumberField
-              label="Taxa de conversão"
+              label={
+                destinationOutcome?.rateLabel || 'Taxa de conversão'
+              }
               value={node.data.conversionRate}
               suffix="%"
               max={100}
@@ -460,11 +641,28 @@ export function InsightsPanel({ onCollapse }) {
                   <strong>Fora da simulação</strong>
                 </div>
               )}
-              {node.data.kind === 'optin' ? (
+              {node.data.kind === 'optin' ||
+              (node.data.kind === 'destination' &&
+                ['lead', 'dm', 'chat_start', 'reply'].includes(
+                  destinationOutcome?.value,
+                )) ? (
                 <div>
                   <span>Novos leads</span>
                   <strong>
                     {number.format(selectedNodeResult?.newLeads ?? 0)}
+                  </strong>
+                </div>
+              ) : null}
+              {node.data.kind === 'destination' &&
+              destinationOutcome &&
+              !['lead', 'dm', 'chat_start', 'reply'].includes(
+                destinationOutcome.value,
+              ) &&
+              !isMoneyEditor(node) ? (
+                <div>
+                  <span>{destinationOutcome.metricLabel}</span>
+                  <strong>
+                    {number.format(selectedNodeResult?.converted ?? 0)}
                   </strong>
                 </div>
               ) : null}
@@ -675,7 +873,7 @@ export function InsightsPanel({ onCollapse }) {
                     <small>
                       {funnel.acquisitionModel === 'source'
                         ? getSourceOption(funnel.sourceType).label
-                        : funnel.acquisitionModel.toUpperCase()}{' '}
+                        : `${getCampaignObjective(funnel.campaignObjective).label} · ${funnel.acquisitionModel.toUpperCase()}`}{' '}
                       · {money.format(funnel.budget)}{' '}
                       {funnel.acquisitionModel === 'source'
                         ? 'de custo'

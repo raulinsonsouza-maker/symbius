@@ -7,6 +7,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  ViewportPortal,
 } from '@xyflow/react';
 import {
   Check,
@@ -24,6 +25,7 @@ import { FunnelNodeCard } from './FunnelNode';
 import { sanitizeFunnelGraph } from './graphPersist';
 import { InsightsPanel } from './InsightsPanel';
 import { NodePalette } from './NodePalette';
+import { computeShiftAlignSnap } from './shiftAlign';
 import { useFunnelStore } from './useFunnelStore';
 
 const nodeTypes = { funnel: FunnelNodeCard };
@@ -89,6 +91,35 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
   const [insightsCollapsed, setInsightsCollapsed] = useState(() =>
     readCollapsed(INSIGHTS_COLLAPSE_KEY),
   );
+  const [alignGuides, setAlignGuides] = useState({
+    horizontal: null,
+    vertical: null,
+  });
+  const [shiftHeld, setShiftHeld] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Shift') setShiftHeld(true);
+    };
+    const onKeyUp = (event) => {
+      if (event.key === 'Shift') {
+        setShiftHeld(false);
+        setAlignGuides({ horizontal: null, vertical: null });
+      }
+    };
+    const onBlur = () => {
+      setShiftHeld(false);
+      setAlignGuides({ horizontal: null, vertical: null });
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, []);
 
   useEffect(() => {
     writeCollapsed(PALETTE_COLLAPSE_KEY, paletteCollapsed);
@@ -231,6 +262,36 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
     [edges],
   );
 
+  const onNodeDrag = useCallback(
+    (event, node) => {
+      if (!event.shiftKey && !shiftHeld) {
+        setAlignGuides({ horizontal: null, vertical: null });
+        return;
+      }
+      const currentNodes = useFunnelStore.getState().nodes;
+      const snap = computeShiftAlignSnap(node, currentNodes, 12);
+      setAlignGuides({
+        horizontal: snap.horizontal,
+        vertical: snap.vertical,
+      });
+      if (snap.snapped) {
+        onNodesChange([
+          {
+            id: node.id,
+            type: 'position',
+            position: snap.position,
+            dragging: true,
+          },
+        ]);
+      }
+    },
+    [onNodesChange, shiftHeld],
+  );
+
+  const onNodeDragStop = useCallback(() => {
+    setAlignGuides({ horizontal: null, vertical: null });
+  }, []);
+
   const defaultEdgeOptions = useMemo(
     () => ({
       type: 'deletable',
@@ -299,7 +360,11 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
           <div className="funil-canvas__head">
             <div>
               <strong>Cenário principal</strong>
-              <span>Planejamento mensal do funil</span>
+              <span>
+                {shiftHeld
+                  ? 'Shift ativo — alinhe os blocos pelas guias'
+                  : 'Planejamento mensal do funil · Segure Shift ao arrastar para alinhar'}
+              </span>
             </div>
           </div>
           <ReactFlow
@@ -312,6 +377,8 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
             onConnect={connect}
             onReconnect={reconnect}
             isValidConnection={isValidConnection}
+            onNodeDrag={onNodeDrag}
+            onNodeDragStop={onNodeDragStop}
             onNodeClick={(_, node) => selectNode(node.id)}
             onEdgeClick={(_, edge) => selectEdge(edge.id)}
             onPaneClick={() => {
@@ -325,13 +392,19 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
             onDrop={onDrop}
             defaultEdgeOptions={defaultEdgeOptions}
             deleteKeyCode={null}
+            selectionKeyCode="Control"
+            multiSelectionKeyCode="Meta"
             edgesReconnectable
-            reconnectRadius={12}
+            reconnectRadius={18}
+            connectionRadius={28}
+            snapToGrid={shiftHeld}
+            snapGrid={[8, 8]}
             minZoom={0.2}
             maxZoom={1.6}
             fitView
             fitViewOptions={{ padding: 0.22, maxZoom: 1 }}
             proOptions={{ hideAttribution: true }}
+            className={shiftHeld ? 'is-shift-align' : undefined}
           >
             <Background
               color="rgba(255,255,255,0.08)"
@@ -340,6 +413,24 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
               variant={BackgroundVariant.Dots}
             />
             <Controls position="bottom-left" showInteractive={false} />
+            <ViewportPortal>
+              {alignGuides.vertical != null ? (
+                <div
+                  className="funil-align-guide funil-align-guide--vertical"
+                  style={{
+                    transform: `translate(${alignGuides.vertical}px, 0)`,
+                  }}
+                />
+              ) : null}
+              {alignGuides.horizontal != null ? (
+                <div
+                  className="funil-align-guide funil-align-guide--horizontal"
+                  style={{
+                    transform: `translate(0, ${alignGuides.horizontal}px)`,
+                  }}
+                />
+              ) : null}
+            </ViewportPortal>
           </ReactFlow>
           <div className="funil-canvas__legend">
             <span>
@@ -349,6 +440,9 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
             <span>
               <i className="funil-canvas__dot funil-canvas__dot--no" /> caminho
               não
+            </span>
+            <span className="funil-canvas__hint">
+              Segure <kbd>Shift</kbd> ao arrastar para alinhar
             </span>
           </div>
         </section>
