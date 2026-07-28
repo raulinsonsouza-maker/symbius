@@ -37,6 +37,9 @@ api/.env
 # Proposal generator source artifact (heavy zip / extract)
 Gerador de Proposta/
 
+# Atlas source sandbox (integrated into web/src/features/funil)
+Planejamento de Funil/
+
 # Local tooling outside project intent
 .deploy-tmp/
 secrets.json

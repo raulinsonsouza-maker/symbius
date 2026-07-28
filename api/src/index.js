@@ -33,6 +33,10 @@ import {
   archiveClient,
   archiveProposal,
   listComercial,
+  listFunnelProjects,
+  createFunnelProject,
+  getFunnelProject,
+  updateFunnelProject,
   listFinanceCategories,
   createFinanceCategory,
   listFinanceEntries,
@@ -72,6 +76,10 @@ app.get('/api/services', listServices);
 app.post('/api/services', createService);
 app.patch('/api/services/:id', patchService);
 app.get('/api/comercial', listComercial);
+app.get('/api/funnel-projects', listFunnelProjects);
+app.post('/api/funnel-projects', createFunnelProject);
+app.get('/api/funnel-projects/:id', getFunnelProject);
+app.put('/api/funnel-projects/:id', updateFunnelProject);
 app.get('/api/proposals', listProposals);
 app.post('/api/proposals', createProposal);
 app.get('/api/proposals/:id', getProposal);

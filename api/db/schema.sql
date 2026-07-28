@@ -178,13 +178,61 @@ CREATE TABLE IF NOT EXISTS contract_signature_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   contract_id UUID NOT NULL,
   event_type TEXT NOT NULL
-    CHECK (event_type IN ('sent', 'viewed', 'signed', 'email_failed')),
+    CHECK (
+      event_type IN (
+        'sent',
+        'viewed',
+        'signed',
+        'email_failed',
+        'asaas_charged',
+        'asaas_failed'
+      )
+    ),
   meta JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE contract_signature_events
+  DROP CONSTRAINT IF EXISTS contract_signature_events_event_type_check;
+ALTER TABLE contract_signature_events
+  ADD CONSTRAINT contract_signature_events_event_type_check
+  CHECK (
+    event_type IN (
+      'sent',
+      'viewed',
+      'signed',
+      'email_failed',
+      'asaas_charged',
+      'asaas_failed'
+    )
+  );
+
 CREATE INDEX IF NOT EXISTS contract_signature_events_contract_idx
   ON contract_signature_events (contract_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS funnel_projects (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL,
+  proposal_id UUID,
+  name TEXT NOT NULL,
+  graph_json JSONB NOT NULL DEFAULT '{"nodes":[],"edges":[]}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE funnel_projects
+  ADD COLUMN IF NOT EXISTS client_id UUID;
+ALTER TABLE funnel_projects
+  ADD COLUMN IF NOT EXISTS proposal_id UUID;
+ALTER TABLE funnel_projects
+  ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT 'Funil de aquisição';
+ALTER TABLE funnel_projects
+  ADD COLUMN IF NOT EXISTS graph_json JSONB NOT NULL DEFAULT '{"nodes":[],"edges":[]}'::jsonb;
+
+CREATE INDEX IF NOT EXISTS funnel_projects_client_idx
+  ON funnel_projects (client_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS funnel_projects_proposal_idx
+  ON funnel_projects (proposal_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS finance_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

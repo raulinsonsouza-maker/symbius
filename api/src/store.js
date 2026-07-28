@@ -210,6 +210,30 @@ function mapSettings(row) {
   };
 }
 
+function mapFunnelProject(row) {
+  if (!row) return null;
+  let graph = row.graph_json || { nodes: [], edges: [] };
+  if (typeof graph === 'string') {
+    try {
+      graph = JSON.parse(graph);
+    } catch {
+      graph = { nodes: [], edges: [] };
+    }
+  }
+  if (!graph || !Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) {
+    graph = { nodes: [], edges: [] };
+  }
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    proposalId: row.proposal_id || null,
+    name: row.name,
+    graph,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 async function nextProposalNumber() {
   const year = new Date().getFullYear();
   const prefix = `SYM-${year}-`;
@@ -1258,6 +1282,69 @@ const pgStore = {
         };
       })
       .filter(Boolean);
+  },
+
+  async listFunnelProjects({ clientId } = {}) {
+    const params = [];
+    const where = [];
+    if (clientId) {
+      params.push(clientId);
+      where.push(`client_id = $${params.length}`);
+    }
+    const { rows } = await pool.query(
+      `SELECT * FROM funnel_projects
+       ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+       ORDER BY updated_at DESC, created_at DESC`,
+      params,
+    );
+    return rows.map(mapFunnelProject);
+  },
+
+  async getFunnelProject(id) {
+    const { rows } = await pool.query(
+      'SELECT * FROM funnel_projects WHERE id = $1',
+      [id],
+    );
+    return mapFunnelProject(rows[0]);
+  },
+
+  async createFunnelProject(input) {
+    const graph = input.graph || { nodes: [], edges: [] };
+    const { rows } = await pool.query(
+      `INSERT INTO funnel_projects (client_id, proposal_id, name, graph_json)
+       VALUES ($1, $2, $3, $4::jsonb)
+       RETURNING *`,
+      [
+        input.clientId,
+        input.proposalId || null,
+        String(input.name || 'Funil de aquisição').trim(),
+        JSON.stringify(graph),
+      ],
+    );
+    return mapFunnelProject(rows[0]);
+  },
+
+  async updateFunnelProject(id, input) {
+    const graphJson =
+      input.graph != null ? JSON.stringify(input.graph) : null;
+    const { rows } = await pool.query(
+      `UPDATE funnel_projects SET
+        client_id = COALESCE($1, client_id),
+        proposal_id = COALESCE($2, proposal_id),
+        name = COALESCE($3, name),
+        graph_json = COALESCE($4::jsonb, graph_json),
+        updated_at = NOW()
+       WHERE id = $5
+       RETURNING *`,
+      [
+        input.clientId ?? null,
+        input.proposalId ?? null,
+        input.name != null ? String(input.name).trim() || null : null,
+        graphJson,
+        id,
+      ],
+    );
+    return mapFunnelProject(rows[0]);
   },
 
   /** Cancela recebíveis em aberto do contrato (churn/perdido/arquivado) */

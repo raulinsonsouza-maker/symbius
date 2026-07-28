@@ -31,6 +31,150 @@ import {
   syncAsaasPayments,
 } from './asaas/financeOverview.js';
 
+function defaultFunnelGraph() {
+  return {
+    nodes: [
+      {
+        id: 'traffic-1',
+        type: 'funnel',
+        position: { x: 40, y: 170 },
+        data: {
+          label: 'Meta Ads',
+          kind: 'traffic',
+          conversionRate: 100,
+          visitors: 3500,
+          monthlyBudget: 4725,
+          acquisitionModel: 'cpc',
+          sourceType: 'other',
+          cpc: 1.35,
+          cpm: 22,
+          ctr: 1.5,
+          price: 0,
+          productCost: 0,
+          refundRate: 0,
+        },
+      },
+      {
+        id: 'optin-1',
+        type: 'funnel',
+        position: { x: 310, y: 170 },
+        data: {
+          label: 'Captura',
+          kind: 'optin',
+          conversionRate: 38,
+          visitors: 0,
+          cpc: 0,
+          price: 0,
+          productCost: 0,
+          refundRate: 0,
+        },
+      },
+      {
+        id: 'sales-1',
+        type: 'funnel',
+        position: { x: 580, y: 170 },
+        data: {
+          label: 'Página de vendas',
+          kind: 'sales',
+          conversionRate: 16,
+          visitors: 0,
+          cpc: 0,
+          price: 0,
+          productCost: 0,
+          refundRate: 0,
+        },
+      },
+      {
+        id: 'checkout-1',
+        type: 'funnel',
+        position: { x: 850, y: 170 },
+        data: {
+          label: 'Checkout',
+          kind: 'checkout',
+          conversionRate: 52,
+          visitors: 0,
+          cpc: 0,
+          price: 497,
+          productCost: 42,
+          refundRate: 5,
+        },
+      },
+      {
+        id: 'upsell-1',
+        type: 'funnel',
+        position: { x: 1120, y: 70 },
+        data: {
+          label: 'Upsell',
+          kind: 'upsell',
+          conversionRate: 24,
+          visitors: 0,
+          cpc: 0,
+          price: 197,
+          productCost: 12,
+          refundRate: 3,
+        },
+      },
+      {
+        id: 'downsell-1',
+        type: 'funnel',
+        position: { x: 1120, y: 330 },
+        data: {
+          label: 'Downsell',
+          kind: 'downsell',
+          conversionRate: 19,
+          visitors: 0,
+          cpc: 0,
+          price: 97,
+          productCost: 5,
+          refundRate: 3,
+        },
+      },
+    ],
+    edges: [
+      {
+        id: 'edge-1',
+        source: 'traffic-1',
+        sourceHandle: 'yes',
+        target: 'optin-1',
+        type: 'deletable',
+        data: { path: 'yes' },
+      },
+      {
+        id: 'edge-2',
+        source: 'optin-1',
+        sourceHandle: 'yes',
+        target: 'sales-1',
+        type: 'deletable',
+        data: { path: 'yes' },
+      },
+      {
+        id: 'edge-3',
+        source: 'sales-1',
+        sourceHandle: 'yes',
+        target: 'checkout-1',
+        type: 'deletable',
+        data: { path: 'yes' },
+      },
+      {
+        id: 'edge-4',
+        source: 'checkout-1',
+        sourceHandle: 'yes',
+        target: 'upsell-1',
+        type: 'deletable',
+        data: { path: 'yes' },
+      },
+      {
+        id: 'edge-5',
+        source: 'checkout-1',
+        sourceHandle: 'no',
+        target: 'downsell-1',
+        type: 'deletable',
+        data: { path: 'no' },
+      },
+    ],
+  };
+}
+
 export async function getSettings(_req, res) {
   const settings = await getStore().getSettings();
   if (!settings) return res.status(404).json({ error: 'Settings não encontradas' });
@@ -227,6 +371,71 @@ export async function convertProposal(req, res) {
 
 export async function listComercial(_req, res) {
   return res.json(await getStore().listComercial());
+}
+
+export async function listFunnelProjects(req, res) {
+  return res.json(
+    await getStore().listFunnelProjects({
+      clientId: req.query.clientId,
+    }),
+  );
+}
+
+export async function createFunnelProject(req, res) {
+  const store = getStore();
+  const clientId = String(req.body?.clientId || '').trim();
+  if (!clientId) {
+    return res.status(400).json({ error: 'clientId é obrigatório' });
+  }
+  const name = String(req.body?.name || '').trim();
+  if (name.length < 2) {
+    return res.status(400).json({ error: 'Nome do funil é obrigatório' });
+  }
+  const client = await store.getClient(clientId);
+  if (!client) {
+    return res.status(404).json({ error: 'Cliente não encontrado' });
+  }
+  if (client.archivedAt) {
+    return res.status(400).json({ error: 'Cliente arquivado' });
+  }
+  const project = await store.createFunnelProject({
+    clientId,
+    proposalId: req.body?.proposalId || null,
+    name,
+    graph: req.body?.graph || defaultFunnelGraph(),
+  });
+  return res.status(201).json(project);
+}
+
+export async function getFunnelProject(req, res) {
+  const project = await getStore().getFunnelProject(req.params.id);
+  if (!project) {
+    return res.status(404).json({ error: 'Projeto de funil não encontrado' });
+  }
+  return res.json(project);
+}
+
+export async function updateFunnelProject(req, res) {
+  const existing = await getStore().getFunnelProject(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Projeto de funil não encontrado' });
+  }
+  if (req.body?.name != null && String(req.body.name).trim().length < 2) {
+    return res.status(400).json({ error: 'Nome do funil é obrigatório' });
+  }
+  if (
+    req.body?.graph != null &&
+    (!req.body.graph.nodes || !req.body.graph.edges)
+  ) {
+    return res.status(400).json({ error: 'graph inválido' });
+  }
+  const project = await getStore().updateFunnelProject(req.params.id, {
+    clientId: req.body?.clientId,
+    proposalId: req.body?.proposalId,
+    name: req.body?.name,
+    graph: req.body?.graph,
+  });
+  return res.json(project);
 }
 
 export async function listFinanceCategories(_req, res) {

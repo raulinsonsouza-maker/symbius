@@ -12,6 +12,15 @@ const TOOLS = [
     available: true,
   },
   {
+    id: 'operacao',
+    title: 'Operação',
+    description:
+      'Área operacional por cliente, com funil e futuras ferramentas de execução.',
+    to: '/admin/operacao',
+    tag: 'Operação',
+    available: true,
+  },
+  {
     id: 'financeiro',
     title: 'Financeiro',
     description:

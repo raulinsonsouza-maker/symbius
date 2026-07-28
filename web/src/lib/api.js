@@ -40,6 +40,23 @@ export const api = {
       body: JSON.stringify(data),
     }),
   listComercial: () => request('/comercial'),
+  listFunnelProjects: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== ''),
+    ).toString();
+    return request(`/funnel-projects${q ? `?${q}` : ''}`);
+  },
+  getFunnelProject: (id) => request(`/funnel-projects/${id}`),
+  createFunnelProject: (data) =>
+    request('/funnel-projects', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateFunnelProject: (id, data) =>
+    request(`/funnel-projects/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   listClients: () => request('/clients'),
   getClient: (id) => request(`/clients/${id}`),
   createClient: (data) =>

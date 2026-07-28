@@ -17,6 +17,8 @@ import LeadProposalTool from './pages/admin/comercial/LeadProposalTool';
 import LeadContractTool from './pages/admin/comercial/LeadContractTool';
 import LeadClientTool from './pages/admin/comercial/LeadClientTool';
 import FinanceiroPage from './pages/admin/financeiro/FinanceiroPage';
+import OperacaoList from './pages/admin/operacao/OperacaoList';
+import OperacaoClient from './pages/admin/operacao/OperacaoClient';
 
 function RedirectToLeadClose() {
   const { id } = useParams();
@@ -93,6 +95,22 @@ export default function App() {
           element={
             <RequireAuth>
               <LeadClientTool />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/operacao"
+          element={
+            <RequireAuth>
+              <OperacaoList />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/operacao/:clientId"
+          element={
+            <RequireAuth>
+              <OperacaoClient />
             </RequireAuth>
           }
         />

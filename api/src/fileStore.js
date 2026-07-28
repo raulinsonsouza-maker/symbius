@@ -94,6 +94,7 @@ function defaultDb() {
     services,
     proposals: [],
     clients: [],
+    funnelProjects: [],
     contracts: [],
     financeCategories: DEFAULT_FINANCE_CATEGORIES.map(({ key, ...rest }) => ({
       id: randomUUID(),
@@ -107,6 +108,7 @@ function defaultDb() {
 
 function ensureFinance(db) {
   if (!Array.isArray(db.clients)) db.clients = [];
+  if (!Array.isArray(db.funnelProjects)) db.funnelProjects = [];
   if (!Array.isArray(db.contracts)) db.contracts = [];
   if (!Array.isArray(db.contractSignatureEvents)) db.contractSignatureEvents = [];
   if (!Array.isArray(db.financeCategories) || db.financeCategories.length === 0) {
@@ -979,5 +981,65 @@ export const fileStore = {
       .filter(Boolean);
 
     return leads;
+  },
+
+  async listFunnelProjects(filters = {}) {
+    const db = readDb();
+    let list = [...db.funnelProjects];
+    if (filters.clientId) {
+      list = list.filter((item) => item.clientId === filters.clientId);
+    }
+    return list.sort(
+      (a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt),
+    );
+  },
+
+  async getFunnelProject(id) {
+    return readDb().funnelProjects.find((item) => item.id === id) || null;
+  },
+
+  async createFunnelProject(input) {
+    const db = readDb();
+    const now = new Date().toISOString();
+    const project = {
+      id: randomUUID(),
+      clientId: input.clientId,
+      proposalId: input.proposalId || null,
+      name: String(input.name || 'Funil de aquisição').trim(),
+      graph: input.graph || { nodes: [], edges: [] },
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.funnelProjects.push(project);
+    writeDb(db);
+    return project;
+  },
+
+  async updateFunnelProject(id, patch) {
+    const db = readDb();
+    const idx = db.funnelProjects.findIndex((item) => item.id === id);
+    if (idx < 0) return null;
+    const current = db.funnelProjects[idx];
+    const nextGraph =
+      patch.graph !== undefined
+        ? patch.graph && Array.isArray(patch.graph.nodes) && Array.isArray(patch.graph.edges)
+          ? patch.graph
+          : current.graph
+        : current.graph;
+    db.funnelProjects[idx] = {
+      ...current,
+      clientId:
+        patch.clientId !== undefined ? patch.clientId : current.clientId,
+      proposalId:
+        patch.proposalId !== undefined ? patch.proposalId : current.proposalId,
+      name:
+        patch.name != null
+          ? String(patch.name || '').trim() || current.name
+          : current.name,
+      graph: nextGraph,
+      updatedAt: new Date().toISOString(),
+    };
+    writeDb(db);
+    return db.funnelProjects[idx];
   },
 };

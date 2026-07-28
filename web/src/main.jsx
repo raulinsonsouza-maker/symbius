@@ -10,5 +10,6 @@ import './styles/landing.css';
 import './styles/admin.css';
 import './styles/propostas.css';
 import './styles/client-panel.css';
+import './styles/funil.css';
 
 createRoot(document.getElementById('root')).render(<App />);

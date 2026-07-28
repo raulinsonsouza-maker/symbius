@@ -256,6 +256,121 @@
   font-size:.9rem
 }
 
+.ops-shell .admin-shell__main {
+  max-width: 1480px;
+}
+
+.ops-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.ops-toolbar .crm-search {
+  flex: 1 1 320px;
+}
+
+.ops-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.ops-card {
+  min-height: 180px;
+}
+
+.ops-client-shell .cp-top__chip {
+  border-color: rgba(143, 191, 154, 0.3);
+  color: #8fbf9a;
+}
+
+.ops-sidebar__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ops-sidebar__top .cp-sidebar__brand {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 12px;
+}
+
+.ops-collapse-btn {
+  appearance: none;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--symbius-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--symbius-muted-light);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.ops-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--symbius-white);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.ops-nav__short {
+  display: none;
+}
+
+.ops-client-shell.is-nav-collapsed {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.ops-client-shell.is-nav-collapsed .ops-sidebar {
+  padding: 16px 8px;
+  align-items: stretch;
+}
+
+.ops-client-shell.is-nav-collapsed .ops-sidebar__top {
+  flex-direction: column;
+  align-items: center;
+}
+
+.ops-client-shell.is-nav-collapsed .cp-sidebar__brand {
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
+.ops-client-shell.is-nav-collapsed .cp-sidebar__titles,
+.ops-client-shell.is-nav-collapsed .ops-nav__label {
+  display: none;
+}
+
+.ops-client-shell.is-nav-collapsed .ops-nav__short {
+  display: inline;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ops-client-shell.is-nav-collapsed .cp-nav__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+  text-align: center;
+}
+
+.ops-client-shell.is-nav-collapsed .cp-content {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
 .deck-back {
   z-index:1000;
   border:1px solid var(--symbius-border);
@@ -298,6 +413,10 @@
   .admin-grid {
     grid-template-columns:1fr;
     gap:14px
+  }
+
+  .ops-grid {
+    grid-template-columns:1fr
   }
 
   .admin-card {
