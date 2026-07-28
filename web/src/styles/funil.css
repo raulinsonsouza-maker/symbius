@@ -1,3 +1,14 @@
+.funil-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+}
+
+.funil-section .cp-section__head {
+  margin-bottom: 14px;
+}
+
 .funil-section .cp-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -13,8 +24,10 @@
 
 .funil-page {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  min-height: 0;
 }
 
 .funil-page.is-projects-collapsed {
@@ -214,7 +227,8 @@
 .funil-builder {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+  min-height: 0;
 }
 
 .funil-builder__top,
@@ -231,13 +245,13 @@
   justify-content: space-between;
   align-items: flex-end;
   gap: 12px;
-  padding: 16px;
+  padding: 12px 14px;
 }
 
 .funil-builder__title {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   flex: 1;
 }
@@ -301,17 +315,21 @@
 
 .funil-builder__body {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr) 340px;
-  gap: 14px;
+  grid-template-columns: 220px minmax(0, 1fr) 300px;
+  gap: 12px;
   min-width: 0;
+  align-items: stretch;
+  height: calc(100dvh - 210px);
+  max-height: 720px;
+  min-height: 440px;
 }
 
 .funil-builder__body.is-palette-collapsed {
-  grid-template-columns: 52px minmax(0, 1fr) 340px;
+  grid-template-columns: 52px minmax(0, 1fr) 300px;
 }
 
 .funil-builder__body.is-insights-collapsed {
-  grid-template-columns: 240px minmax(0, 1fr) 52px;
+  grid-template-columns: 220px minmax(0, 1fr) 52px;
 }
 
 .funil-builder__body.is-palette-collapsed.is-insights-collapsed {
@@ -320,6 +338,14 @@
 
 .funil-side {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+}
+
+.funil-side .funil-palette,
+.funil-side .funil-insights {
+  min-height: 100%;
 }
 
 .funil-side__rail {
@@ -497,37 +523,83 @@
 
 .funil-canvas {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
   background: #0f0f10;
   border: 1px solid var(--symbius-border);
   border-radius: 16px;
   overflow: hidden;
-  min-height: 720px;
   display: flex;
   flex-direction: column;
 }
 
 .funil-canvas__head {
-  margin: 14px;
-  padding: 14px 16px;
-  border-radius: 14px;
+  margin: 10px 10px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  flex-shrink: 0;
 }
 
 .funil-canvas__head strong {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  font-size: 0.92rem;
 }
 
 .funil-canvas .react-flow {
   flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+.funil-canvas .react-flow__controls {
+  margin: 10px;
+  box-shadow: none;
+  border: 1px solid var(--symbius-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #141414;
+}
+
+.funil-canvas .react-flow__controls-button {
+  width: 28px;
+  height: 28px;
+  background: #141414 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--symbius-border) !important;
+  color: #f2f2f2 !important;
+  fill: #f2f2f2 !important;
+}
+
+.funil-canvas .react-flow__controls-button:last-child {
+  border-bottom: 0 !important;
+}
+
+.funil-canvas .react-flow__controls-button:hover {
+  background: #1f1f1f !important;
+}
+
+.funil-canvas .react-flow__controls-button svg {
+  fill: currentColor !important;
+  stroke: currentColor;
+  color: inherit;
+  max-width: 12px;
+  max-height: 12px;
+}
+
+.funil-canvas .react-flow__controls-button path {
+  fill: currentColor;
+  stroke: currentColor;
 }
 
 .funil-canvas__legend {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 0 16px 14px;
+  padding: 8px 14px 12px;
   color: var(--symbius-muted);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  flex-shrink: 0;
 }
 
 .funil-canvas__dot {
@@ -657,7 +729,8 @@
 .funil-insights {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+  min-height: 0;
 }
 
 .funil-panel__head {
@@ -1124,6 +1197,9 @@
 @media (max-width: 1200px) {
   .funil-builder__body:not(.is-insights-collapsed) {
     grid-template-columns: 220px minmax(0, 1fr);
+    height: auto;
+    max-height: none;
+    min-height: 0;
   }
 
   .funil-builder__body:not(.is-insights-collapsed).is-palette-collapsed {
@@ -1132,6 +1208,8 @@
 
   .funil-builder__body:not(.is-insights-collapsed) .funil-side--insights {
     grid-column: 1 / -1;
+    max-height: none;
+    height: auto;
   }
 
   .funil-builder__body.is-insights-collapsed:not(.is-palette-collapsed) {
@@ -1140,6 +1218,11 @@
 
   .funil-builder__body.is-palette-collapsed.is-insights-collapsed {
     grid-template-columns: 52px minmax(0, 1fr) 52px;
+  }
+
+  .funil-canvas {
+    height: min(58vh, 560px);
+    min-height: 380px;
   }
 }
 
@@ -1151,6 +1234,12 @@
   .funil-builder__body.is-insights-collapsed,
   .funil-builder__body.is-palette-collapsed.is-insights-collapsed {
     grid-template-columns: 1fr;
+  }
+
+  .funil-builder__body {
+    height: auto;
+    max-height: none;
+    min-height: 0;
   }
 
   .funil-page.is-projects-collapsed .funil-projects__head strong,
@@ -1166,7 +1255,8 @@
   }
 
   .funil-canvas {
-    min-height: 560px;
+    height: min(52vh, 480px);
+    min-height: 320px;
   }
 
   .funil-side__rail {

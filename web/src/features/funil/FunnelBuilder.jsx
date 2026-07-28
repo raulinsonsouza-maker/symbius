@@ -123,7 +123,7 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
         const project = await api.getFunnelProject(projectId);
         if (!active) return;
         loadProject(project);
-        window.setTimeout(() => fitView({ padding: 0.18, duration: 500 }), 80);
+        window.setTimeout(() => fitView({ padding: 0.22, duration: 400, maxZoom: 1 }), 80);
       } catch {
         if (active) setSaveStatus('error');
       }
@@ -303,9 +303,10 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
             deleteKeyCode={null}
             edgesReconnectable
             reconnectRadius={12}
-            minZoom={0.25}
-            maxZoom={1.8}
+            minZoom={0.2}
+            maxZoom={1.6}
             fitView
+            fitViewOptions={{ padding: 0.22, maxZoom: 1 }}
             proOptions={{ hideAttribution: true }}
           >
             <Background

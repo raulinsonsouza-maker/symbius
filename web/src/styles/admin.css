@@ -366,9 +366,15 @@
   text-align: center;
 }
 
-.ops-client-shell.is-nav-collapsed .cp-content {
-  padding-left: 16px;
-  padding-right: 16px;
+.ops-client-shell .cp-content:has(.funil-section) {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.ops-client-shell .funil-projects {
+  max-height: calc(100dvh - 160px);
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .deck-back {
