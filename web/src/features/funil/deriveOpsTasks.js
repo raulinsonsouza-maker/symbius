@@ -9,6 +9,10 @@ import {
   defaultDaysForTask,
   defaultRoleForTask,
   isOpsRole,
+  isOpsTaskStatus,
+  isOpsTaskPriority,
+  sanitizeOpsDate,
+  createOpsId,
 } from './funnelTypes';
 
 const money = new Intl.NumberFormat('pt-BR', {
@@ -66,9 +70,171 @@ function clampDays(value, fallback = 5) {
 }
 
 function sanitizeDueAt(value) {
-  const raw = String(value || '').trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-  return '';
+  return sanitizeOpsDate(value);
+}
+
+function emptyRichFields() {
+  return {
+    startAt: '',
+    estimateMinutes: null,
+    tags: [],
+    links: [],
+    checklist: [],
+    subtasks: [],
+    comments: [],
+    activity: [],
+    timeLogs: [],
+    timerStartedAt: null,
+  };
+}
+
+function sanitizeTags(tags) {
+  if (!Array.isArray(tags)) return [];
+  return tags
+    .map((tag) => String(tag || '').trim())
+    .filter(Boolean)
+    .slice(0, 20);
+}
+
+function sanitizeLinks(links) {
+  if (!Array.isArray(links)) return [];
+  return links
+    .map((link) => ({
+      id: String(link?.id || createOpsId('link')),
+      label: String(link?.label || '').trim() || 'Link',
+      url: String(link?.url || '').trim(),
+    }))
+    .filter((link) => link.url)
+    .slice(0, 40);
+}
+
+function sanitizeChecklist(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => ({
+      id: String(item?.id || createOpsId('check')),
+      title: String(item?.title || '').trim() || 'Item',
+      done: Boolean(item?.done),
+      role: isOpsRole(item?.role) ? item.role : undefined,
+    }))
+    .filter((item) => item.id)
+    .slice(0, 100);
+}
+
+function sanitizeSubtasks(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => ({
+      id: String(item?.id || createOpsId('sub')),
+      title: String(item?.title || '').trim() || 'Subtarefa',
+      status: isOpsTaskStatus(item?.status) ? item.status : 'todo',
+      role: isOpsRole(item?.role) ? item.role : 'outro',
+      priority: isOpsTaskPriority(item?.priority) ? item.priority : 'medium',
+      dueAt: sanitizeOpsDate(item?.dueAt),
+    }))
+    .filter((item) => item.id)
+    .slice(0, 50);
+}
+
+function sanitizeComments(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => ({
+      id: String(item?.id || createOpsId('cmt')),
+      body: String(item?.body || '').trim(),
+      authorRole: isOpsRole(item?.authorRole) ? item.authorRole : 'outro',
+      createdAt: String(item?.createdAt || new Date().toISOString()),
+    }))
+    .filter((item) => item.body)
+    .slice(-100);
+}
+
+function sanitizeActivity(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => ({
+      id: String(item?.id || createOpsId('act')),
+      type: String(item?.type || 'update'),
+      message: String(item?.message || '').trim() || 'Atualização',
+      at: String(item?.at || new Date().toISOString()),
+      role: isOpsRole(item?.role) ? item.role : 'outro',
+      meta:
+        item?.meta && typeof item.meta === 'object' && !Array.isArray(item.meta)
+          ? item.meta
+          : {},
+    }))
+    .filter((item) => item.id)
+    .slice(-200);
+}
+
+function sanitizeTimeLogs(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => ({
+      id: String(item?.id || createOpsId('time')),
+      minutes: Math.max(0, Math.round(Number(item?.minutes) || 0)),
+      note: String(item?.note || '').trim(),
+      at: String(item?.at || new Date().toISOString()),
+      role: isOpsRole(item?.role) ? item.role : 'outro',
+    }))
+    .filter((item) => item.minutes > 0)
+    .slice(-100);
+}
+
+function pickRichFields(task = {}) {
+  const estimateRaw = Number(task.estimateMinutes);
+  return {
+    startAt: sanitizeOpsDate(task.startAt),
+    estimateMinutes:
+      Number.isFinite(estimateRaw) && estimateRaw > 0
+        ? Math.round(estimateRaw)
+        : null,
+    tags: sanitizeTags(task.tags),
+    links: sanitizeLinks(task.links),
+    checklist: sanitizeChecklist(task.checklist),
+    subtasks: sanitizeSubtasks(task.subtasks),
+    comments: sanitizeComments(task.comments),
+    activity: sanitizeActivity(task.activity),
+    timeLogs: sanitizeTimeLogs(task.timeLogs),
+    timerStartedAt: task.timerStartedAt
+      ? String(task.timerStartedAt)
+      : null,
+  };
+}
+
+function preserveRichFromPrevious(next, prev) {
+  if (!prev) return { ...emptyRichFields(), ...pickRichFields(next) };
+  return pickRichFields({
+    startAt: next.startAt ?? prev.startAt,
+    estimateMinutes:
+      next.estimateMinutes != null ? next.estimateMinutes : prev.estimateMinutes,
+    tags: Array.isArray(next.tags) && next.tags.length ? next.tags : prev.tags,
+    links: Array.isArray(next.links) && next.links.length ? next.links : prev.links,
+    checklist:
+      Array.isArray(next.checklist) && next.checklist.length
+        ? next.checklist
+        : prev.checklist,
+    subtasks:
+      Array.isArray(next.subtasks) && next.subtasks.length
+        ? next.subtasks
+        : prev.subtasks,
+    comments:
+      Array.isArray(next.comments) && next.comments.length
+        ? next.comments
+        : prev.comments,
+    activity:
+      Array.isArray(next.activity) && next.activity.length
+        ? next.activity
+        : prev.activity,
+    timeLogs:
+      Array.isArray(next.timeLogs) && next.timeLogs.length
+        ? next.timeLogs
+        : prev.timeLogs,
+    timerStartedAt:
+      next.timerStartedAt !== undefined
+        ? next.timerStartedAt
+        : prev.timerStartedAt,
+  });
 }
 
 function withAssignmentDefaults(task, { force = false } = {}) {
@@ -84,7 +250,16 @@ function withAssignmentDefaults(task, { force = false } = {}) {
     !force && sanitizeDueAt(task.dueAt)
       ? sanitizeDueAt(task.dueAt)
       : addDaysToDate(new Date(), dueInDays);
-  return { ...task, role, dueInDays, dueAt };
+  const rich = pickRichFields(task);
+  return {
+    ...task,
+    ...rich,
+    role,
+    dueInDays,
+    dueAt,
+    status: isOpsTaskStatus(task.status) ? task.status : 'todo',
+    priority: isOpsTaskPriority(task.priority) ? task.priority : 'medium',
+  };
 }
 
 function taskBase(node, category, title, description, priority = 'medium', meta = {}) {
@@ -95,9 +270,10 @@ function taskBase(node, category, title, description, priority = 'medium', meta 
     title,
     description,
     status: 'todo',
-    priority,
+    priority: isOpsTaskPriority(priority) ? priority : 'medium',
     manual: false,
     meta,
+    ...emptyRichFields(),
   };
   return withAssignmentDefaults(base, { force: true });
 }
@@ -321,27 +497,39 @@ export function mergeOpsTasks(existing = [], generated = [], options = {}) {
   const byId = new Map(previous.map((task) => [task.id, task]));
   const mergedGenerated = generated.map((task) => {
     const prev = byId.get(task.id);
-    if (!prev) return withAssignmentDefaults(task, { force: true });
+    if (!prev) {
+      return withAssignmentDefaults(
+        { ...emptyRichFields(), ...task },
+        { force: true },
+      );
+    }
+    const rich = preserveRichFromPrevious(task, prev);
     if (applyAssignments) {
-      return {
-        ...withAssignmentDefaults(task, { force: true }),
-        status: prev.status || task.status,
-        priority: prev.priority || task.priority,
-      };
+      return withAssignmentDefaults(
+        {
+          ...task,
+          ...rich,
+          status: prev.status || task.status,
+          priority: prev.priority || task.priority,
+        },
+        { force: true },
+      );
     }
     return withAssignmentDefaults({
       ...task,
+      ...rich,
       status: prev.status || task.status,
       priority: prev.priority || task.priority,
       role: prev.role || task.role,
       dueInDays: prev.dueInDays || task.dueInDays,
       dueAt: prev.dueAt || task.dueAt,
+      startAt: rich.startAt || prev.startAt,
     });
   });
   const manuals = previous
     .filter((task) => task.manual)
     .map((task) => withAssignmentDefaults(task));
-  return [...mergedGenerated, ...manuals];
+  return sanitizeOpsTasks([...mergedGenerated, ...manuals]);
 }
 
 export function applyOpsTaskAssignments(tasks = [], assignments = []) {
@@ -361,18 +549,19 @@ export function applyOpsTaskAssignments(tasks = [], assignments = []) {
     const role = isOpsRole(assignment.role)
       ? assignment.role
       : defaultRoleForTask(task);
-    return {
+    return withAssignmentDefaults({
       ...task,
       role,
       dueInDays,
       dueAt: addDaysToDate(new Date(), dueInDays),
-    };
+    });
   });
 }
 
 export function createManualOpsTask(partial = {}) {
   const id = `manual:${crypto.randomUUID()}`;
   const base = {
+    ...emptyRichFields(),
     id,
     nodeId: null,
     category: partial.category || 'outro',
@@ -385,6 +574,7 @@ export function createManualOpsTask(partial = {}) {
     role: partial.role,
     dueInDays: partial.dueInDays,
     dueAt: partial.dueAt,
+    ...pickRichFields(partial),
   };
   return withAssignmentDefaults(base, {
     force: !(isOpsRole(partial.role) && Number(partial.dueInDays) > 0),
@@ -401,12 +591,8 @@ export function sanitizeOpsTasks(tasks = []) {
         category: String(task.category || 'outro'),
         title: String(task.title || '').trim() || 'Tarefa',
         description: String(task.description || ''),
-        status: ['todo', 'doing', 'done'].includes(task.status)
-          ? task.status
-          : 'todo',
-        priority: ['high', 'medium', 'low'].includes(task.priority)
-          ? task.priority
-          : 'medium',
+        status: isOpsTaskStatus(task.status) ? task.status : 'todo',
+        priority: isOpsTaskPriority(task.priority) ? task.priority : 'medium',
         manual: Boolean(task.manual),
         meta:
           task.meta && typeof task.meta === 'object' && !Array.isArray(task.meta)
@@ -415,6 +601,7 @@ export function sanitizeOpsTasks(tasks = []) {
         role: task.role,
         dueInDays: task.dueInDays,
         dueAt: task.dueAt,
+        ...pickRichFields(task),
       }),
     )
     .filter((task) => task.id);

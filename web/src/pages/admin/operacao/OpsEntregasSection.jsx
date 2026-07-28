@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  AlignLeft,
+  Calendar,
+  Flag,
+  ListTodo,
+  Search,
+  User,
+} from 'lucide-react';
 import { api } from '../../../lib/api';
 import { sanitizeOpsTasks } from '../../../features/funil/deriveOpsTasks';
 import {
@@ -7,10 +15,14 @@ import {
   OPS_TASK_STATUSES,
   addDaysToDate,
   formatOpsDueDate,
+  getOpsChecklistProgress,
   getOpsRole,
+  getOpsSubtaskProgress,
+  getOpsTaskPriority,
   isOpsDueOverdue,
 } from '../../../features/funil/funnelTypes';
 import { sanitizeFunnelGraph } from '../../../features/funil/graphPersist';
+import OpsTaskDetailDrawer from './OpsTaskDetailDrawer';
 
 function tasksFromProject(project) {
   return sanitizeOpsTasks(project?.graph?.opsTasks || []).map((task) => ({
@@ -20,6 +32,13 @@ function tasksFromProject(project) {
   }));
 }
 
+function stripProjectFields(task) {
+  const next = { ...task };
+  delete next.projectId;
+  delete next.projectName;
+  return next;
+}
+
 export default function OpsEntregasSection({ client }) {
   const clientId = client?.id;
   const [projects, setProjects] = useState([]);
@@ -27,6 +46,8 @@ export default function OpsEntregasSection({ client }) {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [selectedKey, setSelectedKey] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -55,9 +76,21 @@ export default function OpsEntregasSection({ client }) {
   );
 
   const visibleTasks = useMemo(() => {
-    if (statusFilter === 'all') return allTasks;
-    return allTasks.filter((task) => task.status === statusFilter);
-  }, [allTasks, statusFilter]);
+    const query = search.trim().toLowerCase();
+    return allTasks.filter((task) => {
+      if (statusFilter !== 'all' && task.status !== statusFilter) return false;
+      if (!query) return true;
+      const haystack = [
+        task.title,
+        task.description,
+        task.projectName,
+        ...(task.tags || []),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [allTasks, statusFilter, search]);
 
   const columns = useMemo(() => {
     const roleSet = new Set(visibleTasks.map((task) => task.role || 'outro'));
@@ -68,21 +101,30 @@ export default function OpsEntregasSection({ client }) {
     return [...ordered, ...extras];
   }, [visibleTasks]);
 
-  async function patchTask(projectId, taskId, patch) {
+  const selectedTask = useMemo(() => {
+    if (!selectedKey) return null;
+    return allTasks.find(
+      (task) => `${task.projectId}:${task.id}` === selectedKey,
+    );
+  }, [allTasks, selectedKey]);
+
+  async function replaceTask(projectId, nextTask) {
     const project = projects.find((item) => item.id === projectId);
     if (!project) return;
+    const taskId = nextTask.id;
     setBusyId(`${projectId}:${taskId}`);
     setError('');
     try {
       const graph = sanitizeFunnelGraph(project.graph || {});
-      const opsTasks = sanitizeOpsTasks(graph.opsTasks).map((task) => {
-        if (task.id !== taskId) return task;
-        const next = { ...task, ...patch };
-        if (patch.dueInDays != null && patch.dueAt == null) {
-          next.dueAt = addDaysToDate(new Date(), patch.dueInDays);
-        }
-        return next;
-      });
+      const payload = stripProjectFields(nextTask);
+      if (payload.dueInDays != null && !payload.dueAt) {
+        payload.dueAt = addDaysToDate(new Date(), payload.dueInDays);
+      }
+      const opsTasks = sanitizeOpsTasks(graph.opsTasks).map((task) =>
+        task.id === taskId
+          ? sanitizeOpsTasks([{ ...task, ...payload, id: taskId }])[0]
+          : task,
+      );
       const updated = await api.updateFunnelProject(project.id, {
         name: project.name,
         graph: { ...graph, opsTasks: sanitizeOpsTasks(opsTasks) },
@@ -113,28 +155,40 @@ export default function OpsEntregasSection({ client }) {
         <div className="cp-section__titles">
           <h1>Entregas</h1>
           <p className="cp-muted">
-            Demandas por profissional, geradas no planejamento do funil.
+            Clique no card para abrir o detalhe (status, prazo, checklist,
+            comentários).
           </p>
         </div>
-        <div className="ops-entregas__filters">
-          {[
-            { value: 'all', label: 'Todas' },
-            ...OPS_TASK_STATUSES.map((status) => ({
-              value: status.value,
-              label: status.label,
-            })),
-          ].map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              className={`ops-entregas__filter ${
-                statusFilter === item.value ? 'is-active' : ''
-              }`}
-              onClick={() => setStatusFilter(item.value)}
-            >
-              {item.label}
-            </button>
-          ))}
+        <div className="ops-entregas__toolbar">
+          <label className="ops-entregas__search">
+            <Search size={14} strokeWidth={1.7} />
+            <input
+              type="search"
+              placeholder="Buscar título ou etiqueta…"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+          <div className="ops-entregas__filters">
+            {[
+              { value: 'all', label: 'Todas' },
+              ...OPS_TASK_STATUSES.map((status) => ({
+                value: status.value,
+                label: status.label,
+              })),
+            ].map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className={`ops-entregas__filter ${
+                  statusFilter === item.value ? 'is-active' : ''
+                }`}
+                onClick={() => setStatusFilter(item.value)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -171,95 +225,89 @@ export default function OpsEntregasSection({ client }) {
                 <div className="ops-entregas__cards">
                   {columnTasks.map((task) => {
                     const overdue = isOpsDueOverdue(task.dueAt, task.status);
-                    const busy = busyId === `${task.projectId}:${task.id}`;
+                    const key = `${task.projectId}:${task.id}`;
+                    const checklist = getOpsChecklistProgress(task);
+                    const subtasks = getOpsSubtaskProgress(task);
+                    const progressTotal = checklist.total + subtasks.total;
+                    const progressDone = checklist.done + subtasks.done;
+                    const priority = getOpsTaskPriority(task.priority);
+                    const showPriorityLabel =
+                      priority.value === 'urgent' || priority.value === 'high';
+                    const hasDescription = Boolean(
+                      String(task.description || '').trim(),
+                    );
                     return (
-                      <article
-                        key={`${task.projectId}:${task.id}`}
+                      <button
+                        key={key}
+                        type="button"
                         className={`ops-entregas__card is-${task.status} ${
                           overdue ? 'is-overdue' : ''
-                        }`}
+                        } ${selectedKey === key ? 'is-open' : ''}`}
+                        onClick={() => setSelectedKey(key)}
                       >
-                        <div className="ops-entregas__card-top">
-                          <span className="ops-entregas__project">
+                        <strong className="ops-entregas__card-title">
+                          {task.title}
+                        </strong>
+                        {task.projectName ? (
+                          <span className="ops-entregas__card-project">
                             {task.projectName}
                           </span>
+                        ) : null}
+                        {hasDescription ? (
                           <span
-                            className={`ops-entregas__due ${
+                            className="ops-entregas__card-desc-hint"
+                            title="Tem descrição"
+                          >
+                            <AlignLeft size={13} strokeWidth={1.7} />
+                          </span>
+                        ) : null}
+                        <div className="ops-entregas__card-meta">
+                          <span
+                            className="ops-entregas__meta-item"
+                            title={getOpsRole(task.role).label}
+                          >
+                            <User size={12} strokeWidth={1.7} />
+                          </span>
+                          <span
+                            className={`ops-entregas__meta-item ${
                               overdue ? 'is-overdue' : ''
                             }`}
+                            title={
+                              task.dueAt
+                                ? `Prazo ${formatOpsDueDate(task.dueAt)}`
+                                : 'Sem prazo'
+                            }
                           >
+                            <Calendar size={12} strokeWidth={1.7} />
                             {task.dueAt
                               ? formatOpsDueDate(task.dueAt)
-                              : 'Sem prazo'}
+                              : '—'}
                           </span>
+                          <span
+                            className={`ops-entregas__meta-item ops-entregas__priority is-${priority.tone}`}
+                            title={priority.label}
+                          >
+                            <Flag size={12} strokeWidth={1.8} />
+                            {showPriorityLabel ? priority.label : null}
+                          </span>
+                          {progressTotal > 0 ? (
+                            <span
+                              className="ops-entregas__meta-item"
+                              title="Checklist / subtarefas"
+                            >
+                              <ListTodo size={12} strokeWidth={1.7} />
+                              {progressDone}/{progressTotal}
+                            </span>
+                          ) : null}
                         </div>
-                        <strong>{task.title}</strong>
-                        {task.description ? (
-                          <p>{task.description}</p>
+                        {(task.tags || []).length ? (
+                          <div className="ops-entregas__tags">
+                            {task.tags.slice(0, 3).map((tag) => (
+                              <span key={tag}>{tag}</span>
+                            ))}
+                          </div>
                         ) : null}
-                        <div className="ops-entregas__card-controls">
-                          <label>
-                            <span>Status</span>
-                            <select
-                              value={task.status}
-                              disabled={busy}
-                              onChange={(event) =>
-                                patchTask(task.projectId, task.id, {
-                                  status: event.target.value,
-                                })
-                              }
-                            >
-                              {OPS_TASK_STATUSES.map((status) => (
-                                <option
-                                  key={status.value}
-                                  value={status.value}
-                                >
-                                  {status.label}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label>
-                            <span>Papel</span>
-                            <select
-                              value={task.role || 'outro'}
-                              disabled={busy}
-                              onChange={(event) =>
-                                patchTask(task.projectId, task.id, {
-                                  role: event.target.value,
-                                })
-                              }
-                            >
-                              {OPS_ROLES.map((option) => (
-                                <option
-                                  key={option.value}
-                                  value={option.value}
-                                >
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label>
-                            <span>Dias</span>
-                            <input
-                              type="number"
-                              min={1}
-                              max={90}
-                              value={task.dueInDays || 5}
-                              disabled={busy}
-                              onChange={(event) =>
-                                patchTask(task.projectId, task.id, {
-                                  dueInDays: Math.min(
-                                    90,
-                                    Math.max(1, Number(event.target.value) || 1),
-                                  ),
-                                })
-                              }
-                            />
-                          </label>
-                        </div>
-                      </article>
+                      </button>
                     );
                   })}
                 </div>
@@ -268,6 +316,21 @@ export default function OpsEntregasSection({ client }) {
           })}
         </div>
       )}
+
+      {selectedTask ? (
+        <OpsTaskDetailDrawer
+          task={selectedTask}
+          projectName={selectedTask.projectName}
+          busy={busyId === `${selectedTask.projectId}:${selectedTask.id}`}
+          onClose={() => setSelectedKey(null)}
+          onSave={(next) =>
+            replaceTask(selectedTask.projectId, {
+              ...next,
+              id: selectedTask.id,
+            })
+          }
+        />
+      ) : null}
     </div>
   );
 }

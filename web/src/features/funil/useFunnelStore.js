@@ -380,9 +380,10 @@ export const useFunnelStore = create((set, get) => ({
     })),
   setOpsTaskStatus: (id, status) =>
     set((state) => ({
-      opsTasks: state.opsTasks.map((task) =>
-        task.id === id ? { ...task, status } : task,
-      ),
+      opsTasks: state.opsTasks.map((task) => {
+        if (task.id !== id) return task;
+        return sanitizeOpsTasks([{ ...task, status }])[0] || task;
+      }),
       revision: state.revision + 1,
     })),
   addManualOpsTask: (partial = {}) =>

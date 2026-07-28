@@ -71,7 +71,8 @@ export function OpsTasksPanel({ compact = false }) {
       {!opsTasks.length ? (
         <p className="funil-ops__empty">
           Gere as entregas a partir do mapa: escolha o profissional e o prazo
-          para cada demanda.
+          para cada demanda. Detalhe completo (checklist, subtarefas, timer) fica
+          em Entregas.
         </p>
       ) : (
         <ul className="funil-ops__list">

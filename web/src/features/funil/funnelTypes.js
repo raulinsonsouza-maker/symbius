@@ -368,8 +368,96 @@ export function getCreativeFormat(value) {
 export const OPS_TASK_STATUSES = [
   { value: 'todo', label: 'A fazer' },
   { value: 'doing', label: 'Em andamento' },
+  { value: 'arte', label: 'Arte' },
+  { value: 'revisao', label: 'Revisão' },
+  { value: 'blocked', label: 'Bloqueado' },
   { value: 'done', label: 'Concluído' },
 ];
+
+export const OPS_TASK_PRIORITIES = [
+  { value: 'urgent', label: 'Urgente', tone: 'urgent' },
+  { value: 'high', label: 'Alta', tone: 'high' },
+  { value: 'medium', label: 'Média', tone: 'medium' },
+  { value: 'low', label: 'Baixa', tone: 'low' },
+];
+
+const OPS_STATUS_VALUES = new Set(OPS_TASK_STATUSES.map((s) => s.value));
+const OPS_PRIORITY_VALUES = new Set(OPS_TASK_PRIORITIES.map((p) => p.value));
+
+export function getOpsTaskStatus(value) {
+  return (
+    OPS_TASK_STATUSES.find((status) => status.value === value) ||
+    OPS_TASK_STATUSES[0]
+  );
+}
+
+export function getOpsTaskPriority(value) {
+  const normalized = value === 'high' || value === 'urgent' || value === 'medium' || value === 'low'
+    ? value
+    : 'medium';
+  return (
+    OPS_TASK_PRIORITIES.find((priority) => priority.value === normalized) ||
+    OPS_TASK_PRIORITIES[2]
+  );
+}
+
+export function isOpsTaskStatus(value) {
+  return OPS_STATUS_VALUES.has(String(value));
+}
+
+export function isOpsTaskPriority(value) {
+  return OPS_PRIORITY_VALUES.has(String(value));
+}
+
+export function createOpsId(prefix = 'item') {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return `${prefix}:${crypto.randomUUID()}`;
+  }
+  return `${prefix}:${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+export function createOpsActivity({ type, message, meta = {}, role = 'outro' }) {
+  return {
+    id: createOpsId('act'),
+    type: String(type || 'update'),
+    message: String(message || '').trim() || 'Atualização',
+    at: new Date().toISOString(),
+    role: String(role || 'outro'),
+    meta:
+      meta && typeof meta === 'object' && !Array.isArray(meta) ? meta : {},
+  };
+}
+
+export function getOpsChecklistProgress(task) {
+  const list = Array.isArray(task?.checklist) ? task.checklist : [];
+  const done = list.filter((item) => item.done).length;
+  return { done, total: list.length };
+}
+
+export function getOpsSubtaskProgress(task) {
+  const list = Array.isArray(task?.subtasks) ? task.subtasks : [];
+  const done = list.filter((item) => item.status === 'done').length;
+  return { done, total: list.length };
+}
+
+export function getOpsTimeLoggedMinutes(task) {
+  const logs = Array.isArray(task?.timeLogs) ? task.timeLogs : [];
+  const stored = logs.reduce((sum, log) => sum + (Number(log.minutes) || 0), 0);
+  if (!task?.timerStartedAt) return stored;
+  const started = new Date(task.timerStartedAt).getTime();
+  if (Number.isNaN(started)) return stored;
+  const running = Math.max(0, Math.floor((Date.now() - started) / 60000));
+  return stored + running;
+}
+
+export function formatOpsMinutes(minutes) {
+  const total = Math.max(0, Math.round(Number(minutes) || 0));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h <= 0) return `${m}m`;
+  if (m <= 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
 
 export const OPS_ROLES = [
   { value: 'designer', label: 'Designer' },
@@ -461,6 +549,12 @@ export function isOpsDueOverdue(dueAt, status) {
   due.setHours(0, 0, 0, 0);
   return due < today;
 }
+
+export function sanitizeOpsDate(value) {
+  const raw = String(value || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '';
+}
+
 export const NODE_META = {
   traffic: {
     label: 'Tráfego',
