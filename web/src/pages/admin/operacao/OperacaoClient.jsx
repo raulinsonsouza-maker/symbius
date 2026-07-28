@@ -123,7 +123,9 @@ export default function OperacaoClient() {
 
   return (
     <div
-      className={`cp ops-client-shell ${navCollapsed ? 'is-nav-collapsed' : ''}`}
+      className={`cp ops-client-shell ${navCollapsed ? 'is-nav-collapsed' : ''} ${
+        section === 'funil' ? 'is-funil-workspace' : ''
+      }`}
     >
       <aside className="cp-sidebar ops-sidebar">
         <div className="ops-sidebar__top">
@@ -186,16 +188,24 @@ export default function OperacaoClient() {
       <div className="cp-main">
         <header className="cp-top">
           <div className="cp-top__search">
-            <span className="cp-top__chip">Cliente ativo na operação</span>
-            <input
-              type="search"
-              className="cp-top__input"
-              placeholder="Busca operacional em breve…"
-              disabled
-            />
+            <span className="cp-top__chip">Operação</span>
+            {section === 'funil' ? (
+              <strong className="cp-top__focus-title" title={clientName(client)}>
+                {clientName(client)}
+              </strong>
+            ) : (
+              <input
+                type="search"
+                className="cp-top__input"
+                placeholder="Busca operacional em breve…"
+                disabled
+              />
+            )}
           </div>
           <div className="cp-top__meta">
-            <span className="crm-pill crm-pill--active">Operação</span>
+            {section !== 'funil' ? (
+              <span className="crm-pill crm-pill--active">Operação</span>
+            ) : null}
             <span className="cp-top__name">
               {meta || client.email || client.document || clientName(client)}
             </span>

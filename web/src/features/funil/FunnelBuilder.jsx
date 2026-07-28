@@ -15,7 +15,6 @@ import {
   CloudCog,
   PanelLeft,
   PanelRight,
-  Plus,
   Save,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -308,24 +307,17 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
 
   return (
     <div className="funil-builder">
-      <div className="funil-builder__top">
+          <div className="funil-builder__top">
         <div className="funil-builder__title">
-          <small>Projeto aberto</small>
           <input
             aria-label="Nome do projeto"
             value={projectName}
             onChange={(event) => setProjectName(event.target.value)}
+            placeholder="Nome do funil"
           />
         </div>
         <div className="funil-builder__actions">
           <SaveIndicator />
-          <button
-            type="button"
-            className="lp-btn lp-btn--ghost"
-            onClick={() => onQuickAdd('optin')}
-          >
-            <Plus size={14} strokeWidth={1.6} /> Nova etapa
-          </button>
         </div>
       </div>
 
@@ -357,16 +349,6 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
           )}
         </div>
         <section className="funil-canvas">
-          <div className="funil-canvas__head">
-            <div>
-              <strong>Cenário principal</strong>
-              <span>
-                {shiftHeld
-                  ? 'Shift ativo — alinhe os blocos pelas guias'
-                  : 'Planejamento mensal do funil · Segure Shift ao arrastar para alinhar'}
-              </span>
-            </div>
-          </div>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -434,15 +416,13 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
           </ReactFlow>
           <div className="funil-canvas__legend">
             <span>
-              <i className="funil-canvas__dot funil-canvas__dot--yes" /> caminho
-              sim
+              <i className="funil-canvas__dot funil-canvas__dot--yes" /> sim
             </span>
             <span>
-              <i className="funil-canvas__dot funil-canvas__dot--no" /> caminho
-              não
+              <i className="funil-canvas__dot funil-canvas__dot--no" /> não
             </span>
             <span className="funil-canvas__hint">
-              Segure <kbd>Shift</kbd> ao arrastar para alinhar
+              <kbd>Shift</kbd> alinha
             </span>
           </div>
         </section>

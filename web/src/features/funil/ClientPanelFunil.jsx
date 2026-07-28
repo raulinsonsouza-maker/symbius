@@ -211,16 +211,22 @@ export default function ClientPanelFunil({
   }
 
   return (
-    <section className="cp-section__body funil-section">
-      <div className="cp-section__head">
-        <div className="cp-section__titles">
-          <h1>Funil</h1>
-          <p className="cp-muted">
-            Crie um funil por canal ou campanha — por exemplo Meta e outro só
-            para Google — e alterne entre eles nesta lista.
-          </p>
+    <section
+      className={`cp-section__body funil-section ${
+        selected ? 'is-editing' : ''
+      }`}
+    >
+      {!selected ? (
+        <div className="cp-section__head funil-section__intro">
+          <div className="cp-section__titles">
+            <h1>Funil</h1>
+            <p className="cp-muted">
+              Crie um funil por canal ou campanha e alterne entre eles nesta
+              lista.
+            </p>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {error ? <p className="prop-error">{error}</p> : null}
 

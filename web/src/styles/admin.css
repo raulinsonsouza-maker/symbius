@@ -371,6 +371,73 @@
   padding-bottom: 16px;
 }
 
+.ops-client-shell.is-funil-workspace .cp-top {
+  padding: 8px clamp(12px, 2vw, 20px);
+  gap: 8px 14px;
+}
+
+.ops-client-shell.is-funil-workspace .cp-top__chip {
+  padding: 5px 10px;
+  font-size: 0.75rem;
+}
+
+.ops-client-shell.is-funil-workspace .cp-top__focus-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.ops-client-shell.is-funil-workspace .cp-top__name {
+  font-size: 0.82rem;
+  max-width: 180px;
+  color: var(--symbius-muted-light);
+}
+
+.ops-client-shell.is-funil-workspace .cp-content {
+  padding: 8px clamp(10px, 1.6vw, 16px) 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.ops-client-shell.is-funil-workspace .cp-main {
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.ops-client-shell.is-funil-workspace .cp-content:has(.funil-section) {
+  padding-top: 8px;
+  padding-bottom: 10px;
+}
+
+.ops-client-shell.is-funil-workspace .funil-section {
+  flex: 1;
+  min-height: 0;
+}
+
+.ops-client-shell.is-funil-workspace .funil-page {
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.ops-client-shell.is-funil-workspace .funil-workspace {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ops-client-shell.is-funil-workspace .funil-projects {
+  max-height: none;
+  height: 100%;
+}
+
 .ops-client-shell .funil-projects {
   max-height: calc(100dvh - 160px);
   overflow: auto;
