@@ -13,6 +13,9 @@ import {
   appBaseUrl,
   buildReadyToSignEmail,
   buildSignedEmail,
+  buildInternalContractCreatedEmail,
+  buildInternalContractSignedEmail,
+  internalContractNotifyRecipients,
   sendEmail,
 } from './email/resend.js';
 import {
@@ -296,12 +299,127 @@ export async function getContract(req, res) {
   return res.json(contract);
 }
 
+function clientDisplayName(client) {
+  if (!client) return 'Cliente';
+  return (
+    client.tradeName ||
+    client.legalName ||
+    client.legalRepName ||
+    client.email ||
+    'Cliente'
+  );
+}
+
+function commercialNotifyFields(contract = {}) {
+  return {
+    setupEnabled: contract.setupEnabled,
+    setupPrice: contract.setupPrice,
+    setupTitle: contract.setupTitle,
+    feeEnabled: contract.feeEnabled,
+    feePrice: contract.feePrice,
+    feeTitle: contract.feeTitle,
+    commissionEnabled: contract.commissionEnabled,
+    commissionEstimate: contract.commissionEstimate,
+    mediaEnabled: contract.mediaEnabled,
+    mediaMonthlyBudget: contract.mediaMonthlyBudget,
+  };
+}
+
+async function notifyInternalContractCreated(store, contract) {
+  if (!emailConfigured() || !contract) return;
+  try {
+    const client = contract.clientId
+      ? await store.getClient(contract.clientId)
+      : null;
+    const clientName = clientDisplayName(client);
+    const adminUrl = `${appBaseUrl()}/admin/contratos/${contract.id}`;
+    const { subject, html } = buildInternalContractCreatedEmail({
+      clientName,
+      contractNumber: contract.number,
+      adminUrl,
+      ...commercialNotifyFields(contract),
+    });
+    await sendEmail({
+      to: internalContractNotifyRecipients(),
+      subject,
+      html,
+    });
+    if (store.addSignatureEvent) {
+      await store.addSignatureEvent(contract.id, 'internal_created_email', {
+        to: internalContractNotifyRecipients(),
+      });
+    }
+  } catch (err) {
+    console.error('E-mail interno (contrato gerado) falhou:', err.message);
+    if (store.addSignatureEvent) {
+      try {
+        await store.addSignatureEvent(contract.id, 'email_failed', {
+          stage: 'internal_created',
+          message: err.message,
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
+async function notifyInternalContractSigned(store, contract, extras = {}) {
+  if (!emailConfigured() || !contract) return;
+  try {
+    const client = contract.clientId
+      ? await store.getClient(contract.clientId)
+      : null;
+    const clientName = clientDisplayName(client);
+    const { subject, html } = buildInternalContractSignedEmail({
+      clientName,
+      contractNumber: contract.number,
+      signerName: extras.signerName || contract.signerName,
+      signerEmail: extras.signerEmail || contract.signerEmail,
+      signedAt: extras.signedAt || contract.signedAt,
+      viewUrl: extras.viewUrl,
+      ...commercialNotifyFields(contract),
+    });
+    await sendEmail({
+      to: internalContractNotifyRecipients(),
+      subject,
+      html,
+      attachments: extras.pdfBuffer
+        ? [
+            {
+              filename: `contrato-${contract.number || contract.id}-assinado.pdf`,
+              content: extras.pdfBuffer,
+            },
+          ]
+        : undefined,
+    });
+    if (store.addSignatureEvent) {
+      await store.addSignatureEvent(contract.id, 'internal_signed_email', {
+        to: internalContractNotifyRecipients(),
+      });
+    }
+  } catch (err) {
+    console.error('E-mail interno (contrato assinado) falhou:', err.message);
+    if (store.addSignatureEvent) {
+      try {
+        await store.addSignatureEvent(contract.id, 'email_failed', {
+          stage: 'internal_signed',
+          message: err.message,
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
 export async function createContract(req, res) {
   const store = getStore();
   const contract = await store.createContract(req.body || {});
   if (store.syncContractFinance) {
     await store.syncContractFinance(contract.id);
   }
+  await notifyInternalContractCreated(store, contract);
   return res.status(201).json(contract);
 }
 
@@ -361,6 +479,8 @@ export async function convertProposal(req, res) {
   if (store.applyPipelineToContract) {
     await store.applyPipelineToContract(proposal.id, 'negotiating');
   }
+
+  await notifyInternalContractCreated(store, contract);
 
   return res.status(201).json({
     proposal: updatedProposal,
@@ -961,6 +1081,14 @@ export async function postPublicSign(req, res) {
       });
     }
   }
+
+  await notifyInternalContractSigned(store, signed, {
+    signerName: name,
+    signerEmail: email,
+    signedAt,
+    viewUrl,
+    pdfBuffer,
+  });
 
   const fresh = (await store.getContract(signed.id)) || signed;
 

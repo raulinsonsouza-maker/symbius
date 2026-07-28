@@ -151,6 +151,218 @@ export function buildSignedEmail({
   return { subject, html };
 }
 
+const DEFAULT_INTERNAL_NOTIFY = [
+  'bruno@symbius.com.br',
+  'raul@symbius.com.br',
+];
+
+export function internalContractNotifyRecipients() {
+  const fromEnv = String(process.env.INTERNAL_CONTRACT_NOTIFY || '')
+    .split(',')
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+  return fromEnv.length ? fromEnv : [...DEFAULT_INTERNAL_NOTIFY];
+}
+
+const moneyBr = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  maximumFractionDigits: 2,
+});
+
+function formatMoney(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return moneyBr.format(0);
+  return moneyBr.format(n);
+}
+
+function valueRow(label, value) {
+  return `
+    <tr>
+      <td style="padding:8px 0;font-size:14px;color:#666;border-bottom:1px solid #eee;">${esc(label)}</td>
+      <td style="padding:8px 0;font-size:14px;font-weight:600;color:#111;text-align:right;border-bottom:1px solid #eee;">${esc(value)}</td>
+    </tr>
+  `;
+}
+
+function commercialValuesHtml({
+  setupEnabled,
+  setupPrice,
+  setupTitle,
+  feeEnabled,
+  feePrice,
+  feeTitle,
+  commissionEnabled,
+  commissionEstimate,
+  mediaEnabled,
+  mediaMonthlyBudget,
+}) {
+  const rows = [];
+  if (setupEnabled !== false && Number(setupPrice) > 0) {
+    rows.push(valueRow(setupTitle || 'Setup', formatMoney(setupPrice)));
+  }
+  if (feeEnabled !== false && Number(feePrice) > 0) {
+    rows.push(valueRow(feeTitle || 'Fee mensal', formatMoney(feePrice)));
+  }
+  if (commissionEnabled) {
+    rows.push(
+      valueRow(
+        'Comissão estimada',
+        Number(commissionEstimate) > 0
+          ? formatMoney(commissionEstimate)
+          : 'Ativa (sem estimativa)',
+      ),
+    );
+  }
+  if (mediaEnabled && Number(mediaMonthlyBudget) > 0) {
+    rows.push(valueRow('Verba de mídia / mês', formatMoney(mediaMonthlyBudget)));
+  }
+  if (!rows.length) {
+    rows.push(valueRow('Valores', 'Não informados no momento'));
+  }
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0 0;">
+      ${rows.join('')}
+    </table>
+  `;
+}
+
+export function buildInternalContractCreatedEmail({
+  clientName,
+  contractNumber,
+  setupEnabled,
+  setupPrice,
+  setupTitle,
+  feeEnabled,
+  feePrice,
+  feeTitle,
+  commissionEnabled,
+  commissionEstimate,
+  mediaEnabled,
+  mediaMonthlyBudget,
+  adminUrl,
+}) {
+  const client = clientName || 'Cliente';
+  const subject = `Contrato gerado · ${client}`;
+  const html = layout({
+    title: subject,
+    bodyHtml: `
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:700;line-height:1.25;">
+        Contrato gerado
+      </h1>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#444;">
+        Um novo contrato foi gerado para <strong>${esc(client)}</strong>.
+      </p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 8px;background:#f7f7f7;border-radius:12px;">
+        <tr>
+          <td style="padding:16px 18px;">
+            <p style="margin:0 0 4px;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#888;">Cliente</p>
+            <p style="margin:0 0 12px;font-size:16px;font-weight:600;color:#111;">${esc(client)}</p>
+            <p style="margin:0 0 4px;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#888;">Contrato</p>
+            <p style="margin:0;font-size:15px;color:#333;">${esc(contractNumber || '—')}</p>
+            ${commercialValuesHtml({
+              setupEnabled,
+              setupPrice,
+              setupTitle,
+              feeEnabled,
+              feePrice,
+              feeTitle,
+              commissionEnabled,
+              commissionEstimate,
+              mediaEnabled,
+              mediaMonthlyBudget,
+            })}
+          </td>
+        </tr>
+      </table>
+      ${
+        adminUrl
+          ? `<p style="margin:20px 0 0;">
+              <a href="${esc(adminUrl)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:14px 22px;border-radius:999px;font-size:15px;font-weight:600;">
+                Abrir no CRM
+              </a>
+            </p>`
+          : ''
+      }
+    `,
+  });
+  return { subject, html };
+}
+
+export function buildInternalContractSignedEmail({
+  clientName,
+  contractNumber,
+  signerName,
+  signerEmail,
+  signedAt,
+  setupEnabled,
+  setupPrice,
+  setupTitle,
+  feeEnabled,
+  feePrice,
+  feeTitle,
+  commissionEnabled,
+  commissionEstimate,
+  mediaEnabled,
+  mediaMonthlyBudget,
+  viewUrl,
+}) {
+  const client = clientName || 'Cliente';
+  const subject = `Contrato assinado · ${client}`;
+  const signedLabel = signedAt
+    ? new Date(signedAt).toLocaleString('pt-BR')
+    : 'agora';
+  const html = layout({
+    title: subject,
+    bodyHtml: `
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:700;line-height:1.25;">
+        Contrato assinado
+      </h1>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#444;">
+        O contrato de <strong>${esc(client)}</strong> foi assinado.
+      </p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 8px;background:#f7f7f7;border-radius:12px;">
+        <tr>
+          <td style="padding:16px 18px;">
+            <p style="margin:0 0 4px;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#888;">Cliente</p>
+            <p style="margin:0 0 12px;font-size:16px;font-weight:600;color:#111;">${esc(client)}</p>
+            <p style="margin:0 0 4px;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#888;">Contrato</p>
+            <p style="margin:0 0 12px;font-size:15px;color:#333;">${esc(contractNumber || '—')}</p>
+            <p style="margin:0 0 4px;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#888;">Assinante</p>
+            <p style="margin:0;font-size:15px;color:#333;">
+              ${esc(signerName || '—')}
+              ${signerEmail ? ` · ${esc(signerEmail)}` : ''}
+            </p>
+            <p style="margin:8px 0 0;font-size:13px;color:#666;">Assinado em ${esc(signedLabel)}</p>
+            ${commercialValuesHtml({
+              setupEnabled,
+              setupPrice,
+              setupTitle,
+              feeEnabled,
+              feePrice,
+              feeTitle,
+              commissionEnabled,
+              commissionEstimate,
+              mediaEnabled,
+              mediaMonthlyBudget,
+            })}
+          </td>
+        </tr>
+      </table>
+      ${
+        viewUrl
+          ? `<p style="margin:20px 0 0;">
+              <a href="${esc(viewUrl)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:14px 22px;border-radius:999px;font-size:15px;font-weight:600;">
+                Ver contrato
+              </a>
+            </p>`
+          : ''
+      }
+    `,
+  });
+  return { subject, html };
+}
+
 /**
  * @param {{ to: string|string[], subject: string, html: string, attachments?: Array<{filename:string,content:Buffer}> }} opts
  */
