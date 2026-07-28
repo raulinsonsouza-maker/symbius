@@ -1,5 +1,13 @@
+import { useState } from 'react';
 import { ClipboardList, Plus, RefreshCw, Trash2 } from 'lucide-react';
-import { OPS_TASK_STATUSES } from './funnelTypes';
+import {
+  OPS_ROLES,
+  OPS_TASK_STATUSES,
+  formatOpsDueDate,
+  getOpsRole,
+  isOpsDueOverdue,
+} from './funnelTypes';
+import GenerateEntregasModal from './GenerateEntregasModal';
 import { useFunnelStore } from './useFunnelStore';
 
 const CATEGORY_LABELS = {
@@ -14,11 +22,11 @@ const CATEGORY_LABELS = {
 
 export function OpsTasksPanel({ compact = false }) {
   const opsTasks = useFunnelStore((state) => state.opsTasks);
-  const regenerateOpsTasks = useFunnelStore((state) => state.regenerateOpsTasks);
   const setOpsTaskStatus = useFunnelStore((state) => state.setOpsTaskStatus);
   const updateOpsTask = useFunnelStore((state) => state.updateOpsTask);
   const addManualOpsTask = useFunnelStore((state) => state.addManualOpsTask);
   const deleteOpsTask = useFunnelStore((state) => state.deleteOpsTask);
+  const [entregasOpen, setEntregasOpen] = useState(false);
 
   const doneCount = opsTasks.filter((task) => task.status === 'done').length;
 
@@ -27,29 +35,29 @@ export function OpsTasksPanel({ compact = false }) {
       <div className="funil-ops__head">
         <div className="funil-ops__title">
           <ClipboardList size={14} strokeWidth={1.7} />
-          <strong>Lista de produção</strong>
+          <strong>Entregas do funil</strong>
           <span>
             {opsTasks.length
               ? `${doneCount}/${opsTasks.length} concluídas`
-              : 'ainda não gerada'}
+              : 'ainda não geradas'}
           </span>
         </div>
         <div className="funil-ops__actions">
           <button
             type="button"
             className="lp-btn lp-btn--ghost funil-ops__btn"
-            onClick={() => regenerateOpsTasks()}
-            title="Gerar ou atualizar tarefas a partir do funil"
+            onClick={() => setEntregasOpen(true)}
+            title="Montar ou atualizar entregas a partir do funil"
           >
             <RefreshCw size={13} strokeWidth={1.7} />
-            {opsTasks.length ? 'Atualizar' : 'Gerar lista'}
+            {opsTasks.length ? 'Atualizar' : 'Gerar entregas'}
           </button>
           <button
             type="button"
             className="lp-btn lp-btn--ghost funil-ops__btn"
             onClick={() =>
               addManualOpsTask({
-                title: 'Nova tarefa de produção',
+                title: 'Nova entrega',
                 description: '',
               })
             }
@@ -62,8 +70,8 @@ export function OpsTasksPanel({ compact = false }) {
 
       {!opsTasks.length ? (
         <p className="funil-ops__empty">
-          Gere a lista a partir do mapa: campanhas, LPs, CRM, criativos e
-          checkouts viram tarefas descritas para a operação.
+          Gere as entregas a partir do mapa: escolha o profissional e o prazo
+          para cada demanda.
         </p>
       ) : (
         <ul className="funil-ops__list">
@@ -72,12 +80,17 @@ export function OpsTasksPanel({ compact = false }) {
               key={task.id}
               className={`funil-ops__item is-${task.status} ${
                 task.manual ? 'is-manual' : ''
-              }`}
+              } ${isOpsDueOverdue(task.dueAt, task.status) ? 'is-overdue' : ''}`}
             >
               <div className="funil-ops__item-top">
                 <span className="funil-ops__category">
                   {CATEGORY_LABELS[task.category] || 'Outro'}
                   {task.manual ? ' · manual' : ''}
+                  {' · '}
+                  {getOpsRole(task.role).label}
+                  {task.dueAt
+                    ? ` · ${formatOpsDueDate(task.dueAt)}`
+                    : ''}
                 </span>
                 <select
                   aria-label={`Status de ${task.title}`}
@@ -117,6 +130,40 @@ export function OpsTasksPanel({ compact = false }) {
               ) : (
                 <p className="funil-ops__item-desc">{task.description}</p>
               )}
+              <div className="funil-ops__meta-row">
+                <label>
+                  <span>Papel</span>
+                  <select
+                    value={task.role || 'outro'}
+                    onChange={(event) =>
+                      updateOpsTask(task.id, { role: event.target.value })
+                    }
+                  >
+                    {OPS_ROLES.map((role) => (
+                      <option key={role.value} value={role.value}>
+                        {role.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Dias</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={90}
+                    value={task.dueInDays || 5}
+                    onChange={(event) =>
+                      updateOpsTask(task.id, {
+                        dueInDays: Math.min(
+                          90,
+                          Math.max(1, Number(event.target.value) || 1),
+                        ),
+                      })
+                    }
+                  />
+                </label>
+              </div>
               {task.manual ? (
                 <button
                   type="button"
@@ -131,6 +178,11 @@ export function OpsTasksPanel({ compact = false }) {
           ))}
         </ul>
       )}
+
+      <GenerateEntregasModal
+        open={entregasOpen}
+        onClose={() => setEntregasOpen(false)}
+      />
     </section>
   );
 }

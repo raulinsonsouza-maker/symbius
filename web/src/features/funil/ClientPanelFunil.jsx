@@ -194,7 +194,7 @@ export default function ClientPanelFunil({
       <section className="cp-section__body">
         <div className="cp-section__head">
           <div className="cp-section__titles">
-            <h1>Funil</h1>
+            <h1>Planejamento</h1>
             <p className="cp-muted">
               Cadastre o cliente antes de planejar o funil.
             </p>
@@ -219,7 +219,7 @@ export default function ClientPanelFunil({
       {!selected ? (
         <div className="cp-section__head funil-section__intro">
           <div className="cp-section__titles">
-            <h1>Funil</h1>
+            <h1>Planejamento</h1>
             <p className="cp-muted">
               Crie um funil por canal ou campanha e alterne entre eles nesta
               lista.

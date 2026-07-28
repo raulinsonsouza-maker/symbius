@@ -10,10 +10,11 @@ import { defaultProject } from './defaultProject';
 import {
   createManualOpsTask,
   deriveOpsTasks,
+  applyOpsTaskAssignments,
   mergeOpsTasks,
   sanitizeOpsTasks,
 } from './deriveOpsTasks';
-import { DEFAULT_NODE_DATA } from './funnelTypes';
+import { DEFAULT_NODE_DATA, addDaysToDate } from './funnelTypes';
 import { parseFunnelGraph } from './graphPersist';
 import { simulateFunnel } from './simulation';
 
@@ -313,23 +314,68 @@ export const useFunnelStore = create((set, get) => ({
         revision: state.revision + 1,
       };
     }),
-  regenerateOpsTasks: () =>
+  regenerateOpsTasks: (assignments = null) =>
     set((state) => {
       const generated = deriveOpsTasks(
         state.nodes,
         state.edges,
         state.simulation,
       );
+      const withAssignments = Array.isArray(assignments)
+        ? applyOpsTaskAssignments(generated, assignments)
+        : generated;
       return {
-        opsTasks: mergeOpsTasks(state.opsTasks, generated),
+        opsTasks: mergeOpsTasks(state.opsTasks, withAssignments, {
+          applyAssignments: Array.isArray(assignments),
+        }),
+        revision: state.revision + 1,
+      };
+    }),
+  previewOpsTasks: () => {
+    const state = get();
+    const generated = deriveOpsTasks(
+      state.nodes,
+      state.edges,
+      state.simulation,
+    );
+    const previous = new Map(state.opsTasks.map((task) => [task.id, task]));
+    return generated.map((task) => {
+      const prev = previous.get(task.id);
+      if (!prev) return task;
+      return {
+        ...task,
+        role: prev.role || task.role,
+        dueInDays: prev.dueInDays || task.dueInDays,
+        dueAt: prev.dueAt || task.dueAt,
+        status: prev.status || task.status,
+      };
+    });
+  },
+  commitOpsTaskAssignments: (assignments) =>
+    set((state) => {
+      const generated = deriveOpsTasks(
+        state.nodes,
+        state.edges,
+        state.simulation,
+      );
+      const assigned = applyOpsTaskAssignments(generated, assignments);
+      return {
+        opsTasks: mergeOpsTasks(state.opsTasks, assigned, {
+          applyAssignments: true,
+        }),
         revision: state.revision + 1,
       };
     }),
   updateOpsTask: (id, patch) =>
     set((state) => ({
-      opsTasks: state.opsTasks.map((task) =>
-        task.id === id ? { ...task, ...patch, id: task.id } : task,
-      ),
+      opsTasks: state.opsTasks.map((task) => {
+        if (task.id !== id) return task;
+        const next = { ...task, ...patch, id: task.id };
+        if (patch.dueInDays != null && patch.dueAt == null) {
+          next.dueAt = addDaysToDate(new Date(), patch.dueInDays);
+        }
+        return sanitizeOpsTasks([next])[0] || next;
+      }),
       revision: state.revision + 1,
     })),
   setOpsTaskStatus: (id, status) =>

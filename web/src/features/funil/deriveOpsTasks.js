@@ -5,6 +5,10 @@ import {
   getDestinationOption,
   getDestinationOutcome,
   SOURCE_OPTIONS,
+  addDaysToDate,
+  defaultDaysForTask,
+  defaultRoleForTask,
+  isOpsRole,
 } from './funnelTypes';
 
 const money = new Intl.NumberFormat('pt-BR', {
@@ -55,8 +59,36 @@ function buildGraphIndex(nodes, edges) {
   return { nodesById, parents, children };
 }
 
+function clampDays(value, fallback = 5) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(90, Math.max(1, Math.round(n)));
+}
+
+function sanitizeDueAt(value) {
+  const raw = String(value || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  return '';
+}
+
+function withAssignmentDefaults(task, { force = false } = {}) {
+  const role =
+    !force && isOpsRole(task.role) ? task.role : defaultRoleForTask(task);
+  const dueInDays = clampDays(
+    !force && Number(task.dueInDays) > 0
+      ? task.dueInDays
+      : defaultDaysForTask({ ...task, role }),
+    defaultDaysForTask({ ...task, role }),
+  );
+  const dueAt =
+    !force && sanitizeDueAt(task.dueAt)
+      ? sanitizeDueAt(task.dueAt)
+      : addDaysToDate(new Date(), dueInDays);
+  return { ...task, role, dueInDays, dueAt };
+}
+
 function taskBase(node, category, title, description, priority = 'medium', meta = {}) {
-  return {
+  const base = {
     id: `gen:${node.data.kind}:${node.id}`,
     nodeId: node.id,
     category,
@@ -67,6 +99,7 @@ function taskBase(node, category, title, description, priority = 'medium', meta 
     manual: false,
     meta,
   };
+  return withAssignmentDefaults(base, { force: true });
 }
 
 function deriveTrafficTask(node, index, simulation) {
@@ -282,57 +315,107 @@ export function deriveOpsTasks(nodes = [], edges = [], simulation = null) {
   return tasks;
 }
 
-export function mergeOpsTasks(existing = [], generated = []) {
+export function mergeOpsTasks(existing = [], generated = [], options = {}) {
+  const { applyAssignments = false } = options;
   const previous = Array.isArray(existing) ? existing : [];
   const byId = new Map(previous.map((task) => [task.id, task]));
   const mergedGenerated = generated.map((task) => {
     const prev = byId.get(task.id);
-    if (!prev) return task;
-    return {
+    if (!prev) return withAssignmentDefaults(task, { force: true });
+    if (applyAssignments) {
+      return {
+        ...withAssignmentDefaults(task, { force: true }),
+        status: prev.status || task.status,
+        priority: prev.priority || task.priority,
+      };
+    }
+    return withAssignmentDefaults({
       ...task,
       status: prev.status || task.status,
       priority: prev.priority || task.priority,
+      role: prev.role || task.role,
+      dueInDays: prev.dueInDays || task.dueInDays,
+      dueAt: prev.dueAt || task.dueAt,
+    });
+  });
+  const manuals = previous
+    .filter((task) => task.manual)
+    .map((task) => withAssignmentDefaults(task));
+  return [...mergedGenerated, ...manuals];
+}
+
+export function applyOpsTaskAssignments(tasks = [], assignments = []) {
+  const byId = new Map(
+    (Array.isArray(assignments) ? assignments : []).map((item) => [
+      item.id,
+      item,
+    ]),
+  );
+  return (Array.isArray(tasks) ? tasks : []).map((task) => {
+    const assignment = byId.get(task.id);
+    if (!assignment) return withAssignmentDefaults(task);
+    const dueInDays = clampDays(
+      assignment.dueInDays,
+      defaultDaysForTask(task),
+    );
+    const role = isOpsRole(assignment.role)
+      ? assignment.role
+      : defaultRoleForTask(task);
+    return {
+      ...task,
+      role,
+      dueInDays,
+      dueAt: addDaysToDate(new Date(), dueInDays),
     };
   });
-  const manuals = previous.filter((task) => task.manual);
-  return [...mergedGenerated, ...manuals];
 }
 
 export function createManualOpsTask(partial = {}) {
   const id = `manual:${crypto.randomUUID()}`;
-  return {
+  const base = {
     id,
     nodeId: null,
     category: partial.category || 'outro',
-    title: partial.title || 'Nova tarefa de produção',
+    title: partial.title || 'Nova entrega',
     description: partial.description || '',
     status: partial.status || 'todo',
     priority: partial.priority || 'medium',
     manual: true,
     meta: partial.meta || {},
+    role: partial.role,
+    dueInDays: partial.dueInDays,
+    dueAt: partial.dueAt,
   };
+  return withAssignmentDefaults(base, {
+    force: !(isOpsRole(partial.role) && Number(partial.dueInDays) > 0),
+  });
 }
 
 export function sanitizeOpsTasks(tasks = []) {
   if (!Array.isArray(tasks)) return [];
   return tasks
-    .map((task) => ({
-      id: String(task.id || ''),
-      nodeId: task.nodeId ? String(task.nodeId) : null,
-      category: String(task.category || 'outro'),
-      title: String(task.title || '').trim() || 'Tarefa',
-      description: String(task.description || ''),
-      status: ['todo', 'doing', 'done'].includes(task.status)
-        ? task.status
-        : 'todo',
-      priority: ['high', 'medium', 'low'].includes(task.priority)
-        ? task.priority
-        : 'medium',
-      manual: Boolean(task.manual),
-      meta:
-        task.meta && typeof task.meta === 'object' && !Array.isArray(task.meta)
-          ? task.meta
-          : {},
-    }))
+    .map((task) =>
+      withAssignmentDefaults({
+        id: String(task.id || ''),
+        nodeId: task.nodeId ? String(task.nodeId) : null,
+        category: String(task.category || 'outro'),
+        title: String(task.title || '').trim() || 'Tarefa',
+        description: String(task.description || ''),
+        status: ['todo', 'doing', 'done'].includes(task.status)
+          ? task.status
+          : 'todo',
+        priority: ['high', 'medium', 'low'].includes(task.priority)
+          ? task.priority
+          : 'medium',
+        manual: Boolean(task.manual),
+        meta:
+          task.meta && typeof task.meta === 'object' && !Array.isArray(task.meta)
+            ? task.meta
+            : {},
+        role: task.role,
+        dueInDays: task.dueInDays,
+        dueAt: task.dueAt,
+      }),
+    )
     .filter((task) => task.id);
 }

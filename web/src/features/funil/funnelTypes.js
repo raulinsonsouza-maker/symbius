@@ -371,6 +371,96 @@ export const OPS_TASK_STATUSES = [
   { value: 'done', label: 'Concluído' },
 ];
 
+export const OPS_ROLES = [
+  { value: 'designer', label: 'Designer' },
+  { value: 'trafego', label: 'Gestor de tráfego' },
+  { value: 'copy', label: 'Copy' },
+  { value: 'dev', label: 'Desenvolvedor' },
+  { value: 'crm', label: 'CRM' },
+  { value: 'social', label: 'Social media' },
+  { value: 'outro', label: 'Outro' },
+];
+
+const OPS_ROLE_VALUES = new Set(OPS_ROLES.map((role) => role.value));
+
+export function getOpsRole(value) {
+  return (
+    OPS_ROLES.find((role) => role.value === value) ||
+    OPS_ROLES[OPS_ROLES.length - 1]
+  );
+}
+
+export function defaultRoleForTask(task = {}) {
+  const category = String(task.category || '');
+  const destinationType = String(task.meta?.destinationType || '');
+  if (category === 'campanha') return 'trafego';
+  if (category === 'criativo') return 'designer';
+  if (category === 'crm') return 'crm';
+  if (category === 'landing') return 'copy';
+  if (category === 'checkout') return 'copy';
+  if (category === 'destino') {
+    if (
+      destinationType === 'instagram' ||
+      destinationType === 'tiktok' ||
+      destinationType === 'youtube'
+    ) {
+      return 'social';
+    }
+    if (destinationType === 'whatsapp') return 'crm';
+    if (destinationType === 'ecommerce' || destinationType === 'site') {
+      return 'dev';
+    }
+    return 'outro';
+  }
+  return 'outro';
+}
+
+export function defaultDaysForTask(task = {}) {
+  const category = String(task.category || '');
+  const destinationType = String(task.meta?.destinationType || '');
+  if (category === 'criativo') return 5;
+  if (category === 'campanha') return 3;
+  if (category === 'landing') return 5;
+  if (category === 'checkout') return 4;
+  if (category === 'crm') return 3;
+  if (category === 'destino') {
+    if (destinationType === 'ecommerce' || destinationType === 'site') return 5;
+    return 3;
+  }
+  return 5;
+}
+
+export function isOpsRole(value) {
+  return OPS_ROLE_VALUES.has(String(value));
+}
+
+export function addDaysToDate(baseDate, days) {
+  const date = baseDate instanceof Date ? new Date(baseDate) : new Date();
+  const safeDays = Math.min(90, Math.max(1, Number(days) || 1));
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + safeDays);
+  return date.toISOString().slice(0, 10);
+}
+
+export function formatOpsDueDate(value) {
+  if (!value) return '';
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+  });
+}
+
+export function isOpsDueOverdue(dueAt, status) {
+  if (!dueAt || status === 'done') return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(`${dueAt}T12:00:00`);
+  if (Number.isNaN(due.getTime())) return false;
+  due.setHours(0, 0, 0, 0);
+  return due < today;
+}
 export const NODE_META = {
   traffic: {
     label: 'Tráfego',

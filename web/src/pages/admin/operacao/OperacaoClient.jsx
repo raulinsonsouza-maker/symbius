@@ -3,17 +3,23 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import ClientPanelFunil from '../../../features/funil/ClientPanelFunil';
 import { api } from '../../../lib/api';
-import OpsProductionSection from './OpsProductionSection';
+import OpsEntregasSection from './OpsEntregasSection';
 
 const NAV = [
-  { id: 'funil', label: 'Funil', short: 'Fun', available: true },
-  { id: 'producao', label: 'Produção', short: 'Prod', available: true },
+  { id: 'funil', label: 'Planejamento', short: 'Plan', available: true },
+  { id: 'entregas', label: 'Entregas', short: 'Ent', available: true },
   { id: 'arquivos', label: 'Arquivos', short: 'Arq', available: false },
   { id: 'atas', label: 'Atas', short: 'Ata', available: false },
   { id: 'aprovacoes', label: 'Aprovações', short: 'Apr', available: false },
 ];
 
 const NAV_COLLAPSE_KEY = 'ops-nav-collapsed';
+
+function resolveSection(rawSec) {
+  if (rawSec === 'producao') return 'entregas';
+  if (NAV.some((item) => item.id === rawSec)) return rawSec;
+  return 'funil';
+}
 
 function clientName(client) {
   return client?.tradeName || client?.legalName || 'Cliente sem nome';
@@ -33,7 +39,7 @@ function PlaceholderSection({ title }) {
       <div className="cp-empty">
         <p className="cp-muted" style={{ margin: 0 }}>
           O workspace operacional já está preparado para receber novas
-          ferramentas além do Funil.
+          ferramentas além do Planejamento e das Entregas.
         </p>
       </div>
     </div>
@@ -44,7 +50,7 @@ export default function OperacaoClient() {
   const { clientId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawSec = searchParams.get('sec') || 'funil';
-  const section = NAV.some((item) => item.id === rawSec) ? rawSec : 'funil';
+  const section = resolveSection(rawSec);
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -78,6 +84,13 @@ export default function OperacaoClient() {
       active = false;
     };
   }, [clientId]);
+
+  useEffect(() => {
+    if (rawSec !== 'producao') return;
+    const params = new URLSearchParams(searchParams);
+    params.set('sec', 'entregas');
+    setSearchParams(params, { replace: true });
+  }, [rawSec, searchParams, setSearchParams]);
 
   useEffect(() => {
     try {
@@ -216,8 +229,8 @@ export default function OperacaoClient() {
         <div className="cp-content">
           {section === 'funil' ? (
             <ClientPanelFunil client={client} sectionActive />
-          ) : section === 'producao' ? (
-            <OpsProductionSection client={client} />
+          ) : section === 'entregas' ? (
+            <OpsEntregasSection client={client} />
           ) : (
             <PlaceholderSection
               title={NAV.find((item) => item.id === section)?.label || 'Módulo'}

@@ -24,6 +24,7 @@ import { FunnelNodeCard } from './FunnelNode';
 import { sanitizeFunnelGraph } from './graphPersist';
 import { InsightsPanel } from './InsightsPanel';
 import { NodePalette } from './NodePalette';
+import GenerateEntregasModal from './GenerateEntregasModal';
 import { computeShiftAlignSnap } from './shiftAlign';
 import { useFunnelStore } from './useFunnelStore';
 
@@ -95,6 +96,7 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
     vertical: null,
   });
   const [shiftHeld, setShiftHeld] = useState(false);
+  const [entregasOpen, setEntregasOpen] = useState(false);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -320,14 +322,19 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
           <button
             type="button"
             className="lp-btn lp-btn--ghost funil-builder__ops-btn"
-            onClick={() => useFunnelStore.getState().regenerateOpsTasks()}
-            title="Gerar lista de produção a partir do funil"
+            onClick={() => setEntregasOpen(true)}
+            title="Montar entregas a partir do funil"
           >
-            Gerar produção
+            Gerar entregas
           </button>
           <SaveIndicator />
         </div>
       </div>
+
+      <GenerateEntregasModal
+        open={entregasOpen}
+        onClose={() => setEntregasOpen(false)}
+      />
 
       <div
         className={[
