@@ -236,29 +236,30 @@ export default function ClientPanelFunil({
         }`}
       >
         <aside className="funil-projects">
+          {projectsCollapsed ? (
+            <button
+              type="button"
+              className="funil-side__rail"
+              onClick={() => setProjectsCollapsed(false)}
+              title="Expandir projetos"
+              aria-label="Expandir projetos"
+            >
+              <PanelLeft size={15} strokeWidth={1.6} />
+              <span>Projetos</span>
+            </button>
+          ) : (
+            <>
           <div className="funil-projects__head">
             <strong>Projetos</strong>
             <span>{projects.length}</span>
             <button
               type="button"
               className="ops-collapse-btn funil-projects__collapse"
-              onClick={() => setProjectsCollapsed((value) => !value)}
-              title={
-                projectsCollapsed
-                  ? 'Expandir projetos'
-                  : 'Minimizar projetos'
-              }
-              aria-label={
-                projectsCollapsed
-                  ? 'Expandir projetos'
-                  : 'Minimizar projetos'
-              }
+              onClick={() => setProjectsCollapsed(true)}
+              title="Minimizar projetos"
+              aria-label="Minimizar projetos"
             >
-              {projectsCollapsed ? (
-                <PanelLeft size={15} strokeWidth={1.6} />
-              ) : (
-                <PanelLeftClose size={15} strokeWidth={1.6} />
-              )}
+              <PanelLeftClose size={15} strokeWidth={1.6} />
             </button>
           </div>
 
@@ -371,6 +372,8 @@ export default function ClientPanelFunil({
                 </p>
               ) : null}
             </div>
+          )}
+            </>
           )}
         </aside>
 

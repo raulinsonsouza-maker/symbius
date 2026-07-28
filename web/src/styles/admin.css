@@ -328,11 +328,11 @@
 }
 
 .ops-client-shell.is-nav-collapsed {
-  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-columns: 56px minmax(0, 1fr);
 }
 
 .ops-client-shell.is-nav-collapsed .ops-sidebar {
-  padding: 16px 8px;
+  padding: 12px 6px;
   align-items: stretch;
 }
 
@@ -353,17 +353,24 @@
 
 .ops-client-shell.is-nav-collapsed .ops-nav__short {
   display: inline;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ops-client-shell.is-nav-collapsed .cp-nav__item {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 10px 0;
+  gap: 2px;
+  padding: 10px 2px;
   text-align: center;
+  min-width: 0;
 }
 
 .ops-client-shell .cp-content:has(.funil-section) {
@@ -397,7 +404,7 @@
 }
 
 .ops-client-shell.is-funil-workspace .cp-content {
-  padding: 8px clamp(10px, 1.6vw, 16px) 10px;
+  padding: 8px clamp(8px, 1.2vw, 14px) 10px;
   display: flex;
   flex-direction: column;
   min-height: 0;

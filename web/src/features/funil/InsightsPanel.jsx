@@ -428,7 +428,8 @@ export function InsightsPanel({ onCollapse }) {
                   ))}
                 </select>
                 <small className="funil-field__hint">
-                  {creativeFormat?.description}
+                  {creativeFormat?.description} Passa o fluxo em 100% — não altera
+                  a taxa de conversão da simulação.
                 </small>
               </label>
               <div className="funil-field-grid">
@@ -700,19 +701,43 @@ export function InsightsPanel({ onCollapse }) {
                   </strong>
                 </span>
                 <span>
+                  <small>CPL</small>
+                  <strong>
+                    {campaign.budget > 0 && campaign.leads > 0
+                      ? money.format(campaign.cpl)
+                      : '—'}
+                  </strong>
+                </span>
+                <span>
+                  <small>Custo/pedido</small>
+                  <strong>
+                    {campaign.budget > 0 && campaign.orders > 0
+                      ? money.format(campaign.cpa)
+                      : '—'}
+                  </strong>
+                </span>
+                <span>
                   <small>AOV por comprador</small>
                   <strong>
                     {campaign.buyers > 0 ? money.format(campaign.aov) : '—'}
                   </strong>
                 </span>
                 <span>
-                  <small>ROAS estimado</small>
+                  <small title="Receita bruta / verba">ROAS</small>
                   <strong>
                     {campaign.budget > 0
                       ? `${number.format(campaign.roas)}x`
                       : '—'}
                   </strong>
                 </span>
+                {campaign.budget > 0 &&
+                Math.abs((campaign.roasNet ?? campaign.roas) - campaign.roas) >
+                  0.0001 ? (
+                  <span>
+                    <small>ROAS líquido</small>
+                    <strong>{`${number.format(campaign.roasNet)}x`}</strong>
+                  </span>
+                ) : null}
               </div>
               <div className="funil-offer-breakdown">
                 <span>
@@ -872,7 +897,7 @@ export function InsightsPanel({ onCollapse }) {
             <span className="funil-summary-grid__icon funil-summary-grid__icon--indigo">
               <GitBranch size={13} strokeWidth={1.6} />
             </span>
-            <small>Qualificados CRM</small>
+            <small>Qualificados</small>
             <strong>{number.format(result.qualified ?? 0)}</strong>
           </div>
           <div>
@@ -901,16 +926,38 @@ export function InsightsPanel({ onCollapse }) {
             </strong>
           </div>
           <div>
+            <span className="funil-summary-grid__icon funil-summary-grid__icon--blue">
+              <Users size={13} strokeWidth={1.6} />
+            </span>
+            <small>CPL</small>
+            <strong>
+              {result.trafficCost > 0 && result.leads > 0
+                ? money.format(result.cpl)
+                : '—'}
+            </strong>
+          </div>
+          <div>
             <span className="funil-summary-grid__icon funil-summary-grid__icon--green">
               <TrendingUp size={13} strokeWidth={1.6} />
             </span>
-            <small>ROAS</small>
+            <small title="Receita bruta / verba">ROAS</small>
             <strong>
               {result.trafficCost > 0
                 ? `${number.format(result.roas)}x`
                 : '—'}
             </strong>
           </div>
+          {result.trafficCost > 0 &&
+          result.refunds > 0 &&
+          Math.abs((result.roasNet ?? result.roas) - result.roas) > 0.0001 ? (
+            <div>
+              <span className="funil-summary-grid__icon funil-summary-grid__icon--green">
+                <TrendingUp size={13} strokeWidth={1.6} />
+              </span>
+              <small>ROAS líquido</small>
+              <strong>{`${number.format(result.roasNet)}x`}</strong>
+            </div>
+          ) : null}
         </div>
 
         <div className="funil-cost-breakdown">
@@ -933,7 +980,7 @@ export function InsightsPanel({ onCollapse }) {
             </strong>
           </span>
           <span>
-            <small>Ticket / transação</small>
+            <small>Ticket/pedido</small>
             <strong>
               {result.orders > 0
                 ? money.format(result.transactionAverage)
@@ -941,7 +988,7 @@ export function InsightsPanel({ onCollapse }) {
             </strong>
           </span>
           <span>
-            <small>Custo / transação</small>
+            <small>Custo/pedido</small>
             <strong>
               {result.trafficCost > 0 && result.orders > 0
                 ? money.format(result.cpa)
@@ -1059,19 +1106,43 @@ export function InsightsPanel({ onCollapse }) {
                     </strong>
                   </span>
                   <span>
+                    <small>CPL</small>
+                    <strong>
+                      {funnel.budget > 0 && funnel.leads > 0
+                        ? money.format(funnel.cpl)
+                        : '—'}
+                    </strong>
+                  </span>
+                  <span>
+                    <small>Custo/pedido</small>
+                    <strong>
+                      {funnel.budget > 0 && funnel.orders > 0
+                        ? money.format(funnel.cpa)
+                        : '—'}
+                    </strong>
+                  </span>
+                  <span>
                     <small>AOV</small>
                     <strong>
                       {funnel.buyers > 0 ? money.format(funnel.aov) : '—'}
                     </strong>
                   </span>
                   <span>
-                    <small>ROAS</small>
+                    <small title="Receita bruta / verba">ROAS</small>
                     <strong>
                       {funnel.budget > 0
                         ? `${number.format(funnel.roas)}x`
                         : '—'}
                     </strong>
                   </span>
+                  {funnel.budget > 0 &&
+                  Math.abs((funnel.roasNet ?? funnel.roas) - funnel.roas) >
+                    0.0001 ? (
+                    <span>
+                      <small>ROAS líquido</small>
+                      <strong>{`${number.format(funnel.roasNet)}x`}</strong>
+                    </span>
+                  ) : null}
                 </span>
 
                 <span className="funil-result-card__offers">

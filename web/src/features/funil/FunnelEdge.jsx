@@ -68,14 +68,17 @@ export function FunnelEdgeLine({
             }}
           >
             {showWeight ? (
-              <label className="funil-edge-weight">
+              <label
+                className="funil-edge-weight"
+                title="Proporção relativa (normalizada entre as saídas do mesmo caminho)"
+              >
                 <input
                   type="number"
                   min={1}
                   max={100}
                   step={1}
                   value={weightValue}
-                  placeholder="%"
+                  placeholder="prop."
                   onClick={(event) => event.stopPropagation()}
                   onChange={(event) => {
                     const next = Number(event.target.value);
@@ -83,7 +86,7 @@ export function FunnelEdgeLine({
                       weight: Number.isFinite(next) && next > 0 ? next : undefined,
                     });
                   }}
-                  aria-label="Peso da ramificação"
+                  aria-label="Proporção da ramificação (normalizada)"
                 />
                 <span>%</span>
               </label>

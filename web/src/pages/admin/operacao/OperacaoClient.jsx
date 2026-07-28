@@ -6,11 +6,11 @@ import { api } from '../../../lib/api';
 import OpsProductionSection from './OpsProductionSection';
 
 const NAV = [
-  { id: 'funil', label: 'Funil', short: 'Fu', available: true },
-  { id: 'producao', label: 'Produção', short: 'Pr', available: true },
-  { id: 'arquivos', label: 'Arquivos', short: 'Ar', available: false },
-  { id: 'atas', label: 'Atas', short: 'At', available: false },
-  { id: 'aprovacoes', label: 'Aprovações', short: 'Ap', available: false },
+  { id: 'funil', label: 'Funil', short: 'Fun', available: true },
+  { id: 'producao', label: 'Produção', short: 'Prod', available: true },
+  { id: 'arquivos', label: 'Arquivos', short: 'Arq', available: false },
+  { id: 'atas', label: 'Atas', short: 'Ata', available: false },
+  { id: 'aprovacoes', label: 'Aprovações', short: 'Apr', available: false },
 ];
 
 const NAV_COLLAPSE_KEY = 'ops-nav-collapsed';

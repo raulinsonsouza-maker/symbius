@@ -36,8 +36,24 @@
 }
 
 .funil-page.is-projects-collapsed {
-  grid-template-columns: 52px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.funil-page.is-projects-collapsed .funil-projects {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  padding-right: 0;
+}
+
+.funil-page.is-projects-collapsed .funil-projects .funil-side__rail {
+  flex: 1;
+  min-height: 100%;
+  height: 100%;
 }
 
 .funil-projects,
@@ -55,30 +71,6 @@
 
 .funil-projects__head .funil-projects__collapse {
   margin-left: auto;
-}
-
-.funil-page.is-projects-collapsed .funil-projects {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.funil-page.is-projects-collapsed .funil-projects__head {
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.funil-page.is-projects-collapsed .funil-projects__head strong,
-.funil-page.is-projects-collapsed .funil-projects__head > span,
-.funil-page.is-projects-collapsed .funil-projects__list,
-.funil-page.is-projects-collapsed .funil-projects .cp-card,
-.funil-page.is-projects-collapsed .funil-projects .cp-empty {
-  display: none;
-}
-
-.funil-page.is-projects-collapsed .funil-projects__collapse {
-  margin-left: 0;
 }
 
 .funil-projects__head strong {
@@ -389,7 +381,7 @@
 
 .funil-builder__body {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 280px;
+  grid-template-columns: 188px minmax(0, 1fr) 360px;
   gap: 8px;
   min-width: 0;
   align-items: stretch;
@@ -400,11 +392,11 @@
 }
 
 .funil-builder__body.is-palette-collapsed {
-  grid-template-columns: 44px minmax(0, 1fr) 280px;
+  grid-template-columns: 44px minmax(0, 1fr) 360px;
 }
 
 .funil-builder__body.is-insights-collapsed {
-  grid-template-columns: 200px minmax(0, 1fr) 44px;
+  grid-template-columns: 188px minmax(0, 1fr) 44px;
 }
 
 .funil-builder__body.is-palette-collapsed.is-insights-collapsed {
@@ -415,7 +407,12 @@
   min-width: 0;
   min-height: 0;
   height: 100%;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.funil-side--insights {
+  overflow-x: hidden;
 }
 
 .funil-side .funil-palette,
@@ -458,6 +455,10 @@
 .funil-palette,
 .funil-panel {
   padding: 12px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .funil-palette__title {
@@ -815,12 +816,14 @@
 
 .funil-node {
   width: 220px;
+  max-width: 220px;
   background: #121213;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 14px;
   box-shadow: 0 14px 26px rgba(0, 0, 0, 0.24);
   color: var(--symbius-white);
+  overflow: hidden;
 }
 
 .funil-node.is-selected {
@@ -841,24 +844,38 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 10px;
+  min-width: 0;
 }
 
 .funil-node__kind,
-.funil-node__desc,
 .funil-node__metrics small {
   color: var(--symbius-muted);
   font-size: 0.72rem;
 }
 
+.funil-node__desc {
+  display: block;
+  color: var(--symbius-muted);
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .funil-node__more {
   margin-left: auto;
   color: var(--symbius-muted);
+  flex-shrink: 0;
 }
 
 .funil-node__label {
   display: block;
   margin-bottom: 4px;
   font-size: 0.95rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .funil-node__metrics {
@@ -961,6 +978,9 @@
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .funil-panel__head {
@@ -1031,12 +1051,14 @@
 .funil-summary-grid div {
   border: 1px solid var(--symbius-border);
   border-radius: 12px;
-  padding: 12px;
+  padding: 10px;
   background: #101010;
   display: grid;
-  grid-template-columns: 28px 1fr;
-  gap: 4px 8px;
-  align-items: center;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 2px 8px;
+  align-items: start;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .funil-mini-grid div {
@@ -1054,17 +1076,23 @@
 
 .funil-summary-grid small {
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 0.72rem;
-  line-height: 1.25;
+  letter-spacing: 0.02em;
+  font-size: 0.62rem;
+  line-height: 1.3;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .funil-summary-grid strong {
   grid-column: 1 / -1;
   margin-top: 2px;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 550;
   letter-spacing: -0.02em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .funil-summary-grid__icon--purple {
@@ -1155,27 +1183,34 @@
 .funil-cost-breakdown {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px 14px;
+  gap: 10px 12px;
   margin-top: 14px;
   padding-top: 13px;
   border-top: 1px solid var(--symbius-border);
+  min-width: 0;
 }
 
 .funil-cost-breakdown span {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 8px;
+  min-width: 0;
 }
 
 .funil-cost-breakdown small {
   color: var(--symbius-muted);
-  font-size: 0.76rem;
+  font-size: 0.72rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .funil-cost-breakdown strong {
   color: var(--symbius-white);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 500;
+  flex-shrink: 0;
+  text-align: right;
 }
 
 .funil-offer-breakdown {
@@ -1196,14 +1231,16 @@
 
 .funil-offer-breakdown small {
   color: var(--symbius-muted);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
 }
 
 .funil-offer-breakdown strong {
   color: var(--symbius-white);
   font-size: 0.82rem;
+  overflow-wrap: anywhere;
 }
 
 .funil-source-formula {
@@ -1245,17 +1282,20 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .funil-attribution__grid small {
   color: var(--symbius-muted);
   font-size: 0.68rem;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .funil-attribution__grid strong {
   color: var(--symbius-white);
   font-size: 0.9rem;
+  overflow-wrap: anywhere;
 }
 
 .funil-attribution__accent strong {
@@ -1355,6 +1395,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .funil-result-card__highlight > span:last-child {
@@ -1364,14 +1405,18 @@
 .funil-result-card__highlight small,
 .funil-result-card__metrics small {
   color: var(--symbius-muted);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .funil-result-card__highlight strong {
   color: var(--symbius-white);
   font-size: 1.15rem;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
 }
 
 .funil-result-card__metrics {
@@ -1439,9 +1484,23 @@
   font-size: 0.9rem;
 }
 
+@media (max-width: 1280px) {
+  .funil-builder__body:not(.is-insights-collapsed) {
+    grid-template-columns: 172px minmax(0, 1fr) 320px;
+  }
+
+  .funil-builder__body:not(.is-insights-collapsed).is-palette-collapsed {
+    grid-template-columns: 44px minmax(0, 1fr) 320px;
+  }
+
+  .funil-builder__body.is-insights-collapsed:not(.is-palette-collapsed) {
+    grid-template-columns: 172px minmax(0, 1fr) 44px;
+  }
+}
+
 @media (max-width: 1200px) {
   .funil-builder__body:not(.is-insights-collapsed) {
-    grid-template-columns: 200px minmax(0, 1fr);
+    grid-template-columns: 188px minmax(0, 1fr);
     height: auto;
     max-height: none;
     min-height: 480px;
@@ -1458,7 +1517,7 @@
   }
 
   .funil-builder__body.is-insights-collapsed:not(.is-palette-collapsed) {
-    grid-template-columns: 200px minmax(0, 1fr) 44px;
+    grid-template-columns: 188px minmax(0, 1fr) 44px;
   }
 
   .funil-builder__body.is-palette-collapsed.is-insights-collapsed {
@@ -1487,16 +1546,21 @@
     min-height: 0;
   }
 
-  .funil-page.is-projects-collapsed .funil-projects__head strong,
-  .funil-page.is-projects-collapsed .funil-projects__head > span,
-  .funil-page.is-projects-collapsed .funil-projects__list,
-  .funil-page.is-projects-collapsed .funil-projects .cp-card,
-  .funil-page.is-projects-collapsed .funil-projects .cp-empty {
-    display: revert;
+  .funil-page.is-projects-collapsed .funil-projects {
+    height: auto;
+    overflow: visible;
   }
 
-  .funil-page.is-projects-collapsed .funil-projects__head {
+  .funil-page.is-projects-collapsed .funil-projects .funil-side__rail {
+    min-height: 48px;
+    height: auto;
     flex-direction: row;
+    justify-content: center;
+  }
+
+  .funil-page.is-projects-collapsed .funil-projects .funil-side__rail span {
+    writing-mode: horizontal-tb;
+    transform: none;
   }
 
   .funil-canvas {

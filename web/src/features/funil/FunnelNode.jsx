@@ -135,7 +135,9 @@ export function FunnelNodeCard({ id, data, selected }) {
         <span className="funil-node__kind">{meta.label}</span>
         <Ellipsis className="funil-node__more" size={14} strokeWidth={1.5} />
       </div>
-      <strong className="funil-node__label">{data.label}</strong>
+      <strong className="funil-node__label" title={data.label}>
+        {data.label}
+      </strong>
       <span className="funil-node__desc">
         {destination
           ? `${destination.label} · ${destinationOutcome.label}`

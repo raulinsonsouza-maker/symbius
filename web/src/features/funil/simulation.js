@@ -88,10 +88,11 @@ function isMoneyNode(node) {
   if (node.data.kind !== 'destination') return false;
   const type = normalizeDestinationType(node.data.destinationType);
   const outcome = normalizeDestinationOutcome(type, node.data.destinationOutcome);
-  if (type === 'ecommerce' && outcome === 'purchase') return true;
+  // Qualquer purchase com preço > 0 gera receita (ecommerce incluso).
   return PURCHASE_OUTCOMES.has(outcome) && Number(node.data.price) > 0;
 }
 
+/** Normaliza pesos relativos (não exigem soma 100). */
 function getEdgeShares(edges) {
   if (!edges.length) return [];
   const weights = edges.map((edge) => {
@@ -173,7 +174,17 @@ function collectValidationWarnings(nodes, edges, resultByNode) {
   }
 
   for (const node of nodes) {
-    if (!isMoneyNode(node)) continue;
+    const isCheckoutKind = moneyNodeKinds.has(node.data.kind);
+    let isPurchaseDestination = false;
+    if (node.data.kind === 'destination') {
+      const type = normalizeDestinationType(node.data.destinationType);
+      const outcome = normalizeDestinationOutcome(
+        type,
+        node.data.destinationOutcome,
+      );
+      isPurchaseDestination = PURCHASE_OUTCOMES.has(outcome);
+    }
+    if (!isCheckoutKind && !isPurchaseDestination) continue;
     if (!(Number(node.data.price) > 0)) {
       warnings.push(
         `"${node.data.label || node.id}" é etapa comercial sem preço definido.`,
@@ -182,7 +193,7 @@ function collectValidationWarnings(nodes, edges, resultByNode) {
   }
 
   for (const node of nodes) {
-    if (node.data.kind === 'traffic' || node.data.kind === 'note' || node.data.kind === 'thankyou') {
+    if (node.data.kind === 'note' || node.data.kind === 'thankyou') {
       continue;
     }
     const nodeEdges = outgoing.get(node.id) ?? [];
@@ -192,16 +203,19 @@ function collectValidationWarnings(nodes, edges, resultByNode) {
     const noEdges = nodeEdges.filter(
       (edge) => (edge.data?.path ?? edge.sourceHandle) === 'no',
     );
-    const rate = Number(node.data.conversionRate);
-    if (yesEdges.length === 0 && rate > 0) {
-      warnings.push(
-        `"${node.data.label || node.id}" tem conversão, mas a saída SIM está desconectada.`,
-      );
-    }
-    if (noEdges.length === 0 && rate < 100 && isMoneyNode(node)) {
-      warnings.push(
-        `"${node.data.label || node.id}" não tem saída NÃO para o volume rejeitado.`,
-      );
+
+    if (node.data.kind !== 'traffic') {
+      const rate = Number(node.data.conversionRate);
+      if (yesEdges.length === 0 && rate > 0) {
+        warnings.push(
+          `"${node.data.label || node.id}" tem conversão, mas a saída SIM está desconectada.`,
+        );
+      }
+      if (noEdges.length === 0 && rate < 100 && isMoneyNode(node)) {
+        warnings.push(
+          `"${node.data.label || node.id}" não tem saída NÃO para o volume rejeitado.`,
+        );
+      }
     }
 
     for (const group of [yesEdges, noEdges]) {
@@ -210,14 +224,14 @@ function collectValidationWarnings(nodes, edges, resultByNode) {
         const value = Number(edge.data?.weight);
         return Number.isFinite(value) && value > 0 ? value : 0;
       });
-      const defined = weights.filter((weight) => weight > 0);
-      if (!defined.length) continue;
-      const sum = weights.reduce((total, weight) => total + weight, 0);
-      if (Math.abs(sum - 100) > 0.5) {
+      const positive = weights.filter((weight) => weight > 0).length;
+      const zeroOrMissing = weights.length - positive;
+      // Com pesos definidos em algumas arestas, as sem peso recebem 0 e o volume some.
+      if (positive > 0 && zeroOrMissing > 0) {
         const pathLabel =
           (group[0].data?.path ?? group[0].sourceHandle) === 'no' ? 'NÃO' : 'SIM';
         warnings.push(
-          `Pesos da saída ${pathLabel} em "${node.data.label || node.id}" somam ${sum.toFixed(0)}% (esperado 100%).`,
+          `Saída ${pathLabel} em "${node.data.label || node.id}": ${zeroOrMissing} ramificação(ões) sem peso — esse volume não é distribuído (pesos são proporções normalizadas).`,
         );
       }
     }
@@ -314,8 +328,10 @@ export function simulateFunnel(nodes, edges) {
       conversionRate: 0,
       cac: 0,
       cpa: 0,
+      cpl: 0,
       aov: 0,
       roas: 0,
+      roasNet: 0,
     };
     campaignProductCost[node.id] = 0;
     campaignRefunds[node.id] = 0;
@@ -496,8 +512,10 @@ export function simulateFunnel(nodes, edges) {
       campaignRefunds[campaign.id];
     campaign.conversionRate =
       campaign.visitors > 0 ? (campaign.buyers / campaign.visitors) * 100 : 0;
+    // cac = verba / compradores | cpa = verba / pedidos | cpl = verba / leads
     campaign.cac = campaign.buyers > 0 ? campaign.budget / campaign.buyers : 0;
     campaign.cpa = campaign.orders > 0 ? campaign.budget / campaign.orders : 0;
+    campaign.cpl = campaign.leads > 0 ? campaign.budget / campaign.leads : 0;
     campaign.aov = campaign.buyers > 0 ? campaign.revenue / campaign.buyers : 0;
     campaign.upsellTakeRate =
       campaign.primaryOrders > 0
@@ -507,7 +525,12 @@ export function simulateFunnel(nodes, edges) {
       campaign.primaryDeclines > 0
         ? (campaign.downsellRecoveredBuyers / campaign.primaryDeclines) * 100
         : 0;
+    // roas = receita bruta / verba | roasNet = (receita − reembolsos) / verba
     campaign.roas = campaign.budget > 0 ? campaign.revenue / campaign.budget : 0;
+    campaign.roasNet =
+      campaign.budget > 0
+        ? (campaign.revenue - campaignRefunds[campaign.id]) / campaign.budget
+        : 0;
   }
 
   const all = Object.values(resultByNode);
@@ -559,6 +582,12 @@ export function simulateFunnel(nodes, edges) {
 
   warnings.push(...collectValidationWarnings(nodes, edges, resultByNode));
 
+  // KPIs agregados:
+  // cac = trafficCost / buyers
+  // cpa = trafficCost / orders (custo por pedido, inclui upsell/downsell)
+  // cpl = trafficCost / leads
+  // roas = revenue / trafficCost (bruto)
+  // roasNet = (revenue - refunds) / trafficCost
   return {
     visitors,
     leads,
@@ -582,9 +611,11 @@ export function simulateFunnel(nodes, edges) {
     profit,
     cac: buyers > 0 ? trafficCost / buyers : 0,
     cpa: orders > 0 ? trafficCost / orders : 0,
+    cpl: leads > 0 ? trafficCost / leads : 0,
     aov: buyers > 0 ? revenue / buyers : 0,
     transactionAverage: orders > 0 ? revenue / orders : 0,
     roas: trafficCost > 0 ? revenue / trafficCost : 0,
+    roasNet: trafficCost > 0 ? (revenue - refunds) / trafficCost : 0,
     nodeResults: resultByNode,
     campaignResults,
     warnings,
