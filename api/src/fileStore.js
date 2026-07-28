@@ -84,7 +84,7 @@ function defaultDb() {
       contactWebsite: 'www.symbius.com.br',
       logoUrl: '/images/logotipo-branco.png',
       defaultResponsible: '',
-      whatsappNumber: '5511999999999',
+      whatsappNumber: '5511947192909',
       legalName: 'Symbius',
       legalDocument: '',
       legalAddress: '',

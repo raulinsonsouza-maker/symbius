@@ -19,8 +19,8 @@ export default function ContactForm() {
       <div className="lp-form lp-form--done">
         <h3>Recebemos seu contato.</h3>
         <p>
-          Em breve nosso time vai falar com você para desenhar seu plano de
-          crescimento.
+          Em breve nosso time fala com você para entender o momento da empresa
+          e o caminho mais rápido para captar mais clientes.
         </p>
         <a
           className="lp-btn lp-btn--ghost"
@@ -81,7 +81,7 @@ export default function ContactForm() {
           rows={3}
           value={form.mensagem}
           onChange={onChange('mensagem')}
-          placeholder="Ex.: quero mais clientes qualificados todos os meses"
+          placeholder="Ex.: preciso de mais leads qualificados todo mês"
         />
       </label>
       {status === 'error' && (
@@ -94,9 +94,9 @@ export default function ContactForm() {
         className="lp-btn lp-btn--solid"
         disabled={status === 'sending'}
       >
-        {status === 'sending' ? 'Enviando...' : 'Quero captar mais clientes'}
+        {status === 'sending' ? 'Enviando...' : 'Quero um diagnóstico'}
       </button>
-      <p className="lp-form__note">Resposta rápida. Sem compromisso.</p>
+      <p className="lp-form__note">Resposta rápida pelo WhatsApp. Sem compromisso.</p>
     </form>
   );
 }

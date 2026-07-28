@@ -83,7 +83,7 @@ export const MOVIMENTOS = [
   {
     number: '01',
     title: 'Analisar',
-    copy: 'Análise detalhada da marca, canais e oportunidades.',
+    copy: 'Diagnóstico da marca, dos canais e das oportunidades reais de crescimento.',
     detail: {
       intro: 'Antes de qualquer campanha, entendemos a fundo sua empresa, mercado e cliente.',
       topics: [
@@ -92,13 +92,13 @@ export const MOVIMENTOS = [
         'Identificação de oportunidades de crescimento',
         'Análise de dados e comportamento do público',
       ],
-      outcome: 'Decisões baseadas em dados — não em achismo.',
+      outcome: 'Clareza do que escala — e do que só gasta dinheiro.',
     },
   },
   {
     number: '02',
     title: 'Marca',
-    copy: 'Construção de marca, posicionamento e comunicação.',
+    copy: 'Posicionamento, identidade e comunicação que geram confiança e desejo.',
     detail: {
       intro: 'Construímos uma marca que gera confiança e diferenciação real no mercado.',
       topics: [
@@ -107,13 +107,13 @@ export const MOVIMENTOS = [
         'Tom de comunicação',
         'Experiência de marca em todos os pontos de contato',
       ],
-      outcome: 'Uma marca que permanece quando a campanha termina.',
+      outcome: 'Uma marca que continua vendendo quando a campanha para.',
     },
   },
   {
     number: '03',
     title: 'Growth',
-    copy: 'Dados, tráfego, CRM, campanhas e tecnologia.',
+    copy: 'Dados, tráfego, CRM, campanhas e tecnologia rodando como um sistema.',
     detail: {
       intro: 'Transformamos dados em decisões e colocamos a operação para rodar.',
       topics: [
@@ -122,13 +122,13 @@ export const MOVIMENTOS = [
         'CRM, automação e integrações',
         'E-commerce e conversão online',
       ],
-      outcome: 'Performance mensurável e crescimento escalável.',
+      outcome: 'Aquisição mensurável, otimizada e pronta para escalar.',
     },
   },
   {
     number: '04',
     title: 'Vender',
-    copy: 'Conversão, receita e crescimento previsível.',
+    copy: 'Funil, conversão e retenção para transformar demanda em receita.',
     detail: {
       intro: 'Convertemos atenção em demanda e demanda em receita consistente.',
       topics: [
@@ -137,7 +137,7 @@ export const MOVIMENTOS = [
         'Estratégias de retenção e LTV',
         'Crescimento previsível de vendas',
       ],
-      outcome: 'Mais vendas com melhor experiência para o cliente.',
+      outcome: 'Mais vendas, com melhor experiência para o cliente.',
     },
   },
 ];

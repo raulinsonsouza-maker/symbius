@@ -278,44 +278,63 @@
   font-size:.9rem!important
 }
 
-.lp-section--tool {
+.lp-section--marca {
   background:var(--symbius-surface);
   border-top:1px solid var(--symbius-border);
   border-bottom:1px solid var(--symbius-border)
 }
 
-.lp-tool {
-  grid-template-columns:1fr 1fr;
-  align-items:center;
-  gap:clamp(32px,6vw,72px);
+.lp-cases {
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
   display:grid
+}
+
+.lp-section--tool {
+  border-bottom:1px solid var(--symbius-border)
+}
+
+.lp-tool {
+  max-width:920px;
+  margin:0 auto
+}
+
+.lp-tool__content {
+  text-align:center
 }
 
 .lp-tool__content h2 {
   font-size:var(--symbius-text-title);
   margin:0 0 16px;
-  font-weight:300
+  font-weight:300;
+  line-height:1.2
 }
 
 .lp-tool__lead {
   font-size:var(--symbius-text-body);
   line-height:var(--symbius-line-height-body);
   color:var(--symbius-muted-light);
-  margin:0 0 26px
+  max-width:640px;
+  margin:0 auto 34px
 }
 
 .lp-tool__list {
-  grid-template-columns:repeat(2,1fr);
-  gap:16px 20px;
-  margin:0 0 26px;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+  text-align:left;
+  margin:0 0 28px;
   padding:0;
   list-style:none;
   display:grid
 }
 
 .lp-tool__list li {
+  background:var(--symbius-surface-elevated);
+  border:1px solid var(--symbius-border);
+  border-radius:14px;
   flex-direction:column;
-  gap:4px;
+  gap:6px;
+  padding:22px 20px;
   display:flex
 }
 
@@ -334,20 +353,6 @@
   color:var(--symbius-white);
   margin:0;
   font-size:1.05rem
-}
-
-.lp-tool__preview {
-  border:1px solid var(--symbius-border);
-  background:var(--symbius-surface-elevated);
-  border-radius:16px;
-  overflow:hidden;
-  box-shadow:0 40px 90px #00000073
-}
-
-.lp-tool__preview img {
-  width:100%;
-  height:auto;
-  display:block
 }
 
 .lp-results {
@@ -556,19 +561,23 @@
     display: none;
   }
 
-  .lp-tool,
-  .lp-cta__inner {
-    grid-template-columns: 1fr;
+  .lp-cases {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .lp-tool__preview {
-    order: -1;
+  .lp-tool__list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .lp-cta__inner {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (width <= 560px) {
   .lp-form__row,
-  .lp-tool__list {
+  .lp-tool__list,
+  .lp-cases {
     grid-template-columns: 1fr;
   }
 
