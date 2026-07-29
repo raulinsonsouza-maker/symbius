@@ -440,14 +440,28 @@ export function getOpsSubtaskProgress(task) {
   return { done, total: list.length };
 }
 
+export function getOpsTimerSessionMs(task) {
+  if (!task?.timerStartedAt) return 0;
+  const started = new Date(task.timerStartedAt).getTime();
+  if (Number.isNaN(started)) return 0;
+  return Math.max(0, Date.now() - started);
+}
+
 export function getOpsTimeLoggedMinutes(task) {
   const logs = Array.isArray(task?.timeLogs) ? task.timeLogs : [];
   const stored = logs.reduce((sum, log) => sum + (Number(log.minutes) || 0), 0);
   if (!task?.timerStartedAt) return stored;
-  const started = new Date(task.timerStartedAt).getTime();
-  if (Number.isNaN(started)) return stored;
-  const running = Math.max(0, Math.floor((Date.now() - started) / 60000));
+  const running = Math.max(0, Math.floor(getOpsTimerSessionMs(task) / 60000));
   return stored + running;
+}
+
+export function getOpsTimeLoggedMs(task) {
+  const logs = Array.isArray(task?.timeLogs) ? task.timeLogs : [];
+  const storedMs = logs.reduce(
+    (sum, log) => sum + (Number(log.minutes) || 0) * 60000,
+    0,
+  );
+  return storedMs + getOpsTimerSessionMs(task);
 }
 
 export function formatOpsMinutes(minutes) {
@@ -457,6 +471,15 @@ export function formatOpsMinutes(minutes) {
   if (h <= 0) return `${m}m`;
   if (m <= 0) return `${h}h`;
   return `${h}h ${m}m`;
+}
+
+/** Formata milissegundos como HH:MM:SS. */
+export function formatOpsClock(ms) {
+  const totalSec = Math.max(0, Math.floor(Number(ms) / 1000) || 0);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 export const OPS_ROLES = [
