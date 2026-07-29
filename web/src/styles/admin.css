@@ -508,3 +508,282 @@
     padding:32px 22px
   }
 }
+
+/* ─── Operação Hub ────────────────────────────────────────────── */
+
+.ops-hub {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--symbius-black);
+  color: var(--symbius-white);
+  font-family: var(--symbius-font);
+  overflow: hidden;
+}
+
+.ops-hub__header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 28px;
+  height: 52px;
+  background: var(--symbius-surface);
+  border-bottom: 1px solid var(--symbius-border);
+  flex-shrink: 0;
+}
+
+.ops-hub__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.ops-hub__logo {
+  height: 22px;
+  width: auto;
+  opacity: .9;
+}
+
+.ops-hub__name {
+  font-size: .78rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--symbius-muted);
+  text-transform: uppercase;
+}
+
+.ops-hub__tabs {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  height: 100%;
+}
+
+.ops-hub__tab {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 18px;
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--symbius-muted);
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  transition: color .15s, border-color .15s;
+  white-space: nowrap;
+}
+
+.ops-hub__tab:hover {
+  color: var(--symbius-white);
+}
+
+.ops-hub__tab.is-active {
+  color: var(--symbius-white);
+  border-bottom-color: var(--symbius-accent, #e53);
+}
+
+.ops-hub__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Planejamento page ───────────────────────────────────────── */
+
+.ops-planner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.ops-planner__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--symbius-border);
+  flex-shrink: 0;
+}
+
+.ops-planner__selectors {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.ops-planner__select {
+  background: var(--symbius-surface-elevated);
+  border: 1px solid var(--symbius-border);
+  border-radius: 8px;
+  color: var(--symbius-white);
+  font-family: var(--symbius-font);
+  font-size: .82rem;
+  padding: 6px 10px;
+  min-width: 200px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+
+.ops-planner__select:focus {
+  outline: none;
+  border-color: var(--symbius-accent, #e53);
+}
+
+.ops-planner__mode-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.ops-planner__empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ops-planner__empty p {
+  color: var(--symbius-muted);
+  font-size: .9rem;
+}
+
+.ops-planner__funil-page {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.ops-planner__funil-page.funil-page {
+  height: 100%;
+  align-items: stretch;
+}
+
+.ops-planner__funil-page .funil-workspace,
+.ops-planner__funil-page .funil-builder {
+  height: 100%;
+}
+
+.ops-planner__funil-page .funil-projects {
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+/* ─── Execução cross-cliente ───────────────────────────────────── */
+
+.ops-exec {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.ops-exec__toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 20px 8px;
+  border-bottom: 1px solid var(--symbius-border);
+  flex-shrink: 0;
+}
+
+.ops-exec__role-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ops-exec__role-label {
+  font-size: .75rem;
+  color: var(--symbius-muted);
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.ops-exec__role-chip {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: .76rem;
+  font-weight: 500;
+  background: var(--symbius-surface-elevated);
+  border: 1px solid var(--symbius-border);
+  color: var(--symbius-muted);
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+  white-space: nowrap;
+}
+
+.ops-exec__role-chip:hover,
+.ops-exec__role-chip.is-active {
+  background: var(--symbius-surface-hover, #2a2a2a);
+  color: var(--symbius-white);
+  border-color: var(--symbius-accent, #e53);
+}
+
+.ops-exec__filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ops-exec__board {
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.ops-exec__col-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--symbius-surface);
+}
+
+.ops-exec__card-ctx {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.ops-exec__card-client {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--symbius-accent, #e53);
+  letter-spacing: .02em;
+}
+
+.ops-exec__loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 600px) {
+  .ops-hub__header {
+    padding: 0 16px;
+    height: 48px;
+  }
+
+  .ops-hub__tab {
+    padding: 0 12px;
+    font-size: .76rem;
+  }
+
+  .ops-planner__toolbar,
+  .ops-exec__toolbar {
+    padding: 8px 14px;
+  }
+
+  .ops-exec__role-chips {
+    flex-wrap: wrap;
+  }
+}

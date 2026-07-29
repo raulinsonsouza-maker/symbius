@@ -18,13 +18,14 @@ import {
   OPS_ROLES,
   OPS_TASK_PRIORITIES,
   OPS_TASK_STATUSES,
-  addDaysToDate,
   createOpsActivity,
   createOpsId,
   formatOpsClock,
+  formatOpsDueCountdown,
   formatOpsDueDate,
   formatOpsMinutes,
   getOpsChecklistProgress,
+  getOpsDueDayDelta,
   getOpsRole,
   getOpsSubtaskProgress,
   getOpsTaskPriority,
@@ -543,50 +544,34 @@ export default function OpsTaskDetailDrawer({
                     }
                   />
                 </label>
-                <label className="ops-task-drawer__date-card">
+                <div className="ops-task-drawer__date-card">
                   <span>Data entrega etapa</span>
-                  <input
-                    type="date"
-                    value={draft.dueAt || ''}
-                    disabled={busy}
-                    onChange={(event) =>
-                      patch(
-                        {
-                          dueAt: event.target.value,
-                          dueInDays: draft.dueInDays,
-                        },
-                        `Prazo alterado para ${formatOpsDueDate(event.target.value) || event.target.value}`,
-                        'date',
-                      )
-                    }
-                  />
-                  <small>
-                    ou{' '}
-                    <input
-                      className="ops-task-drawer__days-inline"
-                      type="number"
-                      min={1}
-                      max={90}
-                      value={draft.dueInDays || 5}
-                      disabled={busy}
-                      onChange={(event) => {
-                        const days = Math.min(
-                          90,
-                          Math.max(1, Number(event.target.value) || 1),
-                        );
-                        patch(
+                  <strong className="ops-task-drawer__due-value">
+                    {draft.dueAt
+                      ? new Date(`${draft.dueAt}T12:00:00`).toLocaleDateString(
+                          'pt-BR',
                           {
-                            dueInDays: days,
-                            dueAt: addDaysToDate(new Date(), days),
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
                           },
-                          `Prazo em ${days} dia(s)`,
-                          'date',
-                        );
-                      }}
-                    />{' '}
-                    dias
+                        )
+                      : '—'}
+                  </strong>
+                  <small
+                    className={`ops-task-drawer__due-countdown ${
+                      getOpsDueDayDelta(draft.dueAt) < 0 &&
+                      draft.status !== 'done'
+                        ? 'is-overdue'
+                        : getOpsDueDayDelta(draft.dueAt) === 0 &&
+                            draft.status !== 'done'
+                          ? 'is-today'
+                          : ''
+                    }`}
+                  >
+                    {formatOpsDueCountdown(draft.dueAt, draft.status)}
                   </small>
-                </label>
+                </div>
               </div>
             </section>
 

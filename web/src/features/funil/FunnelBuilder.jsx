@@ -66,7 +66,7 @@ function SaveIndicator() {
   );
 }
 
-function BuilderCanvas({ projectId, onProjectUpdated }) {
+function BuilderCanvas({ projectId, onProjectUpdated, readOnly = false }) {
   const nodes = useFunnelStore((state) => state.nodes);
   const edges = useFunnelStore((state) => state.edges);
   const currentProjectId = useFunnelStore((state) => state.projectId);
@@ -314,21 +314,28 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
           <input
             aria-label="Nome do projeto"
             value={projectName}
-            onChange={(event) => setProjectName(event.target.value)}
+            onChange={(event) => !readOnly && setProjectName(event.target.value)}
             placeholder="Nome do funil"
+            readOnly={readOnly}
           />
         </div>
-        <div className="funil-builder__actions">
-          <button
-            type="button"
-            className="lp-btn lp-btn--ghost funil-builder__ops-btn"
-            onClick={() => setEntregasOpen(true)}
-            title="Montar entregas a partir do funil"
-          >
-            Gerar entregas
-          </button>
-          <SaveIndicator />
-        </div>
+        {!readOnly ? (
+          <div className="funil-builder__actions">
+            <button
+              type="button"
+              className="lp-btn lp-btn--ghost funil-builder__ops-btn"
+              onClick={() => setEntregasOpen(true)}
+              title="Montar entregas a partir do funil"
+            >
+              Gerar entregas
+            </button>
+            <SaveIndicator />
+          </div>
+        ) : (
+          <div className="funil-builder__actions">
+            <span className="funil-save funil-save--saved">Visualização</span>
+          </div>
+        )}
       </div>
 
       <GenerateEntregasModal
@@ -345,63 +352,67 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
           .filter(Boolean)
           .join(' ')}
       >
-        <div className="funil-side funil-side--palette">
-          {paletteCollapsed ? (
-            <button
-              type="button"
-              className="funil-side__rail"
-              onClick={() => setPaletteCollapsed(false)}
-              title="Expandir blocos"
-            >
-              <PanelLeft size={15} strokeWidth={1.6} />
-              <span>Blocos</span>
-            </button>
-          ) : (
-            <NodePalette
-              onQuickAdd={onQuickAdd}
-              onCollapse={() => setPaletteCollapsed(true)}
-            />
-          )}
-        </div>
+        {!readOnly ? (
+          <div className="funil-side funil-side--palette">
+            {paletteCollapsed ? (
+              <button
+                type="button"
+                className="funil-side__rail"
+                onClick={() => setPaletteCollapsed(false)}
+                title="Expandir blocos"
+              >
+                <PanelLeft size={15} strokeWidth={1.6} />
+                <span>Blocos</span>
+              </button>
+            ) : (
+              <NodePalette
+                onQuickAdd={onQuickAdd}
+                onCollapse={() => setPaletteCollapsed(true)}
+              />
+            )}
+          </div>
+        ) : null}
         <section className="funil-canvas">
           <ReactFlow
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={connect}
-            onReconnect={reconnect}
-            isValidConnection={isValidConnection}
-            onNodeDrag={onNodeDrag}
-            onNodeDragStop={onNodeDragStop}
+            onNodesChange={readOnly ? undefined : onNodesChange}
+            onEdgesChange={readOnly ? undefined : onEdgesChange}
+            onConnect={readOnly ? undefined : connect}
+            onReconnect={readOnly ? undefined : reconnect}
+            isValidConnection={readOnly ? undefined : isValidConnection}
+            onNodeDrag={readOnly ? undefined : onNodeDrag}
+            onNodeDragStop={readOnly ? undefined : onNodeDragStop}
             onNodeClick={(_, node) => selectNode(node.id)}
             onEdgeClick={(_, edge) => selectEdge(edge.id)}
             onPaneClick={() => {
               selectNode(null);
               selectEdge(null);
             }}
-            onDragOver={(event) => {
+            onDragOver={readOnly ? undefined : (event) => {
               event.preventDefault();
               event.dataTransfer.dropEffect = 'move';
             }}
-            onDrop={onDrop}
+            onDrop={readOnly ? undefined : onDrop}
             defaultEdgeOptions={defaultEdgeOptions}
             deleteKeyCode={null}
             selectionKeyCode="Control"
             multiSelectionKeyCode="Meta"
-            edgesReconnectable
-            reconnectRadius={18}
-            connectionRadius={28}
-            snapToGrid={shiftHeld}
+            nodesDraggable={!readOnly}
+            nodesConnectable={!readOnly}
+            edgesReconnectable={!readOnly}
+            reconnectRadius={readOnly ? 0 : 18}
+            connectionRadius={readOnly ? 0 : 28}
+            snapToGrid={!readOnly && shiftHeld}
             snapGrid={[8, 8]}
             minZoom={0.2}
             maxZoom={1.6}
             fitView
             fitViewOptions={{ padding: 0.22, maxZoom: 1 }}
             proOptions={{ hideAttribution: true }}
-            className={shiftHeld ? 'is-shift-align' : undefined}
+            className={!readOnly && shiftHeld ? 'is-shift-align' : undefined}
           >
             <Background
               color="rgba(255,255,255,0.08)"
@@ -461,12 +472,13 @@ function BuilderCanvas({ projectId, onProjectUpdated }) {
   );
 }
 
-export function FunnelBuilder({ projectId, onProjectUpdated }) {
+export function FunnelBuilder({ projectId, onProjectUpdated, readOnly = false }) {
   return (
     <ReactFlowProvider>
       <BuilderCanvas
         projectId={projectId}
         onProjectUpdated={onProjectUpdated}
+        readOnly={readOnly}
       />
     </ReactFlowProvider>
   );

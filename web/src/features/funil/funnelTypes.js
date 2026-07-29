@@ -573,6 +573,31 @@ export function isOpsDueOverdue(dueAt, status) {
   return due < today;
 }
 
+/** Diferença em dias até o prazo (negativo = atraso). null se sem data. */
+export function getOpsDueDayDelta(dueAt) {
+  if (!dueAt) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(`${dueAt}T12:00:00`);
+  if (Number.isNaN(due.getTime())) return null;
+  due.setHours(0, 0, 0, 0);
+  return Math.round((due - today) / 86400000);
+}
+
+export function formatOpsDueCountdown(dueAt, status) {
+  if (!dueAt) return 'Sem data de entrega';
+  if (status === 'done') {
+    return `Entrega: ${formatOpsDueDate(dueAt)}`;
+  }
+  const delta = getOpsDueDayDelta(dueAt);
+  if (delta == null) return 'Sem data de entrega';
+  if (delta > 1) return `Faltam ${delta} dias para a data final`;
+  if (delta === 1) return 'Falta 1 dia para a data final';
+  if (delta === 0) return 'Entrega é hoje';
+  if (delta === -1) return 'Tarefa com 1 dia de atraso';
+  return `Tarefa com ${Math.abs(delta)} dias de atraso`;
+}
+
 export function sanitizeOpsDate(value) {
   const raw = String(value || '').trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '';

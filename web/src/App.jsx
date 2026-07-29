@@ -17,8 +17,10 @@ import LeadProposalTool from './pages/admin/comercial/LeadProposalTool';
 import LeadContractTool from './pages/admin/comercial/LeadContractTool';
 import LeadClientTool from './pages/admin/comercial/LeadClientTool';
 import FinanceiroPage from './pages/admin/financeiro/FinanceiroPage';
-import OperacaoList from './pages/admin/operacao/OperacaoList';
-import OperacaoClient from './pages/admin/operacao/OperacaoClient';
+import OperacaoHub from './pages/admin/operacao/OperacaoHub';
+import OpsPlanejamentoPage from './pages/admin/operacao/OpsPlanejamentoPage';
+import OpsExecucaoPage from './pages/admin/operacao/OpsExecucaoPage';
+import LegacyOperacaoClientRedirect from './pages/admin/operacao/LegacyOperacaoClientRedirect';
 
 function RedirectToLeadClose() {
   const { id } = useParams();
@@ -102,15 +104,20 @@ export default function App() {
           path="/admin/operacao"
           element={
             <RequireAuth>
-              <OperacaoList />
+              <OperacaoHub />
             </RequireAuth>
           }
-        />
+        >
+          <Route index element={<Navigate to="planejamento" replace />} />
+          <Route path="planejamento" element={<OpsPlanejamentoPage />} />
+          <Route path="execucao" element={<OpsExecucaoPage />} />
+        </Route>
+        {/* Redirects legados: /admin/operacao/:clientId?sec=... */}
         <Route
           path="/admin/operacao/:clientId"
           element={
             <RequireAuth>
-              <OperacaoClient />
+              <LegacyOperacaoClientRedirect />
             </RequireAuth>
           }
         />
