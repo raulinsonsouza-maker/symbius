@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { WHATSAPP_NUMBER } from '../lib/whatsapp';
@@ -13,7 +13,11 @@ const PROCESS_STEPS = [
 ];
 
 const PROCESS_NOTE =
-  'Na Symbius não começamos criando campanhas ou redesenhando um site. Primeiro buscamos entender onde está o principal gargalo de crescimento. A partir disso, estruturamos um plano priorizando o que tem maior potencial de impacto.';
+  'Na Symbius não começamos criando campanhas ou redesenhando um site. Primeiro entendemos o gargalo de crescimento — e priorizamos o que tem maior impacto.';
+
+function scoreKind(score) {
+  return Number(score) >= 65 ? 'strong' : 'opp';
+}
 
 function renderPerception(text, highlight) {
   if (!text) return null;
@@ -26,10 +30,86 @@ function renderPerception(text, highlight) {
       {parts.map((part, i) => (
         <span key={i}>
           {part}
-          {i < parts.length - 1 ? <span className="sa-lp__hl">{highlight}</span> : null}
+          {i < parts.length - 1 ? (
+            <span className="sa-lp__hl">{highlight}</span>
+          ) : null}
         </span>
       ))}
     </blockquote>
+  );
+}
+
+/** Anéis concêntricos no hero — visão rápida da maturidade */
+function HeroRadar({ items }) {
+  const list = (items || []).slice(0, 5);
+  if (!list.length) return null;
+  const size = 280;
+  const cx = size / 2;
+  const cy = size / 2;
+  const maxR = 108;
+
+  return (
+    <div className="sa-lp__radar" aria-hidden="true">
+      <svg viewBox={`0 0 ${size} ${size}`} className="sa-lp__radar-svg">
+        {[0.25, 0.5, 0.75, 1].map((t) => (
+          <circle
+            key={t}
+            cx={cx}
+            cy={cy}
+            r={maxR * t}
+            className="sa-lp__radar-ring"
+          />
+        ))}
+        {list.map((m, i) => {
+          const score = Math.max(0, Math.min(100, Number(m.score) || 0));
+          const r = (score / 100) * maxR;
+          const angle = (-90 + (i * 360) / list.length) * (Math.PI / 180);
+          const x = cx + Math.cos(angle) * r;
+          const y = cy + Math.sin(angle) * r;
+          const lx = cx + Math.cos(angle) * (maxR + 22);
+          const ly = cy + Math.sin(angle) * (maxR + 22);
+          const kind = scoreKind(score);
+          return (
+            <g key={m.label || i}>
+              <line
+                x1={cx}
+                y1={cy}
+                x2={cx + Math.cos(angle) * maxR}
+                y2={cy + Math.sin(angle) * maxR}
+                className="sa-lp__radar-axis"
+              />
+              <circle
+                cx={x}
+                cy={y}
+                r={6}
+                className={`sa-lp__radar-dot sa-lp__radar-dot--${kind}`}
+              />
+              <text
+                x={lx}
+                y={ly}
+                className="sa-lp__radar-label"
+                textAnchor="middle"
+                dominantBaseline="middle"
+              >
+                {score}
+              </text>
+            </g>
+          );
+        })}
+        <circle cx={cx} cy={cy} r={4} className="sa-lp__radar-center" />
+      </svg>
+      <ul className="sa-lp__radar-legend">
+        {list.map((m) => {
+          const score = Number(m.score) || 0;
+          return (
+            <li key={m.label} className={`sa-lp__radar-legend-item sa-lp__radar-legend-item--${scoreKind(score)}`}>
+              <span>{m.label}</span>
+              <b>{score}</b>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -55,10 +135,10 @@ function MaturityBars({ items }) {
   }, [items]);
 
   return (
-    <div ref={rootRef}>
+    <div ref={rootRef} className="sa-lp__maturity">
       {items.map((m) => {
         const score = Number(m.score) || 0;
-        const kind = score >= 65 ? 'strong' : 'opp';
+        const kind = scoreKind(score);
         return (
           <div key={m.label} className="sa-lp__maturity-row">
             <div className="sa-lp__maturity-label">{m.label}</div>
@@ -68,7 +148,9 @@ function MaturityBars({ items }) {
                 data-score={score}
               />
             </div>
-            <div className="sa-lp__maturity-score">{score}</div>
+            <div className={`sa-lp__maturity-score sa-lp__maturity-score--${kind}`}>
+              {score}
+            </div>
           </div>
         );
       })}
@@ -103,6 +185,32 @@ export default function StrategicAnalysisPublicPage() {
     document.title = `Análise Estratégica — ${name} | Symbius`;
     return () => {
       document.title = previous;
+    };
+  }, [data]);
+
+  const stats = useMemo(() => {
+    if (!data) return null;
+    const maturity = Array.isArray(data.analysis.report?.maturity)
+      ? data.analysis.report.maturity
+      : [];
+    const opportunities = Array.isArray(data.analysis.report?.opportunities)
+      ? data.analysis.report.opportunities
+      : [];
+    const scores = maturity.map((m) => Number(m.score) || 0);
+    const avg = scores.length
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : 0;
+    const lowest = scores.length ? Math.min(...scores) : 0;
+    const gaps = scores.filter((s) => s < 65).length;
+    const weakest = [...maturity].sort(
+      (a, b) => (Number(a.score) || 0) - (Number(b.score) || 0),
+    )[0];
+    return {
+      avg,
+      lowest,
+      gaps,
+      oppCount: opportunities.length,
+      weakestLabel: weakest?.label || '—',
     };
   }, [data]);
 
@@ -159,10 +267,19 @@ export default function StrategicAnalysisPublicPage() {
     <div className="sa-lp">
       <header className="sa-lp__masthead">
         <div className="sa-lp__wrap sa-lp__masthead-row">
+          <img
+            src="/images/logotipo-branco.png"
+            alt="Symbius"
+            className="sa-lp__logo"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.add('sa-lp__brand--show');
+            }}
+          />
           <div className="sa-lp__brand">SYMBIUS</div>
           <div className="sa-lp__masthead-right">
             <span className="sa-lp__for-client">
-              Elaborado exclusivamente para <b>{clientName}</b>
+              Exclusivo para <b>{clientName}</b>
             </span>
             <a
               className="sa-lp__cta sa-lp__cta--header"
@@ -176,17 +293,49 @@ export default function StrategicAnalysisPublicPage() {
         </div>
       </header>
 
-      <section className="sa-lp__hero sa-lp__wrap">
-        <div className="sa-lp__eyebrow">Análise independente · informações públicas</div>
-        <h1>Análise Estratégica de Crescimento</h1>
-        {report.heroDiagnosis ? (
-          <p className="sa-lp__lede">{report.heroDiagnosis}</p>
-        ) : (
-          <p className="sa-lp__lede">
-            Diagnóstico da presença digital pública de {clientName} — site, redes
-            e canais abertos.
-          </p>
-        )}
+      <section className="sa-lp__hero">
+        <div className="sa-lp__hero-bg" aria-hidden="true" />
+        <div className="sa-lp__wrap sa-lp__hero-grid">
+          <div className="sa-lp__hero-copy">
+            <p className="sa-lp__eyebrow">Análise Estratégica · dados públicos</p>
+            <p className="sa-lp__client-signal">{clientName}</p>
+            <h1>
+              {report.heroDiagnosis ||
+                `Diagnóstico digital de crescimento para ${clientName}`}
+            </h1>
+            <p className="sa-lp__lede">
+              Leitura da presença pública — site, redes e canais abertos — com
+              foco no que trava e no que acelera o próximo salto.
+            </p>
+
+            {stats ? (
+              <div className="sa-lp__kpis">
+                <div className="sa-lp__kpi">
+                  <span className="sa-lp__kpi-value">{stats.avg}</span>
+                  <span className="sa-lp__kpi-label">Maturidade média</span>
+                </div>
+                <div className="sa-lp__kpi sa-lp__kpi--accent">
+                  <span className="sa-lp__kpi-value">{stats.gaps}</span>
+                  <span className="sa-lp__kpi-label">Frentes em gap</span>
+                </div>
+                <div className="sa-lp__kpi">
+                  <span className="sa-lp__kpi-value">{stats.oppCount}</span>
+                  <span className="sa-lp__kpi-label">Oportunidades</span>
+                </div>
+                <div className="sa-lp__kpi sa-lp__kpi--wide">
+                  <span className="sa-lp__kpi-label">Menor score</span>
+                  <span className="sa-lp__kpi-sub">
+                    {stats.weakestLabel} · <b>{stats.lowest}</b>
+                  </span>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="sa-lp__hero-visual">
+            <HeroRadar items={maturity} />
+          </div>
+        </div>
       </section>
 
       <section className="sa-lp__section">
@@ -207,9 +356,7 @@ export default function StrategicAnalysisPublicPage() {
             <div className="sa-lp__consolidada">
               <div className="sa-lp__bar" />
               <p>
-                <span className="sa-lp__cite">
-                  Leitura consolidada a partir de site, redes e canais públicos.
-                </span>
+                <span className="sa-lp__cite">Leitura consolidada</span>
                 {report.consolidatedReading}
               </p>
             </div>
@@ -221,10 +368,12 @@ export default function StrategicAnalysisPublicPage() {
         <div className="sa-lp__wrap">
           <div className="sa-lp__sec-head">
             <span className="sa-lp__sec-num">02</span>
-            <h2>Maturidade percebida por frente</h2>
+            <h2>Maturidade por frente</h2>
           </div>
           <MaturityBars items={maturity} />
-          <p className="sa-lp__note">Estimativa qualitativa com base em informações públicas.</p>
+          <p className="sa-lp__note">
+            Estimativa qualitativa com base em informações públicas.
+          </p>
         </div>
       </section>
 
@@ -256,10 +405,10 @@ export default function StrategicAnalysisPublicPage() {
                 )}
                 {Array.isArray(o.impact) && o.impact.length > 0 ? (
                   <div className="sa-lp__impact">
-                    <div className="sa-lp__list-title sa-lp__list-title--teal">
+                    <div className="sa-lp__list-title sa-lp__list-title--accent">
                       Impacto esperado
                     </div>
-                    <ul className="sa-lp__plain sa-lp__plain--teal">
+                    <ul className="sa-lp__plain sa-lp__plain--accent">
                       {o.impact.map((imp, ii) => (
                         <li key={ii}>{imp}</li>
                       ))}
@@ -338,24 +487,20 @@ export default function StrategicAnalysisPublicPage() {
           ))}
           {!closingParagraphs.length ? (
             <p>
-              Esta análise foi feita com informações públicas. Queremos
-              conversar sobre o momento da {clientName} e aprofundar as
-              oportunidades.
+              Análise baseada em informações públicas. Queremos conversar sobre
+              o momento da {clientName} e aprofundar as oportunidades.
             </p>
           ) : null}
           <div className="sa-lp__contact-row">
-            <a href={waHref} target="_blank" rel="noreferrer">
-              WhatsApp
-            </a>
-            {email ? <a href={`mailto:${email}`}>{email}</a> : null}
             <a
               className="sa-lp__cta sa-lp__cta--closing"
               href={waHref}
               target="_blank"
               rel="noreferrer"
             >
-              Agendar conversa
+              Agendar conversa no WhatsApp
             </a>
+            {email ? <a href={`mailto:${email}`}>{email}</a> : null}
           </div>
           <div className="sa-lp__foot-note">
             Documento analítico · informações públicas · Symbius
