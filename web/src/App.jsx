@@ -22,6 +22,9 @@ import OpsHomePage from './pages/admin/operacao/OpsHomePage';
 import OpsPlanejamentoPage from './pages/admin/operacao/OpsPlanejamentoPage';
 import OpsExecucaoPage from './pages/admin/operacao/OpsExecucaoPage';
 import LegacyOperacaoClientRedirect from './pages/admin/operacao/LegacyOperacaoClientRedirect';
+import StrategicAnalysisList from './pages/admin/analise-estrategica/StrategicAnalysisList';
+import StrategicAnalysisEditor from './pages/admin/analise-estrategica/StrategicAnalysisEditor';
+import StrategicAnalysisPublicPage from './pages/StrategicAnalysisPublicPage';
 
 function RedirectToLeadClose() {
   const { id } = useParams();
@@ -35,6 +38,7 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/p/:slug" element={<ProposalPublicPage />} />
         <Route path="/c/:slug" element={<ContractPublicPage />} />
+        <Route path="/a/:slug" element={<StrategicAnalysisPublicPage />} />
         <Route path="/assinar/:token" element={<ContractSignPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route
@@ -127,6 +131,22 @@ export default function App() {
           element={
             <RequireAuth>
               <FinanceiroPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/analise-estrategica"
+          element={
+            <RequireAuth>
+              <StrategicAnalysisList />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/analise-estrategica/:id"
+          element={
+            <RequireAuth>
+              <StrategicAnalysisEditor />
             </RequireAuth>
           }
         />

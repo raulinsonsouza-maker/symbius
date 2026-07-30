@@ -103,6 +103,7 @@ function defaultDb() {
     })),
     financeEntries: [],
     contractSignatureEvents: [],
+    strategicAnalyses: [],
   };
 }
 
@@ -119,6 +120,7 @@ function ensureFinance(db) {
     }));
   }
   if (!Array.isArray(db.financeEntries)) db.financeEntries = [];
+  if (!Array.isArray(db.strategicAnalyses)) db.strategicAnalyses = [];
   db.settings = {
     legalName: db.settings?.companyName || 'Symbius',
     legalDocument: '',
@@ -1048,6 +1050,95 @@ export const fileStore = {
     const before = db.funnelProjects.length;
     db.funnelProjects = db.funnelProjects.filter((item) => item.id !== id);
     if (db.funnelProjects.length === before) return false;
+    writeDb(db);
+    return true;
+  },
+
+  async listStrategicAnalyses() {
+    return [...readDb().strategicAnalyses].sort(
+      (a, b) =>
+        new Date(b.updatedAt || b.createdAt) -
+        new Date(a.updatedAt || a.createdAt),
+    );
+  },
+
+  async getStrategicAnalysis(id) {
+    return readDb().strategicAnalyses.find((item) => item.id === id) || null;
+  },
+
+  async getStrategicAnalysisBySlug(slug) {
+    return (
+      readDb().strategicAnalyses.find((item) => item.publicSlug === slug) ||
+      null
+    );
+  },
+
+  async createStrategicAnalysis(input) {
+    const db = readDb();
+    const now = new Date().toISOString();
+    const analysis = {
+      id: randomUUID(),
+      clientName: String(input.clientName || '').trim(),
+      websiteUrl: String(input.websiteUrl || '').trim(),
+      publicSlug: input.publicSlug || slugId(),
+      status: input.status || 'pending',
+      sourceSnapshot: input.sourceSnapshot || {},
+      report: input.report || {},
+      whatsappMessage: String(input.whatsappMessage || ''),
+      errorMessage: String(input.errorMessage || ''),
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.strategicAnalyses.push(analysis);
+    writeDb(db);
+    return analysis;
+  },
+
+  async updateStrategicAnalysis(id, patch) {
+    const db = readDb();
+    const idx = db.strategicAnalyses.findIndex((item) => item.id === id);
+    if (idx < 0) return null;
+    const current = db.strategicAnalyses[idx];
+    const next = {
+      ...current,
+      clientName:
+        patch.clientName !== undefined
+          ? String(patch.clientName || '').trim()
+          : current.clientName,
+      websiteUrl:
+        patch.websiteUrl !== undefined
+          ? String(patch.websiteUrl || '').trim()
+          : current.websiteUrl,
+      publicSlug:
+        patch.publicSlug !== undefined
+          ? String(patch.publicSlug || '').trim() || current.publicSlug
+          : current.publicSlug,
+      status: patch.status !== undefined ? patch.status : current.status,
+      sourceSnapshot:
+        patch.sourceSnapshot !== undefined
+          ? patch.sourceSnapshot
+          : current.sourceSnapshot,
+      report: patch.report !== undefined ? patch.report : current.report,
+      whatsappMessage:
+        patch.whatsappMessage !== undefined
+          ? String(patch.whatsappMessage || '')
+          : current.whatsappMessage,
+      errorMessage:
+        patch.errorMessage !== undefined
+          ? String(patch.errorMessage || '')
+          : current.errorMessage,
+      updatedAt: new Date().toISOString(),
+    };
+    db.strategicAnalyses[idx] = next;
+    writeDb(db);
+    return next;
+  },
+
+  async deleteStrategicAnalysis(id) {
+    const db = readDb();
+    const before = db.strategicAnalyses.length;
+    db.strategicAnalyses = db.strategicAnalyses.filter((item) => item.id !== id);
+    if (db.strategicAnalyses.length === before) return false;
     writeDb(db);
     return true;
   },

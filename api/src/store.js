@@ -234,6 +234,32 @@ function mapFunnelProject(row) {
   };
 }
 
+function mapStrategicAnalysis(row) {
+  if (!row) return null;
+  const parseJson = (value, fallback) => {
+    if (value == null) return fallback;
+    if (typeof value === 'object') return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
+  };
+  return {
+    id: row.id,
+    clientName: row.client_name || '',
+    websiteUrl: row.website_url || '',
+    publicSlug: row.public_slug,
+    status: row.status,
+    sourceSnapshot: parseJson(row.source_snapshot, {}),
+    report: parseJson(row.report, {}),
+    whatsappMessage: row.whatsapp_message || '',
+    errorMessage: row.error_message || '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 async function nextProposalNumber() {
   const year = new Date().getFullYear();
   const prefix = `SYM-${year}-`;
@@ -1411,6 +1437,120 @@ const pgStore = {
   },
 };
 
+Object.assign(pgStore, {
+  async listStrategicAnalyses() {
+    const { rows } = await pool.query(
+      `SELECT * FROM strategic_analyses
+       ORDER BY updated_at DESC, created_at DESC`,
+    );
+    return rows.map(mapStrategicAnalysis);
+  },
+
+  async getStrategicAnalysis(id) {
+    const { rows } = await pool.query(
+      'SELECT * FROM strategic_analyses WHERE id = $1',
+      [id],
+    );
+    return mapStrategicAnalysis(rows[0]);
+  },
+
+  async getStrategicAnalysisBySlug(slug) {
+    const { rows } = await pool.query(
+      'SELECT * FROM strategic_analyses WHERE public_slug = $1',
+      [slug],
+    );
+    return mapStrategicAnalysis(rows[0]);
+  },
+
+  async createStrategicAnalysis(input) {
+    const { rows } = await pool.query(
+      `INSERT INTO strategic_analyses (
+        client_name, website_url, public_slug, status,
+        source_snapshot, report, whatsapp_message, error_message
+      ) VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8)
+      RETURNING *`,
+      [
+        String(input.clientName || '').trim(),
+        String(input.websiteUrl || '').trim(),
+        input.publicSlug || slugId(),
+        input.status || 'pending',
+        JSON.stringify(input.sourceSnapshot || {}),
+        JSON.stringify(input.report || {}),
+        String(input.whatsappMessage || ''),
+        String(input.errorMessage || ''),
+      ],
+    );
+    return mapStrategicAnalysis(rows[0]);
+  },
+
+  async updateStrategicAnalysis(id, patch) {
+    const current = await this.getStrategicAnalysis(id);
+    if (!current) return null;
+    const next = {
+      clientName:
+        patch.clientName !== undefined
+          ? String(patch.clientName || '').trim()
+          : current.clientName,
+      websiteUrl:
+        patch.websiteUrl !== undefined
+          ? String(patch.websiteUrl || '').trim()
+          : current.websiteUrl,
+      publicSlug:
+        patch.publicSlug !== undefined
+          ? String(patch.publicSlug || '').trim() || current.publicSlug
+          : current.publicSlug,
+      status: patch.status !== undefined ? patch.status : current.status,
+      sourceSnapshot:
+        patch.sourceSnapshot !== undefined
+          ? patch.sourceSnapshot
+          : current.sourceSnapshot,
+      report: patch.report !== undefined ? patch.report : current.report,
+      whatsappMessage:
+        patch.whatsappMessage !== undefined
+          ? String(patch.whatsappMessage || '')
+          : current.whatsappMessage,
+      errorMessage:
+        patch.errorMessage !== undefined
+          ? String(patch.errorMessage || '')
+          : current.errorMessage,
+    };
+    const { rows } = await pool.query(
+      `UPDATE strategic_analyses SET
+        client_name = $2,
+        website_url = $3,
+        public_slug = $4,
+        status = $5,
+        source_snapshot = $6::jsonb,
+        report = $7::jsonb,
+        whatsapp_message = $8,
+        error_message = $9,
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *`,
+      [
+        id,
+        next.clientName,
+        next.websiteUrl,
+        next.publicSlug,
+        next.status,
+        JSON.stringify(next.sourceSnapshot || {}),
+        JSON.stringify(next.report || {}),
+        next.whatsappMessage,
+        next.errorMessage,
+      ],
+    );
+    return mapStrategicAnalysis(rows[0]);
+  },
+
+  async deleteStrategicAnalysis(id) {
+    const { rowCount } = await pool.query(
+      'DELETE FROM strategic_analyses WHERE id = $1',
+      [id],
+    );
+    return rowCount > 0;
+  },
+});
+
 let store = fileStore;
 
 export async function initStore() {
@@ -1421,6 +1561,26 @@ export async function initStore() {
   }
   try {
     await pool.query('SELECT 1');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS strategic_analyses (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_name TEXT NOT NULL DEFAULT '',
+        website_url TEXT NOT NULL DEFAULT '',
+        public_slug TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL DEFAULT 'pending'
+          CHECK (status IN ('pending', 'generating', 'ready', 'error')),
+        source_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+        report JSONB NOT NULL DEFAULT '{}'::jsonb,
+        whatsapp_message TEXT NOT NULL DEFAULT '',
+        error_message TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS strategic_analyses_created_at_idx
+        ON strategic_analyses (created_at DESC)
+    `);
     store = pgStore;
     console.log('Store: PostgreSQL');
   } catch (err) {

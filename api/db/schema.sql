@@ -281,3 +281,21 @@ CREATE INDEX IF NOT EXISTS clients_created_at_idx ON clients (created_at DESC);
 CREATE INDEX IF NOT EXISTS contracts_created_at_idx ON contracts (created_at DESC);
 CREATE INDEX IF NOT EXISTS finance_entries_due_date_idx ON finance_entries (due_date);
 CREATE INDEX IF NOT EXISTS finance_entries_contract_idx ON finance_entries (contract_id);
+
+CREATE TABLE IF NOT EXISTS strategic_analyses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_name TEXT NOT NULL DEFAULT '',
+  website_url TEXT NOT NULL DEFAULT '',
+  public_slug TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'generating', 'ready', 'error')),
+  source_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+  report JSONB NOT NULL DEFAULT '{}'::jsonb,
+  whatsapp_message TEXT NOT NULL DEFAULT '',
+  error_message TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS strategic_analyses_created_at_idx
+  ON strategic_analyses (created_at DESC);

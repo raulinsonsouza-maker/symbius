@@ -140,4 +140,22 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  listStrategicAnalyses: () => request('/strategic-analyses'),
+  getStrategicAnalysis: (id) => request(`/strategic-analyses/${id}`),
+  createStrategicAnalysis: (data) =>
+    request('/strategic-analyses', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateStrategicAnalysis: (id, data) =>
+    request(`/strategic-analyses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  regenerateStrategicAnalysis: (id) =>
+    request(`/strategic-analyses/${id}/regenerate`, { method: 'POST' }),
+  deleteStrategicAnalysis: (id) =>
+    request(`/strategic-analyses/${id}`, { method: 'DELETE' }),
+  getPublicStrategicAnalysis: (slug) =>
+    request(`/public/strategic-analyses/${slug}`, { auth: false }),
 };

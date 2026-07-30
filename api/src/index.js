@@ -52,6 +52,13 @@ import {
   chargeContractAsaas,
   chargeContractCommission,
   asaasWebhook,
+  listStrategicAnalyses,
+  getStrategicAnalysis,
+  createStrategicAnalysis,
+  updateStrategicAnalysis,
+  regenerateStrategicAnalysis,
+  deleteStrategicAnalysis,
+  getPublicStrategicAnalysis,
 } from './routes.js';
 
 dotenv.config();
@@ -68,6 +75,7 @@ app.get('/api/public/contracts/:slug', getPublicContract);
 app.get('/api/public/contracts/:slug/signed-pdf', getPublicSignedPdfBySlug);
 app.get('/api/public/sign/:token', getPublicSign);
 app.post('/api/public/sign/:token', postPublicSign);
+app.get('/api/public/strategic-analyses/:slug', getPublicStrategicAnalysis);
 app.post('/api/webhooks/asaas', asaasWebhook);
 
 app.use('/api', requireAdmin);
@@ -114,6 +122,13 @@ app.get('/api/finance/asaas/payments', listAsaasFinancePayments);
 app.post('/api/finance/asaas/sync', syncAsaasFinance);
 app.post('/api/contracts/:id/asaas/charge', chargeContractAsaas);
 app.post('/api/contracts/:id/asaas/commission', chargeContractCommission);
+
+app.get('/api/strategic-analyses', listStrategicAnalyses);
+app.post('/api/strategic-analyses', createStrategicAnalysis);
+app.get('/api/strategic-analyses/:id', getStrategicAnalysis);
+app.put('/api/strategic-analyses/:id', updateStrategicAnalysis);
+app.post('/api/strategic-analyses/:id/regenerate', regenerateStrategicAnalysis);
+app.delete('/api/strategic-analyses/:id', deleteStrategicAnalysis);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

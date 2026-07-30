@@ -1032,3 +1032,94 @@ export async function getPublicSignedPdfBySlug(req, res) {
     return res.sendFile(abs);
   }
 }
+
+export async function listStrategicAnalyses(_req, res) {
+  return res.json(await getStore().listStrategicAnalyses());
+}
+
+export async function getStrategicAnalysis(req, res) {
+  const analysis = await getStore().getStrategicAnalysis(req.params.id);
+  if (!analysis) {
+    return res.status(404).json({ error: 'Análise não encontrada' });
+  }
+  return res.json(analysis);
+}
+
+export async function createStrategicAnalysis(req, res) {
+  try {
+    const websiteUrl = String(req.body?.websiteUrl || '').trim();
+    const clientName = String(req.body?.clientName || '').trim();
+    if (!websiteUrl) {
+      return res.status(400).json({ error: 'websiteUrl é obrigatório' });
+    }
+    const { createAndGenerateAnalysis } = await import(
+      './strategicAnalysis/generate.js'
+    );
+    const analysis = await createAndGenerateAnalysis({
+      websiteUrl,
+      clientName,
+    });
+    return res.status(201).json(analysis);
+  } catch (err) {
+    const status = err.status && err.status < 500 ? err.status : 400;
+    return res
+      .status(status)
+      .json({ error: err.message || 'Falha ao criar análise' });
+  }
+}
+
+export async function updateStrategicAnalysis(req, res) {
+  const store = getStore();
+  const existing = await store.getStrategicAnalysis(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Análise não encontrada' });
+  }
+  const body = req.body || {};
+  const patch = {};
+  if (body.clientName !== undefined) patch.clientName = body.clientName;
+  if (body.websiteUrl !== undefined) patch.websiteUrl = body.websiteUrl;
+  if (body.whatsappMessage !== undefined) {
+    patch.whatsappMessage = body.whatsappMessage;
+  }
+  if (body.report !== undefined) patch.report = body.report;
+  const updated = await store.updateStrategicAnalysis(req.params.id, patch);
+  return res.json(updated);
+}
+
+export async function regenerateStrategicAnalysis(req, res) {
+  try {
+    const { regenerateAnalysis } = await import(
+      './strategicAnalysis/generate.js'
+    );
+    const analysis = await regenerateAnalysis(req.params.id);
+    if (!analysis) {
+      return res.status(404).json({ error: 'Análise não encontrada' });
+    }
+    return res.json(analysis);
+  } catch (err) {
+    const status = err.status && err.status < 500 ? err.status : 400;
+    return res
+      .status(status)
+      .json({ error: err.message || 'Falha ao regenerar análise' });
+  }
+}
+
+export async function deleteStrategicAnalysis(req, res) {
+  const store = getStore();
+  const existing = await store.getStrategicAnalysis(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Análise não encontrada' });
+  }
+  await store.deleteStrategicAnalysis(req.params.id);
+  return res.status(204).end();
+}
+
+export async function getPublicStrategicAnalysis(req, res) {
+  const store = getStore();
+  const analysis = await store.getStrategicAnalysisBySlug(req.params.slug);
+  if (!analysis || analysis.status !== 'ready') {
+    return res.status(404).json({ error: 'Análise não encontrada' });
+  }
+  const settings = await store.getSettings();
+  return res.json({ analysis, settings });
+}

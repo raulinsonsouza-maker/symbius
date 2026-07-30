@@ -48,6 +48,15 @@ const TOOLS = [
     available: true,
   },
   {
+    id: 'analise-estrategica',
+    title: 'Análise Estratégica',
+    description:
+      'Gera uma LP diagnóstica a partir do site do cliente — isca comercial com link público.',
+    to: '/admin/analise-estrategica',
+    tag: 'Comercial',
+    available: true,
+  },
+  {
     id: 'em-breve',
     title: 'Novas ferramentas',
     description:
