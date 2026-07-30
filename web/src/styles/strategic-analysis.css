@@ -423,6 +423,10 @@
   color: #000;
 }
 
+.sa-lp a.sa-lp__cta--header {
+  color: #000;
+}
+
 .sa-lp__cta--header:hover {
   opacity: 0.92;
   transform: translateY(-1px);
@@ -436,6 +440,10 @@
 
 .sa-lp__cta--closing {
   background: var(--sa-accent);
+  color: #000;
+}
+
+.sa-lp a.sa-lp__cta--closing {
   color: #000;
 }
 
@@ -943,6 +951,97 @@
   gap: 10px;
 }
 
+.sa-lp__method-intro {
+  color: var(--sa-ink-soft);
+  max-width: 40em;
+  margin-bottom: 28px;
+  font-size: 1.05rem;
+}
+
+.sa-lp__bg-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 4px;
+  align-items: center;
+  padding: 18px 0 28px;
+  border-top: 1px solid var(--sa-line);
+  margin-bottom: 8px;
+}
+
+.sa-lp__bg-flow-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sa-lp__bg-flow-num {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: var(--sa-muted);
+}
+
+.sa-lp__bg-flow-label {
+  font-size: 1.05rem;
+  font-weight: 400;
+}
+
+.sa-lp__bg-flow-arrow {
+  color: var(--sa-muted);
+  margin: 0 8px;
+}
+
+.sa-lp__method-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.sa-lp__method-card {
+  background: var(--sa-elevated);
+  border: 1px solid var(--sa-line);
+  border-radius: 12px;
+  padding: 22px 22px 24px;
+}
+
+.sa-lp__method-num {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  color: var(--sa-accent);
+  margin-bottom: 10px;
+}
+
+.sa-lp__method-card h3 {
+  font-size: 1.35rem;
+  font-weight: 300;
+  margin-bottom: 8px;
+}
+
+.sa-lp__method-copy {
+  font-size: 0.92rem;
+  color: var(--sa-ink-soft);
+  margin-bottom: 16px;
+}
+
+.sa-lp__method-apply {
+  border-top: 1px solid var(--sa-line);
+  padding-top: 14px;
+}
+
+.sa-lp__method-apply-label {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sa-accent);
+  margin-bottom: 6px;
+}
+
+.sa-lp__method-apply p {
+  font-size: 0.92rem;
+  color: var(--sa-ink-soft);
+  line-height: 1.55;
+}
+
 .sa-lp__proc-step {
   background: var(--sa-elevated);
   border: 1px solid var(--sa-line);
@@ -1059,6 +1158,10 @@
   }
 
   .sa-lp__roadmap {
+    grid-template-columns: 1fr;
+  }
+
+  .sa-lp__method-grid {
     grid-template-columns: 1fr;
   }
 

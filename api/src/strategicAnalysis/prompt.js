@@ -107,8 +107,14 @@ Responda APENAS com JSON válido (sem markdown, sem \`\`\`), neste schema:
   "closing": {
     "title":"Gostaríamos de conhecer melhor a ${name}.",
     "paragraphs":["1–2 parágrafos curtos convidando para conversa estratégica"]
-  }
+  },
+  "methodology": [
+    {"key":"analisar","title":"Analisar","application":"1–2 frases: como o diagnóstico se aplica a esta empresa"},
+    {"key":"marca","title":"Marca","application":"1–2 frases: o que faríamos em posicionamento/comunicação"},
+    {"key":"growth","title":"Growth","application":"1–2 frases: dados, tráfego, CRM, aquisição"},
+    {"key":"vender","title":"Vender","application":"1–2 frases: conversão, funil, receita"}
+  ]
 }
 
-Quantidades: 4–6 highlights, 5 frentes de maturidade, 3–5 oportunidades, 2–3 itens por fase do roadmap.`;
+Quantidades: 4–6 highlights, 5 frentes de maturidade, 3–5 oportunidades, 2–3 itens por fase do roadmap, 4 itens em methodology (BrandGrowth).`;
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../../../lib/api';
 
 const STATUS_LABEL = {
@@ -30,7 +30,6 @@ function publicUrl(slug) {
 }
 
 export default function StrategicAnalysisList() {
-  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -60,14 +59,13 @@ export default function StrategicAnalysisList() {
     setCreating(true);
     setError('');
     try {
-      const created = await api.createStrategicAnalysis({
+      await api.createStrategicAnalysis({
         clientName: clientName.trim(),
         channels: channels.trim(),
       });
       setClientName('');
       setChannels('');
       await load();
-      navigate(`/admin/analise-estrategica/${created.id}`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -195,24 +193,22 @@ export default function StrategicAnalysisList() {
                         {item.status === 'ready' ? 'Editar' : 'Continuar'}
                       </Link>
                       {item.status === 'ready' ? (
-                        <>
-                          <a
-                            href={publicUrl(item.publicSlug)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="sa-btn sa-btn--ghost"
-                          >
-                            Abrir
-                          </a>
-                          <button
-                            type="button"
-                            className="sa-btn sa-btn--ghost"
-                            onClick={() => copyLink(item)}
-                          >
-                            {copiedId === item.id ? 'Copiado' : 'Copiar link'}
-                          </button>
-                        </>
+                        <a
+                          href={publicUrl(item.publicSlug)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="sa-btn sa-btn--ghost"
+                        >
+                          Abrir
+                        </a>
                       ) : null}
+                      <button
+                        type="button"
+                        className="sa-btn sa-btn--ghost"
+                        onClick={() => copyLink(item)}
+                      >
+                        {copiedId === item.id ? 'Copiado' : 'Copiar link'}
+                      </button>
                       <button
                         type="button"
                         className="sa-btn sa-btn--danger"

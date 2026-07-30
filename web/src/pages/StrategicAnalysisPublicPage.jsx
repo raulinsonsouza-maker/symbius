@@ -1,19 +1,85 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
-import { WHATSAPP_NUMBER } from '../lib/whatsapp';
+import { whatsappUrl } from '../lib/whatsapp';
+import { BRANDGROWTH, MOVIMENTOS } from '../data/content';
 
-const PROCESS_STEPS = [
-  'Descobrir o gargalo',
-  'Priorizar oportunidades',
-  'Estruturar um plano',
-  'Implementar',
-  'Medir',
-  'Otimizar continuamente',
-];
+function pickOpp(opportunities, keywords, fallbackIndex = 0) {
+  const list = Array.isArray(opportunities) ? opportunities : [];
+  const hit = list.find((o) => {
+    const text = `${o.title || ''} ${o.body || ''}`.toLowerCase();
+    return keywords.some((k) => text.includes(k));
+  });
+  return hit || list[fallbackIndex] || null;
+}
 
-const PROCESS_NOTE =
-  'Na Symbius não começamos criando campanhas ou redesenhando um site. Primeiro entendemos o gargalo de crescimento — e priorizamos o que tem maior impacto.';
+function resolveMethodology(report, clientName) {
+  const fromAi = Array.isArray(report?.methodology) ? report.methodology : [];
+  const byKey = Object.fromEntries(
+    fromAi.map((m) => [
+      String(m.key || m.title || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, ''),
+      m,
+    ]),
+  );
+
+  const opps = report?.opportunities || [];
+  const marcaOpp = pickOpp(opps, [
+    'posicionamento',
+    'autoridade',
+    'comunicação',
+    'comunicacao',
+    'marca',
+    'prova',
+    'depoimento',
+  ], 0);
+  const growthOpp = pickOpp(
+    opps,
+    ['aquisição', 'aquisicao', 'crm', 'dado', 'mídia', 'midia', 'conteúdo', 'conteudo', 'tráfego', 'trafego', 'automação', 'automacao'],
+    Math.min(1, opps.length - 1),
+  );
+  const venderOpp = pickOpp(
+    opps,
+    ['conversão', 'conversao', 'funil', 'cta', 'lead', 'cadastro', 'venda'],
+    Math.min(2, Math.max(0, opps.length - 1)),
+  );
+  const shortItems = report?.roadmap?.short?.items || [];
+
+  const heuristics = {
+    analisar:
+      report?.heroDiagnosis ||
+      report?.consolidatedReading ||
+      `Partimos do diagnóstico público de ${clientName} para priorizar o gargalo real de crescimento.`,
+    marca: marcaOpp
+      ? `${marcaOpp.title}${marcaOpp.body ? ` — ${marcaOpp.body}` : ''}`
+      : `Fortalecemos o posicionamento e a comunicação de ${clientName} para gerar mais confiança e desejo.`,
+    growth: growthOpp
+      ? `${growthOpp.title}${growthOpp.body ? ` — ${growthOpp.body}` : ''}`
+      : `Estruturamos aquisição, dados e CRM para ${clientName} operar growth de forma mensurável.`,
+    vender: venderOpp
+      ? `${venderOpp.title}${venderOpp.body ? ` — ${venderOpp.body}` : ''}`
+      : shortItems.length
+        ? shortItems.slice(0, 2).join(' ')
+        : `Otimizamos a jornada de conversão de ${clientName} para transformar demanda em receita.`,
+  };
+
+  return MOVIMENTOS.map((mov) => {
+    const key = mov.title
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    const ai = byKey[key] || byKey[mov.number] || null;
+    const application = String(
+      ai?.application || heuristics[key] || mov.copy,
+    ).slice(0, 360);
+    return {
+      ...mov,
+      application,
+    };
+  });
+}
 
 function scoreKind(score) {
   return Number(score) >= 65 ? 'strong' : 'opp';
@@ -242,11 +308,10 @@ export default function StrategicAnalysisPublicPage() {
   const { analysis, settings } = data;
   const report = analysis.report || {};
   const clientName = analysis.clientName || 'Cliente';
-  const waNumber = settings?.whatsappNumber || WHATSAPP_NUMBER;
-  const waMessage =
+  const waHref = whatsappUrl(
     analysis.whatsappMessage ||
-    `Olá! Vi a Análise Estratégica elaborada pela Symbius para ${clientName} e gostaria de conversar.`;
-  const waHref = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
+      `Olá! Vi a Análise Estratégica elaborada pela Symbius para ${clientName} e gostaria de conversar.`,
+  );
   const email = settings?.contactEmail || '';
   const highlights = Array.isArray(report.highlights) ? report.highlights : [];
   const maturity = Array.isArray(report.maturity) ? report.maturity : [];
@@ -262,6 +327,7 @@ export default function StrategicAnalysisPublicPage() {
   const closingParagraphs = Array.isArray(report.closing?.paragraphs)
     ? report.closing.paragraphs
     : [];
+  const methodology = resolveMethodology(report, clientName);
 
   return (
     <div className="sa-lp">
@@ -460,19 +526,41 @@ export default function StrategicAnalysisPublicPage() {
         <div className="sa-lp__wrap">
           <div className="sa-lp__sec-head">
             <span className="sa-lp__sec-num">06</span>
-            <h2>Como costumamos atuar</h2>
+            <h2>Como implementaríamos o BrandGrowth na {clientName}</h2>
           </div>
-          <div className="sa-lp__process">
-            {PROCESS_STEPS.map((label, i) => (
-              <div key={label} className="sa-lp__proc-step">
-                <div className="sa-lp__proc-num">
+          <p className="sa-lp__method-intro">
+            {BRANDGROWTH.headline} {BRANDGROWTH.objective}
+          </p>
+          <div className="sa-lp__bg-flow">
+            {BRANDGROWTH.flow.map((step, i) => (
+              <div key={step} className="sa-lp__bg-flow-step">
+                <span className="sa-lp__bg-flow-num">
                   {String(i + 1).padStart(2, '0')}
-                </div>
-                <div className="sa-lp__proc-label">{label}</div>
+                </span>
+                <span className="sa-lp__bg-flow-label">{step}</span>
+                {i < BRANDGROWTH.flow.length - 1 ? (
+                  <span className="sa-lp__bg-flow-arrow" aria-hidden="true">
+                    →
+                  </span>
+                ) : null}
               </div>
             ))}
           </div>
-          <p className="sa-lp__process-note">{PROCESS_NOTE}</p>
+          <div className="sa-lp__method-grid">
+            {methodology.map((mov) => (
+              <div key={mov.number} className="sa-lp__method-card">
+                <div className="sa-lp__method-num">{mov.number}</div>
+                <h3>{mov.title}</h3>
+                <p className="sa-lp__method-copy">{mov.copy}</p>
+                <div className="sa-lp__method-apply">
+                  <span className="sa-lp__method-apply-label">
+                    Na {clientName}
+                  </span>
+                  <p>{mov.application}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

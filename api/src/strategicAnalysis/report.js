@@ -12,6 +12,7 @@ export function emptyReport() {
     },
     perception: { text: '', highlight: '' },
     closing: { title: '', paragraphs: [] },
+    methodology: [],
   };
 }
 
@@ -118,6 +119,14 @@ export function normalizeReport(raw, clientName) {
         .filter(Boolean)
         .slice(0, 3),
     },
+    methodology: asArray(data.methodology)
+      .slice(0, 4)
+      .map((m) => ({
+        key: asString(m?.key || m?.title, 40).toLowerCase(),
+        title: asString(m?.title, 40),
+        application: asString(m?.application, 320),
+      }))
+      .filter((m) => m.application || m.title),
   };
 }
 

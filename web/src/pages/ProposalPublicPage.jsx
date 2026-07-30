@@ -99,11 +99,9 @@ export default function ProposalPublicPage() {
   const { proposal, settings, services } = data;
   const logo = settings.logoUrl || '/images/logotipo-branco.png';
   const company = settings.companyName || 'Symbius';
-  const wa = settings.whatsappNumber
-    ? `https://wa.me/${settings.whatsappNumber}?text=${encodeURIComponent(
-        `Olá! Vi a proposta ${proposal.number} (${proposal.clientName}) e quero conversar.`,
-      )}`
-    : whatsappUrl();
+  const wa = whatsappUrl(
+    `Olá! Vi a proposta ${proposal.number} (${proposal.clientName}) e quero conversar.`,
+  );
 
   const blocks = buildBlocks(proposal, services);
   const isBlank = proposal.template === 'blank';
