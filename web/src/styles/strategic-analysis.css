@@ -366,12 +366,13 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 16px;
-  padding: 16px 0;
+  padding: 14px 0;
 }
 
 .sa-lp__logo {
-  height: 22px;
+  height: 24px;
   width: auto;
+  display: block;
 }
 
 .sa-lp__brand {
@@ -455,7 +456,7 @@
 /* Hero */
 .sa-lp__hero {
   position: relative;
-  padding: clamp(48px, 8vh, 88px) 0 clamp(56px, 9vh, 96px);
+  padding: clamp(40px, 6vh, 72px) 0 clamp(48px, 7vh, 80px);
   overflow: hidden;
   border-bottom: 1px solid var(--sa-line);
 }
@@ -472,62 +473,71 @@
 .sa-lp__hero-grid {
   position: relative;
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: clamp(28px, 5vw, 56px);
-  align-items: center;
+  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+  gap: clamp(24px, 4vw, 48px);
+  align-items: start;
+}
+
+.sa-lp__hero-copy {
+  min-width: 0;
+  padding-top: 4px;
 }
 
 .sa-lp__eyebrow {
   display: inline-block;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   letter-spacing: 0.16em;
   font-weight: 500;
   color: var(--sa-muted);
   text-transform: uppercase;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .sa-lp__client-signal {
-  font-size: clamp(1.5rem, 3.5vw, 2.35rem);
+  font-size: clamp(2rem, 4.2vw, 3rem);
   font-weight: 300;
-  letter-spacing: -0.03em;
-  margin-bottom: 18px;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  margin: 0 0 14px;
   background: linear-gradient(90deg, #fff 0%, #9a9a9a 100%);
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
 }
 
-.sa-lp__hero-copy h1 {
-  font-size: clamp(1.65rem, 3.2vw, 2.45rem);
+.sa-lp__diagnosis {
+  margin: 0;
+  font-size: clamp(1rem, 1.6vw, 1.2rem);
   font-weight: 400;
-  line-height: 1.2;
-  max-width: 18em;
+  line-height: 1.45;
+  color: var(--sa-ink-soft);
+  max-width: 34em;
 }
 
 .sa-lp__lede {
-  margin-top: 18px;
-  font-size: 1.05rem;
-  color: var(--sa-ink-soft);
-  max-width: 34em;
-  line-height: 1.65;
+  margin-top: 12px;
+  font-size: 0.92rem;
+  color: var(--sa-muted);
+  max-width: 32em;
+  line-height: 1.55;
 }
 
 .sa-lp__kpis {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 36px;
+  margin-top: 28px;
 }
 
 .sa-lp__kpi {
   background: var(--sa-elevated);
   border: 1px solid var(--sa-line);
   border-radius: 12px;
-  padding: 16px 14px;
+  padding: 14px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .sa-lp__kpi--accent {
@@ -540,7 +550,7 @@
 }
 
 .sa-lp__kpi-value {
-  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
   font-weight: 300;
   letter-spacing: -0.04em;
   line-height: 1;
@@ -551,14 +561,14 @@
 }
 
 .sa-lp__kpi-label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--sa-muted);
 }
 
 .sa-lp__kpi-sub {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--sa-ink-soft);
   margin-top: 2px;
 }
@@ -571,12 +581,14 @@
 /* Radar */
 .sa-lp__hero-visual {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
+  align-self: start;
+  padding-top: 8px;
 }
 
 .sa-lp__radar {
   width: 100%;
-  max-width: 360px;
+  max-width: 340px;
 }
 
 .sa-lp__radar-svg {
@@ -616,27 +628,35 @@
 
 .sa-lp__radar-legend {
   list-style: none;
-  margin: 18px 0 0;
+  margin: 14px 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .sa-lp__radar-legend-item {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 12px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--sa-ink-soft);
-  padding: 8px 12px;
+  padding: 7px 11px;
   border-radius: 8px;
   background: var(--sa-elevated);
   border: 1px solid var(--sa-line);
 }
 
+.sa-lp__radar-legend-item span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sa-lp__radar-legend-item b {
   font-weight: 500;
+  flex-shrink: 0;
 }
 
 .sa-lp__radar-legend-item--strong b {
@@ -1124,6 +1144,8 @@
 
   .sa-lp__hero-visual {
     order: -1;
+    justify-content: center;
+    padding-top: 0;
   }
 
   .sa-lp__radar {

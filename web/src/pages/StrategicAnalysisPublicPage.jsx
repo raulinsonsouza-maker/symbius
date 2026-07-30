@@ -200,6 +200,20 @@ function filterClosingParagraphs(paragraphs, heroDiagnosis, clientName) {
   ];
 }
 
+function shortHeroDiagnosis(text, max = 148) {
+  const t = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!t || t.length <= max) return t;
+  const slice = t.slice(0, max);
+  const sentence = slice.match(/^(.+?[.!?])\s/);
+  if (sentence && sentence[1].length >= 72) return sentence[1];
+  const comma = slice.lastIndexOf(',');
+  if (comma > 72) return `${slice.slice(0, comma).trim()}.`;
+  const sp = slice.lastIndexOf(' ');
+  return `${(sp > 60 ? slice.slice(0, sp) : slice).trim()}…`;
+}
+
 function scoreKind(score) {
   return Number(score) >= 65 ? 'strong' : 'opp';
 }
@@ -465,14 +479,19 @@ export default function StrategicAnalysisPublicPage() {
         <div className="sa-lp__wrap sa-lp__hero-grid">
           <div className="sa-lp__hero-copy">
             <p className="sa-lp__eyebrow">Análise Estratégica · dados públicos</p>
-            <p className="sa-lp__client-signal">{clientName}</p>
-            <h1>
-              {report.heroDiagnosis ||
-                `Diagnóstico digital de crescimento para ${clientName}`}
-            </h1>
+            <h1 className="sa-lp__client-signal">{clientName}</h1>
+            {report.heroDiagnosis ? (
+              <p className="sa-lp__diagnosis">
+                {shortHeroDiagnosis(report.heroDiagnosis)}
+              </p>
+            ) : (
+              <p className="sa-lp__diagnosis">
+                Diagnóstico digital de crescimento para {clientName}.
+              </p>
+            )}
             <p className="sa-lp__lede">
-              Leitura da presença pública — site, redes e canais abertos — com
-              foco no que trava e no que acelera o próximo salto.
+              Leitura da presença pública — site, redes e canais — com foco no
+              que trava e no que acelera o próximo salto.
             </p>
 
             {stats ? (

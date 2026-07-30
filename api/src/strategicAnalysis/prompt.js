@@ -85,7 +85,7 @@ REGRAS DE TOM:
 
 ANTI-REPETIÇÃO (obrigatório):
 - Cada campo tem um papel único. NÃO reutilize a mesma frase, tese ou parágrafo entre heroDiagnosis, consolidatedReading, opportunities, roadmap, perception, methodology e closing.
-- heroDiagnosis = 1 tese afiada (só aparece no hero)
+- heroDiagnosis = 1 tese afiada curta (máx. ~140 caracteres; 1 frase)
 - consolidatedReading = síntese dos achados (não copie o hero)
 - opportunities = gaps + frentes/impacto (não repita o hero)
 - roadmap = prioridades acionáveis (não copie títulos das oportunidades verbatim)
@@ -95,7 +95,7 @@ ANTI-REPETIÇÃO (obrigatório):
 
 Responda APENAS com JSON válido (sem markdown, sem \`\`\`), neste schema:
 {
-  "heroDiagnosis": "1 frase afiada do diagnóstico principal",
+  "heroDiagnosis": "1 frase afiada curta (máx. ~140 caracteres)",
   "highlights": [{"title":"...", "body":"1 frase factual"}],
   "consolidatedReading": "2–3 linhas: leitura consolidada (sem repetir o hero)",
   "maturity": [{"label":"frente", "score":0}],
