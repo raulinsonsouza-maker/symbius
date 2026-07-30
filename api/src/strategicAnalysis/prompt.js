@@ -83,11 +83,21 @@ REGRAS DE TOM:
 - Destaques = achados factuais do que a marca já tem
 - Oportunidades = o que está fraco ou subexplorado digitalmente
 
+ANTI-REPETIÇÃO (obrigatório):
+- Cada campo tem um papel único. NÃO reutilize a mesma frase, tese ou parágrafo entre heroDiagnosis, consolidatedReading, opportunities, roadmap, perception, methodology e closing.
+- heroDiagnosis = 1 tese afiada (só aparece no hero)
+- consolidatedReading = síntese dos achados (não copie o hero)
+- opportunities = gaps + frentes/impacto (não repita o hero)
+- roadmap = prioridades acionáveis (não copie títulos das oportunidades verbatim)
+- perception = tese interna de apoio (não ecoar no closing; a LP pode não exibir)
+- methodology.application = 1 frase de PRÓXIMO MOVIMENTO (ação), distinta entre Analisar/Marca/Growth/Vender e distinta das oportunidades — nunca cole o heroDiagnosis nem o body de uma opportunity
+- closing.paragraphs = só convite à conversa; SEM reafirmar o diagnóstico
+
 Responda APENAS com JSON válido (sem markdown, sem \`\`\`), neste schema:
 {
   "heroDiagnosis": "1 frase afiada do diagnóstico principal",
   "highlights": [{"title":"...", "body":"1 frase factual"}],
-  "consolidatedReading": "2–3 linhas: leitura consolidada",
+  "consolidatedReading": "2–3 linhas: leitura consolidada (sem repetir o hero)",
   "maturity": [{"label":"frente", "score":0}],
   "opportunities": [{
     "title":"afirmação afiada do gap",
@@ -101,18 +111,18 @@ Responda APENAS com JSON válido (sem markdown, sem \`\`\`), neste schema:
     "long": {"when":"9 – 18 MESES","title":"Longo prazo","items":["..."]}
   },
   "perception": {
-    "text":"parágrafo curto (~80 palavras) com a tese",
-    "highlight":"trecho-chave que deve destacar"
+    "text":"tese interna (~80 palavras); não ecoar no closing",
+    "highlight":"trecho-chave"
   },
   "closing": {
     "title":"Gostaríamos de conhecer melhor a ${name}.",
-    "paragraphs":["1–2 parágrafos curtos convidando para conversa estratégica"]
+    "paragraphs":["1 parágrafo curto só convidando para conversa — sem repetir o diagnóstico"]
   },
   "methodology": [
-    {"key":"analisar","title":"Analisar","application":"1–2 frases: como o diagnóstico se aplica a esta empresa"},
-    {"key":"marca","title":"Marca","application":"1–2 frases: o que faríamos em posicionamento/comunicação"},
-    {"key":"growth","title":"Growth","application":"1–2 frases: dados, tráfego, CRM, aquisição"},
-    {"key":"vender","title":"Vender","application":"1–2 frases: conversão, funil, receita"}
+    {"key":"analisar","title":"Analisar","application":"1 frase: próximo movimento de diagnóstico (ação)"},
+    {"key":"marca","title":"Marca","application":"1 frase: próximo movimento de posicionamento/comunicação"},
+    {"key":"growth","title":"Growth","application":"1 frase: próximo movimento em dados/tráfego/CRM"},
+    {"key":"vender","title":"Vender","application":"1 frase: próximo movimento de conversão/funil"}
   ]
 }
 

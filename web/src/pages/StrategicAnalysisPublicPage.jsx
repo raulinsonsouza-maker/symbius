@@ -4,105 +4,204 @@ import { api } from '../lib/api';
 import { whatsappUrl } from '../lib/whatsapp';
 import { BRANDGROWTH, MOVIMENTOS } from '../data/content';
 
-function pickOpp(opportunities, keywords, fallbackIndex = 0) {
-  const list = Array.isArray(opportunities) ? opportunities : [];
-  const hit = list.find((o) => {
-    const text = `${o.title || ''} ${o.body || ''}`.toLowerCase();
-    return keywords.some((k) => text.includes(k));
-  });
-  return hit || list[fallbackIndex] || null;
+const METHOD_APP_MAX = 180;
+
+function normKey(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
+function clipAction(text, max = METHOD_APP_MAX) {
+  const t = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!t) return '';
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max - 1);
+  const sp = cut.lastIndexOf(' ');
+  return `${(sp > 40 ? cut.slice(0, sp) : cut).trim()}…`;
+}
+
+function actionFromItem(item, verb) {
+  const raw = String(item || '').replace(/\s+/g, ' ').trim();
+  if (!raw) return '';
+  if (/^(priorizar|estruturar|implantar|criar|desenvolver|otimizar|fortalecer|mapear)/i.test(raw)) {
+    return clipAction(raw);
+  }
+  return clipAction(`${verb} ${raw.charAt(0).toLowerCase()}${raw.slice(1)}`);
+}
+
+function takeExclusive(pool, keywords) {
+  const idx = pool.findIndex((item) => {
+    const t = normKey(item);
+    return keywords.some((k) => t.includes(k));
+  });
+  if (idx < 0) return null;
+  const [picked] = pool.splice(idx, 1);
+  return picked;
+}
+
+/** BrandGrowth: ações curtas — nunca cola hero/oportunidade/percepção. */
 function resolveMethodology(report, clientName) {
   const fromAi = Array.isArray(report?.methodology) ? report.methodology : [];
   const byKey = Object.fromEntries(
-    fromAi.map((m) => [
-      String(m.key || m.title || '')
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, ''),
-      m,
-    ]),
+    fromAi.map((m) => [normKey(m.key || m.title), m]),
   );
 
-  const opps = report?.opportunities || [];
-  const marcaOpp = pickOpp(opps, [
-    'posicionamento',
-    'autoridade',
-    'comunicação',
-    'comunicacao',
-    'marca',
-    'prova',
-    'depoimento',
-  ], 0);
-  const growthOpp = pickOpp(
-    opps,
-    ['aquisição', 'aquisicao', 'crm', 'dado', 'mídia', 'midia', 'conteúdo', 'conteudo', 'tráfego', 'trafego', 'automação', 'automacao'],
-    Math.min(1, opps.length - 1),
-  );
-  const venderOpp = pickOpp(
-    opps,
-    ['conversão', 'conversao', 'funil', 'cta', 'lead', 'cadastro', 'venda'],
-    Math.min(2, Math.max(0, opps.length - 1)),
-  );
-  const shortItems = report?.roadmap?.short?.items || [];
+  const maturity = Array.isArray(report?.maturity) ? report.maturity : [];
+  const weakest = maturity.length
+    ? maturity.reduce((a, b) =>
+        Number(a.score) <= Number(b.score) ? a : b,
+      )
+    : null;
 
-  const heuristics = {
-    analisar:
-      report?.heroDiagnosis ||
-      report?.consolidatedReading ||
-      `Partimos do diagnóstico público de ${clientName} para priorizar o gargalo real de crescimento.`,
-    marca: marcaOpp
-      ? `${marcaOpp.title}${marcaOpp.body ? ` — ${marcaOpp.body}` : ''}`
-      : `Fortalecemos o posicionamento e a comunicação de ${clientName} para gerar mais confiança e desejo.`,
-    growth: growthOpp
-      ? `${growthOpp.title}${growthOpp.body ? ` — ${growthOpp.body}` : ''}`
-      : `Estruturamos aquisição, dados e CRM para ${clientName} operar growth de forma mensurável.`,
-    vender: venderOpp
-      ? `${venderOpp.title}${venderOpp.body ? ` — ${venderOpp.body}` : ''}`
-      : shortItems.length
-        ? shortItems.slice(0, 2).join(' ')
-        : `Otimizamos a jornada de conversão de ${clientName} para transformar demanda em receita.`,
+  const pool = [];
+  const pushUnique = (s) => {
+    const t = String(s || '').replace(/\s+/g, ' ').trim();
+    if (!t || t.length < 8) return;
+    const n = normKey(t);
+    if (pool.some((p) => normKey(p) === n)) return;
+    pool.push(t);
   };
 
+  for (const phase of ['short', 'medium']) {
+    for (const item of report?.roadmap?.[phase]?.items || []) pushUnique(item);
+  }
+  for (const o of report?.opportunities || []) {
+    for (const f of o.fronts || []) pushUnique(f);
+  }
+
+  const analisar =
+    weakest?.label != null
+      ? clipAction(
+          `Priorizar o gargalo em ${weakest.label} (score ${Number(weakest.score) || 0}) e transformar o diagnóstico público em plano de crescimento para ${clientName}.`,
+        )
+      : clipAction(
+          `Mapear canais e gaps públicos de ${clientName} para priorizar o próximo salto de crescimento.`,
+        );
+
+  const marcaItem = takeExclusive(pool, [
+    'posicion',
+    'marca',
+    'autoridade',
+    'comunic',
+    'prova',
+    'depoiment',
+    'case',
+    'identidade',
+    'conteudo',
+    'conteúdo',
+    'editorial',
+  ]);
+  const growthItem = takeExclusive(pool, [
+    'crm',
+    'dado',
+    'analytics',
+    'ga4',
+    'midia',
+    'mídia',
+    'trafego',
+    'tráfego',
+    'aquisic',
+    'aquisiç',
+    'automac',
+    'automaç',
+    'campanha',
+    'seo',
+  ]);
+  const venderItem = takeExclusive(pool, [
+    'convers',
+    'funil',
+    'cta',
+    'lead',
+    'cadastro',
+    'landing',
+    'venda',
+    'jornada',
+    'formulario',
+    'formulário',
+    'parceiro',
+  ]);
+
+  const marca =
+    actionFromItem(marcaItem, 'Fortalecer') ||
+    clipAction(
+      `Estruturar posicionamento e prova social de ${clientName} para gerar mais confiança e desejo.`,
+    );
+  const growth =
+    actionFromItem(growthItem, 'Implantar') ||
+    actionFromItem(pool.shift(), 'Implantar') ||
+    clipAction(
+      `Implantar captura, mensuração e CRM para ${clientName} operar aquisição de forma previsível.`,
+    );
+  const vender =
+    actionFromItem(venderItem, 'Otimizar') ||
+    actionFromItem(pool.shift(), 'Otimizar') ||
+    clipAction(
+      `Otimizar CTAs e jornada comercial de ${clientName} para converter demanda em receita.`,
+    );
+
+  const heuristics = { analisar, marca, growth, vender };
+  const banned = [
+    report?.heroDiagnosis,
+    report?.consolidatedReading,
+    report?.perception?.text,
+  ]
+    .filter(Boolean)
+    .map(normKey);
+
   return MOVIMENTOS.map((mov) => {
-    const key = mov.title
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
+    const key = normKey(mov.title);
     const ai = byKey[key] || byKey[mov.number] || null;
-    const application = String(
-      ai?.application || heuristics[key] || mov.copy,
-    ).slice(0, 360);
-    return {
-      ...mov,
-      application,
-    };
+    const rawAi = String(ai?.application || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const aiNorm = normKey(rawAi);
+    const isBanned =
+      !rawAi ||
+      rawAi.length > METHOD_APP_MAX ||
+      banned.some(
+        (b) =>
+          b &&
+          (aiNorm === b ||
+            (b.length > 40 && aiNorm.includes(b.slice(0, 80))) ||
+            (aiNorm.length > 40 && b.includes(aiNorm))),
+      );
+
+    const application = clipAction(
+      isBanned ? heuristics[key] || mov.copy : rawAi,
+    );
+    return { ...mov, application };
   });
+}
+
+function overlapsHero(paragraph, heroDiagnosis) {
+  const p = normKey(paragraph);
+  const h = normKey(heroDiagnosis);
+  if (!p || !h) return false;
+  if (p === h) return true;
+  if (h.length >= 40 && p.includes(h.slice(0, Math.min(80, h.length)))) return true;
+  const words = h.split(/\s+/).filter((w) => w.length > 4);
+  if (words.length < 6) return false;
+  const hits = words.filter((w) => p.includes(w)).length;
+  return hits / words.length >= 0.55;
+}
+
+function filterClosingParagraphs(paragraphs, heroDiagnosis, clientName) {
+  const list = (Array.isArray(paragraphs) ? paragraphs : [])
+    .map((p) => String(p || '').trim())
+    .filter(Boolean)
+    .filter((p) => !overlapsHero(p, heroDiagnosis));
+  if (list.length) return list;
+  return [
+    `Queremos entender melhor os objetivos de crescimento da ${clientName} e onde uma estratégia de growth pode gerar impacto mais rápido.`,
+  ];
 }
 
 function scoreKind(score) {
   return Number(score) >= 65 ? 'strong' : 'opp';
-}
-
-function renderPerception(text, highlight) {
-  if (!text) return null;
-  if (!highlight || !text.includes(highlight)) {
-    return <blockquote>{text}</blockquote>;
-  }
-  const parts = text.split(highlight);
-  return (
-    <blockquote>
-      {parts.map((part, i) => (
-        <span key={i}>
-          {part}
-          {i < parts.length - 1 ? (
-            <span className="sa-lp__hl">{highlight}</span>
-          ) : null}
-        </span>
-      ))}
-    </blockquote>
-  );
 }
 
 /** Anéis concêntricos no hero — visão rápida da maturidade */
@@ -324,9 +423,11 @@ export default function StrategicAnalysisPublicPage() {
     roadmap.medium || { when: '3 – 9 MESES', title: 'Médio prazo', items: [] },
     roadmap.long || { when: '9 – 18 MESES', title: 'Longo prazo', items: [] },
   ];
-  const closingParagraphs = Array.isArray(report.closing?.paragraphs)
-    ? report.closing.paragraphs
-    : [];
+  const closingParagraphs = filterClosingParagraphs(
+    report.closing?.paragraphs,
+    report.heroDiagnosis,
+    clientName,
+  );
   const methodology = resolveMethodology(report, clientName);
 
   return (
@@ -509,23 +610,10 @@ export default function StrategicAnalysisPublicPage() {
         </div>
       </section>
 
-      <section className="sa-lp__section sa-lp__percep">
-        <div className="sa-lp__wrap">
-          <div className="sa-lp__sec-head">
-            <span className="sa-lp__sec-num">05</span>
-            <h2>Nossa percepção</h2>
-          </div>
-          {renderPerception(
-            report.perception?.text || '',
-            report.perception?.highlight || '',
-          )}
-        </div>
-      </section>
-
       <section className="sa-lp__section sa-lp__section--alt">
         <div className="sa-lp__wrap">
           <div className="sa-lp__sec-head">
-            <span className="sa-lp__sec-num">06</span>
+            <span className="sa-lp__sec-num">05</span>
             <h2>Como implementaríamos o BrandGrowth na {clientName}</h2>
           </div>
           <p className="sa-lp__method-intro">
@@ -573,12 +661,6 @@ export default function StrategicAnalysisPublicPage() {
           {closingParagraphs.map((p, i) => (
             <p key={i}>{p}</p>
           ))}
-          {!closingParagraphs.length ? (
-            <p>
-              Análise baseada em informações públicas. Queremos conversar sobre
-              o momento da {clientName} e aprofundar as oportunidades.
-            </p>
-          ) : null}
           <div className="sa-lp__contact-row">
             <a
               className="sa-lp__cta sa-lp__cta--closing"

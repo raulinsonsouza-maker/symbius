@@ -124,7 +124,7 @@ export function normalizeReport(raw, clientName) {
       .map((m) => ({
         key: asString(m?.key || m?.title, 40).toLowerCase(),
         title: asString(m?.title, 40),
-        application: asString(m?.application, 320),
+        application: asString(m?.application, 180),
       }))
       .filter((m) => m.application || m.title),
   };
