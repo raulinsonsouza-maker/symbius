@@ -391,6 +391,14 @@
   min-height: 420px;
 }
 
+.funil-builder__body.is-readonly {
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.funil-builder__body.is-readonly.is-insights-collapsed {
+  grid-template-columns: minmax(0, 1fr) 44px;
+}
+
 .funil-builder__body.is-palette-collapsed {
   grid-template-columns: 44px minmax(0, 1fr) 360px;
 }
@@ -1485,28 +1493,39 @@
 }
 
 @media (max-width: 1280px) {
-  .funil-builder__body:not(.is-insights-collapsed) {
+  .funil-builder__body:not(.is-insights-collapsed):not(.is-readonly) {
     grid-template-columns: 172px minmax(0, 1fr) 320px;
   }
 
-  .funil-builder__body:not(.is-insights-collapsed).is-palette-collapsed {
+  .funil-builder__body.is-readonly:not(.is-insights-collapsed) {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  .funil-builder__body:not(.is-insights-collapsed).is-palette-collapsed:not(.is-readonly) {
     grid-template-columns: 44px minmax(0, 1fr) 320px;
   }
 
-  .funil-builder__body.is-insights-collapsed:not(.is-palette-collapsed) {
+  .funil-builder__body.is-insights-collapsed:not(.is-palette-collapsed):not(.is-readonly) {
     grid-template-columns: 172px minmax(0, 1fr) 44px;
   }
 }
 
 @media (max-width: 1200px) {
-  .funil-builder__body:not(.is-insights-collapsed) {
+  .funil-builder__body:not(.is-insights-collapsed):not(.is-readonly) {
     grid-template-columns: 188px minmax(0, 1fr);
     height: auto;
     max-height: none;
     min-height: 480px;
   }
 
-  .funil-builder__body:not(.is-insights-collapsed).is-palette-collapsed {
+  .funil-builder__body.is-readonly:not(.is-insights-collapsed) {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    max-height: none;
+    min-height: 480px;
+  }
+
+  .funil-builder__body:not(.is-insights-collapsed).is-palette-collapsed:not(.is-readonly) {
     grid-template-columns: 44px minmax(0, 1fr);
   }
 
@@ -1516,11 +1535,11 @@
     height: auto;
   }
 
-  .funil-builder__body.is-insights-collapsed:not(.is-palette-collapsed) {
+  .funil-builder__body.is-insights-collapsed:not(.is-palette-collapsed):not(.is-readonly) {
     grid-template-columns: 188px minmax(0, 1fr) 44px;
   }
 
-  .funil-builder__body.is-palette-collapsed.is-insights-collapsed {
+  .funil-builder__body.is-palette-collapsed.is-insights-collapsed:not(.is-readonly) {
     grid-template-columns: 44px minmax(0, 1fr) 44px;
   }
 

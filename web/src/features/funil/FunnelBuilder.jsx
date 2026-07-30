@@ -169,6 +169,7 @@ function BuilderCanvas({ projectId, onProjectUpdated, readOnly = false }) {
   }, [fitView, loadProject, projectId, setSaveStatus, startProjectLoad]);
 
   useEffect(() => {
+    if (readOnly) return undefined;
     if (!hydrated || revision === 0) return undefined;
     const saveProjectId = currentProjectId;
     setSaveStatus('saving');
@@ -195,7 +196,7 @@ function BuilderCanvas({ projectId, onProjectUpdated, readOnly = false }) {
       }
     }, 750);
     return () => window.clearTimeout(timer);
-  }, [hydrated, currentProjectId, revision, setSaveStatus, onProjectUpdated]);
+  }, [hydrated, currentProjectId, revision, setSaveStatus, onProjectUpdated, readOnly]);
 
   const parsePalettePayload = (raw) => {
     if (!raw) return null;
@@ -346,7 +347,8 @@ function BuilderCanvas({ projectId, onProjectUpdated, readOnly = false }) {
       <div
         className={[
           'funil-builder__body',
-          paletteCollapsed ? 'is-palette-collapsed' : '',
+          readOnly ? 'is-readonly' : '',
+          !readOnly && paletteCollapsed ? 'is-palette-collapsed' : '',
           insightsCollapsed ? 'is-insights-collapsed' : '',
         ]
           .filter(Boolean)
