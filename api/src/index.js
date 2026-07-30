@@ -56,7 +56,7 @@ import {
   getStrategicAnalysis,
   createStrategicAnalysis,
   updateStrategicAnalysis,
-  regenerateStrategicAnalysis,
+  importStrategicAnalysis,
   deleteStrategicAnalysis,
   getPublicStrategicAnalysis,
 } from './routes.js';
@@ -127,7 +127,7 @@ app.get('/api/strategic-analyses', listStrategicAnalyses);
 app.post('/api/strategic-analyses', createStrategicAnalysis);
 app.get('/api/strategic-analyses/:id', getStrategicAnalysis);
 app.put('/api/strategic-analyses/:id', updateStrategicAnalysis);
-app.post('/api/strategic-analyses/:id/regenerate', regenerateStrategicAnalysis);
+app.post('/api/strategic-analyses/:id/import', importStrategicAnalysis);
 app.delete('/api/strategic-analyses/:id', deleteStrategicAnalysis);
 
 app.use((err, _req, res, _next) => {

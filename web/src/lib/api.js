@@ -154,6 +154,11 @@ export const api = {
     }),
   regenerateStrategicAnalysis: (id) =>
     request(`/strategic-analyses/${id}/regenerate`, { method: 'POST' }),
+  importStrategicAnalysis: (id, data) =>
+    request(`/strategic-analyses/${id}/import`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   deleteStrategicAnalysis: (id) =>
     request(`/strategic-analyses/${id}`, { method: 'DELETE' }),
   getPublicStrategicAnalysis: (slug) =>

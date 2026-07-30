@@ -288,7 +288,7 @@ CREATE TABLE IF NOT EXISTS strategic_analyses (
   website_url TEXT NOT NULL DEFAULT '',
   public_slug TEXT NOT NULL UNIQUE,
   status TEXT NOT NULL DEFAULT 'pending'
-    CHECK (status IN ('pending', 'generating', 'ready', 'error')),
+    CHECK (status IN ('pending', 'generating', 'awaiting_import', 'ready', 'error')),
   source_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
   report JSONB NOT NULL DEFAULT '{}'::jsonb,
   whatsapp_message TEXT NOT NULL DEFAULT '',

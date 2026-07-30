@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../../lib/api';
 
 const STATUS_LABEL = {
   pending: 'Pendente',
   generating: 'Gerando…',
+  awaiting_import: 'Aguardando GPT',
   ready: 'Pronta',
   error: 'Erro',
 };
@@ -33,15 +34,14 @@ export default function StrategicAnalysisList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [websiteUrl, setWebsiteUrl] = useState('');
   const [clientName, setClientName] = useState('');
+  const [channels, setChannels] = useState('');
   const [creating, setCreating] = useState(false);
   const [copiedId, setCopiedId] = useState('');
 
   const load = useCallback(async () => {
     try {
-      const list = await api.listStrategicAnalyses();
-      setItems(list);
+      setItems(await api.listStrategicAnalyses());
       setError('');
     } catch (err) {
       setError(err.message);
@@ -54,29 +54,18 @@ export default function StrategicAnalysisList() {
     load();
   }, [load]);
 
-  const hasGenerating = useMemo(
-    () => items.some((i) => i.status === 'generating' || i.status === 'pending'),
-    [items],
-  );
-
-  useEffect(() => {
-    if (!hasGenerating) return undefined;
-    const t = setInterval(load, 3000);
-    return () => clearInterval(t);
-  }, [hasGenerating, load]);
-
   async function handleCreate(e) {
     e.preventDefault();
-    if (!websiteUrl.trim()) return;
+    if (!channels.trim()) return;
     setCreating(true);
     setError('');
     try {
       const created = await api.createStrategicAnalysis({
-        websiteUrl: websiteUrl.trim(),
         clientName: clientName.trim(),
+        channels: channels.trim(),
       });
-      setWebsiteUrl('');
       setClientName('');
+      setChannels('');
       await load();
       navigate(`/admin/analise-estrategica/${created.id}`);
     } catch (err) {
@@ -97,7 +86,11 @@ export default function StrategicAnalysisList() {
   }
 
   async function handleDelete(item) {
-    if (!window.confirm(`Excluir a análise de ${item.clientName || item.websiteUrl}?`)) {
+    if (
+      !window.confirm(
+        `Excluir a análise de ${item.clientName || item.websiteUrl}?`,
+      )
+    ) {
       return;
     }
     try {
@@ -123,39 +116,41 @@ export default function StrategicAnalysisList() {
         <div className="admin-shell__intro">
           <h1 className="admin-shell__title">Análise Estratégica</h1>
           <p className="admin-shell__subtitle">
-            Cole o site do cliente. Geramos o diagnóstico e um link público para
-            enviar como isca comercial.
+            Informe os canais → copie o prompt → cole no GPT → cole a saída aqui
+            → LP pronta.
           </p>
         </div>
 
         <form className="sa-create" onSubmit={handleCreate}>
-          <div className="sa-create__fields">
+          <div className="sa-create__fields sa-create__fields--stack">
             <label className="sa-field">
-              <span>Site do cliente</span>
+              <span>Nome do cliente (opcional)</span>
               <input
                 type="text"
-                placeholder="https://cliente.com.br"
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                required
+                placeholder="Ex.: Sense Biologicus"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
               />
             </label>
             <label className="sa-field">
-              <span>Nome (opcional)</span>
-              <input
-                type="text"
-                placeholder="Detectado automaticamente se vazio"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
+              <span>Canais (um link por linha)</span>
+              <textarea
+                rows={4}
+                placeholder={
+                  'https://cliente.com.br\nhttps://instagram.com/cliente\nhttps://linkedin.com/company/cliente'
+                }
+                value={channels}
+                onChange={(e) => setChannels(e.target.value)}
+                required
               />
             </label>
           </div>
           <button
             type="submit"
             className="sa-btn sa-btn--primary"
-            disabled={creating || !websiteUrl.trim()}
+            disabled={creating || !channels.trim()}
           >
-            {creating ? 'Gerando…' : 'Gerar análise'}
+            {creating ? 'Preparando…' : 'Gerar prompt'}
           </button>
         </form>
 
@@ -171,7 +166,7 @@ export default function StrategicAnalysisList() {
               <thead>
                 <tr>
                   <th>Cliente</th>
-                  <th>Site</th>
+                  <th>Canais / site</th>
                   <th>Status</th>
                   <th>Atualizado</th>
                   <th>Ações</th>
@@ -184,17 +179,12 @@ export default function StrategicAnalysisList() {
                       <strong>{item.clientName || '—'}</strong>
                     </td>
                     <td className="sa-table__url">
-                      <a href={item.websiteUrl} target="_blank" rel="noreferrer">
-                        {item.websiteUrl}
-                      </a>
+                      {item.websiteUrl || '—'}
                     </td>
                     <td>
                       <span className={`sa-status sa-status--${item.status}`}>
                         {STATUS_LABEL[item.status] || item.status}
                       </span>
-                      {item.status === 'error' && item.errorMessage ? (
-                        <div className="sa-status__err">{item.errorMessage}</div>
-                      ) : null}
                     </td>
                     <td>{formatDate(item.updatedAt || item.createdAt)}</td>
                     <td className="sa-table__actions">
@@ -202,7 +192,7 @@ export default function StrategicAnalysisList() {
                         to={`/admin/analise-estrategica/${item.id}`}
                         className="sa-btn sa-btn--ghost"
                       >
-                        Editar
+                        {item.status === 'ready' ? 'Editar' : 'Continuar'}
                       </Link>
                       {item.status === 'ready' ? (
                         <>

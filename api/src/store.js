@@ -1568,7 +1568,7 @@ export async function initStore() {
         website_url TEXT NOT NULL DEFAULT '',
         public_slug TEXT NOT NULL UNIQUE,
         status TEXT NOT NULL DEFAULT 'pending'
-          CHECK (status IN ('pending', 'generating', 'ready', 'error')),
+          CHECK (status IN ('pending', 'generating', 'awaiting_import', 'ready', 'error')),
         source_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
         report JSONB NOT NULL DEFAULT '{}'::jsonb,
         whatsapp_message TEXT NOT NULL DEFAULT '',
@@ -1576,6 +1576,13 @@ export async function initStore() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
+    `);
+    await pool.query(`
+      ALTER TABLE strategic_analyses DROP CONSTRAINT IF EXISTS strategic_analyses_status_check
+    `);
+    await pool.query(`
+      ALTER TABLE strategic_analyses ADD CONSTRAINT strategic_analyses_status_check
+        CHECK (status IN ('pending', 'generating', 'awaiting_import', 'ready', 'error'))
     `);
     await pool.query(`
       CREATE INDEX IF NOT EXISTS strategic_analyses_created_at_idx

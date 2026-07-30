@@ -1047,17 +1047,17 @@ export async function getStrategicAnalysis(req, res) {
 
 export async function createStrategicAnalysis(req, res) {
   try {
-    const websiteUrl = String(req.body?.websiteUrl || '').trim();
     const clientName = String(req.body?.clientName || '').trim();
-    if (!websiteUrl) {
-      return res.status(400).json({ error: 'websiteUrl é obrigatório' });
-    }
-    const { createAndGenerateAnalysis } = await import(
+    const channels =
+      req.body?.channels ??
+      req.body?.websiteUrl ??
+      '';
+    const { createAndPrepareAnalysis } = await import(
       './strategicAnalysis/generate.js'
     );
-    const analysis = await createAndGenerateAnalysis({
-      websiteUrl,
+    const analysis = await createAndPrepareAnalysis({
       clientName,
+      channels,
     });
     return res.status(201).json(analysis);
   } catch (err) {
@@ -1086,12 +1086,16 @@ export async function updateStrategicAnalysis(req, res) {
   return res.json(updated);
 }
 
-export async function regenerateStrategicAnalysis(req, res) {
+export async function importStrategicAnalysis(req, res) {
   try {
-    const { regenerateAnalysis } = await import(
+    const rawText = String(req.body?.rawText || '').trim();
+    if (!rawText) {
+      return res.status(400).json({ error: 'Cole a saída do GPT' });
+    }
+    const { importAnalysisFromAiText } = await import(
       './strategicAnalysis/generate.js'
     );
-    const analysis = await regenerateAnalysis(req.params.id);
+    const analysis = await importAnalysisFromAiText(req.params.id, rawText);
     if (!analysis) {
       return res.status(404).json({ error: 'Análise não encontrada' });
     }
@@ -1100,7 +1104,7 @@ export async function regenerateStrategicAnalysis(req, res) {
     const status = err.status && err.status < 500 ? err.status : 400;
     return res
       .status(status)
-      .json({ error: err.message || 'Falha ao regenerar análise' });
+      .json({ error: err.message || 'Falha ao montar análise' });
   }
 }
 

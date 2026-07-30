@@ -35,6 +35,36 @@
   min-width: 260px;
 }
 
+.sa-create__fields--stack {
+  grid-template-columns: 1fr;
+}
+
+.sa-status--awaiting_import {
+  background: rgba(90, 140, 200, 0.22);
+  color: #b8d4f0;
+}
+
+.sa-flow__steps {
+  margin: 0 0 16px;
+  padding-left: 18px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.sa-flow__import {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sa-banner a {
+  color: #f3d5c7;
+}
+
 .sa-field {
   display: flex;
   flex-direction: column;

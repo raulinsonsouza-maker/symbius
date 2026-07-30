@@ -1,103 +1,98 @@
 import { getStore } from '../store.js';
-import { collectWebsite, normalizeUrl } from './collect.js';
-import { emptyReport, generateReportWithGemini } from './gemini.js';
+import { collectWebsite } from './collect.js';
 import { buildAnalysisSlug } from './slug.js';
+import { buildExportPrompt, parseChannels, pickWebsiteUrl } from './prompt.js';
+import {
+  emptyReport,
+  extractJsonFromAiText,
+  normalizeReport,
+} from './report.js';
 import { customAlphabet } from 'nanoid';
 
 const slugId = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 8);
-const running = new Set();
 
 function defaultWhatsappMessage(clientName) {
   const name = clientName || 'sua empresa';
   return `Olá! Vi a Análise Estratégica elaborada pela Symbius para ${name} e gostaria de conversar sobre as oportunidades.`;
 }
 
-export async function createAndGenerateAnalysis({ websiteUrl, clientName }) {
+export async function createAndPrepareAnalysis({ clientName, channels }) {
   const store = getStore();
-  const url = normalizeUrl(websiteUrl);
   const name = String(clientName || '').trim();
-  const analysis = await store.createStrategicAnalysis({
-    websiteUrl: url,
-    clientName: name,
-    publicSlug: buildAnalysisSlug(name, slugId()),
-    status: 'generating',
+  const channelList = parseChannels(channels);
+  if (channelList.length === 0) {
+    throw Object.assign(
+      new Error('Informe pelo menos um canal (site, Instagram, etc.)'),
+      { status: 400 },
+    );
+  }
+
+  const websiteUrl = pickWebsiteUrl(channelList);
+  let snapshot = null;
+  if (websiteUrl) {
+    try {
+      snapshot = await collectWebsite(websiteUrl);
+    } catch {
+      snapshot = null;
+    }
+  }
+
+  const resolvedName =
+    name ||
+    snapshot?.suggestedClientName ||
+    snapshot?.hostname ||
+    'Cliente';
+
+  const exportPrompt = buildExportPrompt({
+    clientName: resolvedName,
+    channels: channelList,
+    snapshot,
+  });
+
+  const sourceSnapshot = {
+    channels: channelList,
+    exportPrompt,
+    title: snapshot?.title || '',
+    description: snapshot?.description || '',
+    ogTitle: snapshot?.ogTitle || '',
+    ogSite: snapshot?.ogSite || '',
+    hostname: snapshot?.hostname || '',
+    socialLinks: snapshot?.socialLinks || {},
+    textPreview: String(snapshot?.text || '').slice(0, 4000),
+    collectedAt: snapshot?.collectedAt || null,
+    collectFailed: !snapshot,
+  };
+
+  return store.createStrategicAnalysis({
+    websiteUrl: snapshot?.websiteUrl || websiteUrl || channelList[0],
+    clientName: resolvedName,
+    publicSlug: buildAnalysisSlug(resolvedName, slugId()),
+    status: 'awaiting_import',
     report: emptyReport(),
-    sourceSnapshot: {},
-    whatsappMessage: name ? defaultWhatsappMessage(name) : '',
+    sourceSnapshot,
+    whatsappMessage: defaultWhatsappMessage(resolvedName),
+    errorMessage: '',
   });
-
-  queueMicrotask(() => {
-    runGeneration(analysis.id).catch((err) => {
-      console.error('strategic analysis generation failed', analysis.id, err);
-    });
-  });
-
-  return analysis;
 }
 
-export async function regenerateAnalysis(id) {
+export async function importAnalysisFromAiText(id, rawText) {
   const store = getStore();
   const existing = await store.getStrategicAnalysis(id);
   if (!existing) return null;
 
-  await store.updateStrategicAnalysis(id, {
-    status: 'generating',
-    errorMessage: '',
-  });
-
-  queueMicrotask(() => {
-    runGeneration(id).catch((err) => {
-      console.error('strategic analysis regenerate failed', id, err);
-    });
-  });
-
-  return store.getStrategicAnalysis(id);
-}
-
-async function runGeneration(id) {
-  if (running.has(id)) return;
-  running.add(id);
-  const store = getStore();
-
   try {
-    const current = await store.getStrategicAnalysis(id);
-    if (!current) return;
-
-    const snapshot = await collectWebsite(current.websiteUrl);
-    const clientName =
-      String(current.clientName || '').trim() ||
-      snapshot.suggestedClientName ||
-      snapshot.hostname ||
-      'Cliente';
-
-    const report = await generateReportWithGemini({ clientName, snapshot });
-    const whatsappMessage =
-      current.whatsappMessage || defaultWhatsappMessage(clientName);
-
-    await store.updateStrategicAnalysis(id, {
-      clientName,
-      websiteUrl: snapshot.websiteUrl,
-      sourceSnapshot: {
-        title: snapshot.title,
-        description: snapshot.description,
-        ogTitle: snapshot.ogTitle,
-        ogSite: snapshot.ogSite,
-        hostname: snapshot.hostname,
-        socialLinks: snapshot.socialLinks,
-        textPreview: String(snapshot.text || '').slice(0, 4000),
-        collectedAt: snapshot.collectedAt,
-      },
+    const parsed = extractJsonFromAiText(rawText);
+    const report = normalizeReport(parsed, existing.clientName);
+    return store.updateStrategicAnalysis(id, {
       report,
-      whatsappMessage,
       status: 'ready',
       errorMessage: '',
     });
   } catch (err) {
     await store.updateStrategicAnalysis(id, {
       status: 'error',
-      errorMessage: err.message || 'Falha na geração',
+      errorMessage: err.message || 'Falha ao importar saída do GPT',
     });
-  } finally {
-    running.delete(id);
+    throw err;
   }
 }
