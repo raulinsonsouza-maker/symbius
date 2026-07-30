@@ -18,6 +18,7 @@ import LeadContractTool from './pages/admin/comercial/LeadContractTool';
 import LeadClientTool from './pages/admin/comercial/LeadClientTool';
 import FinanceiroPage from './pages/admin/financeiro/FinanceiroPage';
 import OperacaoHub from './pages/admin/operacao/OperacaoHub';
+import OpsHomePage from './pages/admin/operacao/OpsHomePage';
 import OpsPlanejamentoPage from './pages/admin/operacao/OpsPlanejamentoPage';
 import OpsExecucaoPage from './pages/admin/operacao/OpsExecucaoPage';
 import LegacyOperacaoClientRedirect from './pages/admin/operacao/LegacyOperacaoClientRedirect';
@@ -108,7 +109,7 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<Navigate to="planejamento" replace />} />
+          <Route index element={<OpsHomePage />} />
           <Route path="planejamento" element={<OpsPlanejamentoPage />} />
           <Route path="execucao" element={<OpsExecucaoPage />} />
         </Route>

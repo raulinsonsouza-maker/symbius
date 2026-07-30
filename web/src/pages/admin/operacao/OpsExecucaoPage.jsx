@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   AlignLeft,
   Calendar,
@@ -189,7 +189,12 @@ export default function OpsExecucaoPage() {
 
   return (
     <div className="ops-exec">
-      {/* Toolbar */}
+      <div className="ops-exec__topbar">
+        <Link to="/admin/operacao" className="ops-exec__back">
+          ← Operação
+        </Link>
+        <strong className="ops-exec__title">Execução</strong>
+      </div>
       <div className="ops-exec__toolbar">
         <div className="ops-exec__role-chips">
           <span className="ops-exec__role-label">Papel:</span>

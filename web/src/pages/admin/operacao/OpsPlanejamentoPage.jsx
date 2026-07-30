@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Copy, PanelLeft, PanelLeftClose, Plus, Trash2 } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Copy, PanelLeft, PanelLeftClose, Plus, Search, Trash2 } from 'lucide-react';
 import { api } from '../../../lib/api';
 
 const FunnelBuilder = lazy(() =>
@@ -11,6 +11,15 @@ const FunnelBuilder = lazy(() =>
 
 function clientLabel(c) {
   return c?.tradeName || c?.legalName || 'Cliente sem nome';
+}
+
+function clientInitials(c) {
+  const name = clientLabel(c).trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase() || '?';
 }
 
 function formatDate(value) {
@@ -33,6 +42,7 @@ export default function OpsPlanejamentoPage() {
 
   const [clients, setClients] = useState([]);
   const [clientsLoading, setClientsLoading] = useState(true);
+  const [clientQuery, setClientQuery] = useState('');
 
   const [projects, setProjects] = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
@@ -53,13 +63,18 @@ export default function OpsPlanejamentoPage() {
   useEffect(() => {
     let active = true;
     setClientsLoading(true);
-    api.listClients()
+    api
+      .listClients()
       .then((list) => {
         if (active) setClients((list || []).filter((c) => !c.archivedAt));
       })
       .catch(() => {})
-      .finally(() => { if (active) setClientsLoading(false); });
-    return () => { active = false; };
+      .finally(() => {
+        if (active) setClientsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   async function loadProjects(cid) {
@@ -82,9 +97,29 @@ export default function OpsPlanejamentoPage() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(PROJECTS_COLLAPSE_KEY, projectsCollapsed ? '1' : '0');
-    } catch { /* ignore */ }
+      window.localStorage.setItem(
+        PROJECTS_COLLAPSE_KEY,
+        projectsCollapsed ? '1' : '0',
+      );
+    } catch {
+      /* ignore */
+    }
   }, [projectsCollapsed]);
+
+  const selectedClient = useMemo(
+    () => clients.find((c) => c.id === clientId) || null,
+    [clients, clientId],
+  );
+
+  const filteredClients = useMemo(() => {
+    const term = clientQuery.trim().toLowerCase();
+    if (!term) return clients;
+    return clients.filter((c) =>
+      [c.tradeName, c.legalName, c.email, c.city, c.state]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(term)),
+    );
+  }, [clients, clientQuery]);
 
   const selectedProject = useMemo(
     () => projects.find((p) => p.id === funilId) || null,
@@ -102,6 +137,11 @@ export default function OpsPlanejamentoPage() {
     const next = new URLSearchParams();
     if (cid) next.set('clientId', cid);
     setSearchParams(next, { replace: true });
+  }
+
+  function clearClient() {
+    setSearchParams(new URLSearchParams(), { replace: true });
+    setClientQuery('');
   }
 
   function selectProject(pid) {
@@ -122,7 +162,11 @@ export default function OpsPlanejamentoPage() {
     setProjects((cur) =>
       cur.map((p) =>
         p.id === patch.id
-          ? { ...p, name: patch.name ?? p.name, updatedAt: new Date().toISOString() }
+          ? {
+              ...p,
+              name: patch.name ?? p.name,
+              updatedAt: new Date().toISOString(),
+            }
           : p,
       ),
     );
@@ -132,11 +176,18 @@ export default function OpsPlanejamentoPage() {
     event?.preventDefault?.();
     if (!clientId || creating) return;
     const name = draftName.trim();
-    if (name.length < 2) { setError('Dê um nome ao funil.'); return; }
+    if (name.length < 2) {
+      setError('Dê um nome ao funil.');
+      return;
+    }
     setCreating(true);
     setError('');
     try {
-      const created = await api.createFunnelProject({ clientId, name, graph: EMPTY_GRAPH });
+      const created = await api.createFunnelProject({
+        clientId,
+        name,
+        graph: EMPTY_GRAPH,
+      });
       setComposerOpen(false);
       setDraftName('');
       await loadProjects(clientId);
@@ -181,26 +232,98 @@ export default function OpsPlanejamentoPage() {
 
   const readOnly = mode !== 'edit';
 
+  /* ── Picker de cliente ─────────────────────────────────────── */
+  if (!clientId) {
+    return (
+      <div className="admin-shell ops-shell">
+        <header className="admin-shell__header">
+          <div className="admin-shell__brand">
+            <img
+              src="/images/logotipo-branco.png"
+              alt="Symbius"
+              className="admin-shell__logo"
+            />
+            <span className="admin-shell__label">Planejamento</span>
+          </div>
+          <Link to="/admin/operacao" className="admin-shell__logout">
+            ← Operação
+          </Link>
+        </header>
+
+        <main className="admin-shell__main ops-picker-main">
+          <div className="admin-shell__intro">
+            <h1 className="admin-shell__title">Escolha o cliente</h1>
+            <p className="admin-shell__subtitle">
+              Selecione um cliente para abrir o planejamento do funil.
+            </p>
+          </div>
+
+          <div className="ops-client-picker">
+            <label className="ops-client-picker__search">
+              <Search size={16} strokeWidth={1.7} />
+              <input
+                type="search"
+                placeholder="Buscar cliente por nome…"
+                value={clientQuery}
+                onChange={(e) => setClientQuery(e.target.value)}
+                autoFocus
+              />
+            </label>
+
+            {clientsLoading ? (
+              <p className="ops-client-picker__hint">Carregando clientes…</p>
+            ) : !filteredClients.length ? (
+              <p className="ops-client-picker__hint">
+                {clients.length
+                  ? 'Nenhum cliente encontrado nesta busca.'
+                  : 'Nenhum cliente cadastrado.'}
+              </p>
+            ) : (
+              <ul className="ops-client-picker__list">
+                {filteredClients.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      className="ops-client-picker__item"
+                      onClick={() => selectClient(c.id)}
+                    >
+                      <span className="ops-client-picker__avatar" aria-hidden>
+                        {clientInitials(c)}
+                      </span>
+                      <span className="ops-client-picker__name">
+                        {clientLabel(c)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  /* ── Workspace do cliente ──────────────────────────────────── */
   return (
     <div className={`ops-planner ${selectedProject ? 'is-editing' : ''}`}>
-      {/* Toolbar superior */}
       <div className="ops-planner__toolbar">
-        <div className="ops-planner__selectors">
-          <select
-            className="ops-planner__select"
-            value={clientId}
-            onChange={(e) => selectClient(e.target.value)}
-            disabled={clientsLoading}
+        <div className="ops-planner__client-bar">
+          <Link to="/admin/operacao" className="ops-planner__back">
+            ← Operação
+          </Link>
+          <span className="ops-planner__client-name" title={clientLabel(selectedClient)}>
+            {selectedClient
+              ? clientLabel(selectedClient)
+              : 'Cliente'}
+          </span>
+          <button
+            type="button"
+            className="lp-btn lp-btn--ghost ops-planner__swap"
+            onClick={clearClient}
           >
-            <option value="">
-              {clientsLoading ? 'Carregando clientes…' : '— Escolha um cliente —'}
-            </option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {clientLabel(c)}
-              </option>
-            ))}
-          </select>
+            Trocar cliente
+          </button>
         </div>
 
         {selectedProject ? (
@@ -210,7 +333,11 @@ export default function OpsPlanejamentoPage() {
                 Editar funil
               </button>
             ) : (
-              <button type="button" className="lp-btn lp-btn--ghost" onClick={exitEdit}>
+              <button
+                type="button"
+                className="lp-btn lp-btn--ghost"
+                onClick={exitEdit}
+              >
                 Sair da edição
               </button>
             )}
@@ -218,152 +345,187 @@ export default function OpsPlanejamentoPage() {
         ) : null}
       </div>
 
-      {error ? <p className="prop-error" style={{ margin: '8px 20px 0' }}>{error}</p> : null}
+      {error ? (
+        <p className="prop-error" style={{ margin: '8px 20px 0' }}>
+          {error}
+        </p>
+      ) : null}
 
-      {!clientId ? (
-        <div className="ops-planner__empty">
-          <p>Escolha um cliente para analisar o funil.</p>
-        </div>
-      ) : (
-        <div className={`funil-page ops-planner__funil-page ${projectsCollapsed ? 'is-projects-collapsed' : ''}`}>
-          <aside className="funil-projects">
-            {projectsCollapsed ? (
-              <button
-                type="button"
-                className="funil-side__rail"
-                onClick={() => setProjectsCollapsed(false)}
-                title="Expandir projetos"
-              >
-                <PanelLeft size={15} strokeWidth={1.6} />
-                <span>Projetos</span>
-              </button>
-            ) : (
-              <>
-                <div className="funil-projects__head">
-                  <strong>Projetos</strong>
-                  <span>{projects.length}</span>
-                  <button
-                    type="button"
-                    className="ops-collapse-btn funil-projects__collapse"
-                    onClick={() => setProjectsCollapsed(true)}
-                    title="Minimizar projetos"
-                  >
-                    <PanelLeftClose size={15} strokeWidth={1.6} />
-                  </button>
+      <div
+        className={`funil-page ops-planner__funil-page ${
+          projectsCollapsed ? 'is-projects-collapsed' : ''
+        }`}
+      >
+        <aside className="funil-projects">
+          {projectsCollapsed ? (
+            <button
+              type="button"
+              className="funil-side__rail"
+              onClick={() => setProjectsCollapsed(false)}
+              title="Expandir projetos"
+            >
+              <PanelLeft size={15} strokeWidth={1.6} />
+              <span>Projetos</span>
+            </button>
+          ) : (
+            <>
+              <div className="funil-projects__head">
+                <strong>Projetos</strong>
+                <span>{projects.length}</span>
+                <button
+                  type="button"
+                  className="ops-collapse-btn funil-projects__collapse"
+                  onClick={() => setProjectsCollapsed(true)}
+                  title="Minimizar projetos"
+                >
+                  <PanelLeftClose size={15} strokeWidth={1.6} />
+                </button>
+              </div>
+
+              {projectsLoading ? (
+                <div className="cp-card">
+                  <p className="cp-muted" style={{ margin: 0 }}>
+                    Carregando…
+                  </p>
                 </div>
-
-                {projectsLoading ? (
-                  <div className="cp-card"><p className="cp-muted" style={{ margin: 0 }}>Carregando…</p></div>
-                ) : (
-                  <div className="funil-projects__list">
-                    {projects.map((project) => (
-                      <div
-                        key={project.id}
-                        className={`funil-projects__item ${project.id === funilId ? 'is-active' : ''}`}
-                      >
-                        <button
-                          type="button"
-                          className="funil-projects__item-main"
-                          onClick={() => selectProject(project.id)}
-                          title={project.name}
-                        >
-                          <strong>{project.name}</strong>
-                          <span>Atualizado {formatDate(project.updatedAt || project.createdAt)}</span>
-                        </button>
-                        <div className="funil-projects__item-actions">
-                          <button
-                            type="button"
-                            className="funil-projects__icon-btn"
-                            title="Duplicar funil"
-                            disabled={busyId === project.id}
-                            onClick={(e) => duplicateProject(project, e)}
-                          >
-                            <Copy size={13} strokeWidth={1.7} />
-                          </button>
-                          <button
-                            type="button"
-                            className="funil-projects__icon-btn funil-projects__icon-btn--danger"
-                            title="Excluir funil"
-                            disabled={busyId === project.id}
-                            onClick={(e) => deleteProject(project, e)}
-                          >
-                            <Trash2 size={13} strokeWidth={1.7} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-
-                    {composerOpen ? (
-                      <form className="funil-projects__composer" onSubmit={createProject}>
-                        <label className="funil-projects__composer-label">
-                          Nome do funil
-                          <input
-                            type="text"
-                            value={draftName}
-                            onChange={(e) => setDraftName(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Escape') setComposerOpen(false); }}
-                            placeholder="Ex.: Google Ads"
-                            maxLength={80}
-                            disabled={creating}
-                            autoFocus
-                          />
-                        </label>
-                        <div className="funil-projects__composer-actions">
-                          <button type="button" className="lp-btn lp-btn--ghost" onClick={() => setComposerOpen(false)} disabled={creating}>Cancelar</button>
-                          <button type="submit" className="lp-btn" disabled={creating || draftName.trim().length < 2}>
-                            {creating ? 'Criando…' : 'Criar funil'}
-                          </button>
-                        </div>
-                      </form>
-                    ) : (
+              ) : (
+                <div className="funil-projects__list">
+                  {projects.map((project) => (
+                    <div
+                      key={project.id}
+                      className={`funil-projects__item ${
+                        project.id === funilId ? 'is-active' : ''
+                      }`}
+                    >
                       <button
                         type="button"
-                        className="funil-projects__add"
-                        onClick={() => { setProjectsCollapsed(false); setDraftName(''); setComposerOpen(true); setError(''); }}
+                        className="funil-projects__item-main"
+                        onClick={() => selectProject(project.id)}
+                        title={project.name}
                       >
-                        <Plus size={18} strokeWidth={1.8} />
-                        <span>Novo funil</span>
+                        <strong>{project.name}</strong>
+                        <span>
+                          Atualizado{' '}
+                          {formatDate(project.updatedAt || project.createdAt)}
+                        </span>
                       </button>
-                    )}
+                      <div className="funil-projects__item-actions">
+                        <button
+                          type="button"
+                          className="funil-projects__icon-btn"
+                          title="Duplicar funil"
+                          disabled={busyId === project.id}
+                          onClick={(e) => duplicateProject(project, e)}
+                        >
+                          <Copy size={13} strokeWidth={1.7} />
+                        </button>
+                        <button
+                          type="button"
+                          className="funil-projects__icon-btn funil-projects__icon-btn--danger"
+                          title="Excluir funil"
+                          disabled={busyId === project.id}
+                          onClick={(e) => deleteProject(project, e)}
+                        >
+                          <Trash2 size={13} strokeWidth={1.7} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
 
-                    {!projects.length && !composerOpen ? (
-                      <p className="funil-projects__hint">
-                        Separe canais ou campanhas em funis diferentes para comparar cenários.
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-              </>
-            )}
-          </aside>
+                  {composerOpen ? (
+                    <form
+                      className="funil-projects__composer"
+                      onSubmit={createProject}
+                    >
+                      <label className="funil-projects__composer-label">
+                        Nome do funil
+                        <input
+                          type="text"
+                          value={draftName}
+                          onChange={(e) => setDraftName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') setComposerOpen(false);
+                          }}
+                          placeholder="Ex.: Google Ads"
+                          maxLength={80}
+                          disabled={creating}
+                          autoFocus
+                        />
+                      </label>
+                      <div className="funil-projects__composer-actions">
+                        <button
+                          type="button"
+                          className="lp-btn lp-btn--ghost"
+                          onClick={() => setComposerOpen(false)}
+                          disabled={creating}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className="lp-btn"
+                          disabled={creating || draftName.trim().length < 2}
+                        >
+                          {creating ? 'Criando…' : 'Criar funil'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      className="funil-projects__add"
+                      onClick={() => {
+                        setProjectsCollapsed(false);
+                        setDraftName('');
+                        setComposerOpen(true);
+                        setError('');
+                      }}
+                    >
+                      <Plus size={18} strokeWidth={1.8} />
+                      <span>Novo funil</span>
+                    </button>
+                  )}
 
-          <div className="funil-workspace">
-            {selectedProject ? (
-              <Suspense
-                fallback={
-                  <div className="cp-card">
-                    <p className="cp-muted" style={{ margin: 0 }}>Carregando funil…</p>
-                  </div>
-                }
-              >
-                <FunnelBuilder
-                  projectId={selectedProject.id}
-                  onProjectUpdated={handleProjectUpdated}
-                  readOnly={readOnly}
-                />
-              </Suspense>
-            ) : (
-              <div className="cp-empty funil-workspace__empty">
-                <p className="cp-muted" style={{ margin: 0 }}>
-                  {projects.length
-                    ? 'Selecione um funil na lista ao lado para visualizar.'
-                    : 'Use Novo funil para criar o primeiro funil deste cliente.'}
-                </p>
-              </div>
-            )}
-          </div>
+                  {!projects.length && !composerOpen ? (
+                    <p className="funil-projects__hint">
+                      Separe canais ou campanhas em funis diferentes para
+                      comparar cenários.
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            </>
+          )}
+        </aside>
+
+        <div className="funil-workspace">
+          {selectedProject ? (
+            <Suspense
+              fallback={
+                <div className="cp-card">
+                  <p className="cp-muted" style={{ margin: 0 }}>
+                    Carregando funil…
+                  </p>
+                </div>
+              }
+            >
+              <FunnelBuilder
+                projectId={selectedProject.id}
+                onProjectUpdated={handleProjectUpdated}
+                readOnly={readOnly}
+              />
+            </Suspense>
+          ) : (
+            <div className="cp-empty funil-workspace__empty">
+              <p className="cp-muted" style={{ margin: 0 }}>
+                {projects.length
+                  ? 'Selecione um funil na lista ao lado para visualizar.'
+                  : 'Use Novo funil para criar o primeiro funil deste cliente.'}
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

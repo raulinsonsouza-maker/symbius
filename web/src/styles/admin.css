@@ -509,9 +509,116 @@
   }
 }
 
-/* ─── Operação Hub ────────────────────────────────────────────── */
+/* ─── Operação: picker de cliente (Planejamento) ─────────────── */
 
-.ops-hub {
+.ops-picker-main {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  max-width: 560px;
+}
+
+.ops-client-picker {
+  background: var(--symbius-surface-elevated, #1a1a1a);
+  border: 1px solid var(--symbius-border);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: min(62vh, 520px);
+}
+
+.ops-client-picker__search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--symbius-border);
+  flex-shrink: 0;
+  color: var(--symbius-muted);
+}
+
+.ops-client-picker__search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--symbius-white);
+  font-family: var(--symbius-font);
+  font-size: .9rem;
+}
+
+.ops-client-picker__search input::placeholder {
+  color: var(--symbius-muted);
+}
+
+.ops-client-picker__hint {
+  margin: 0;
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--symbius-muted);
+  font-size: .88rem;
+}
+
+.ops-client-picker__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.ops-client-picker__item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 18px;
+  border: none;
+  border-bottom: 1px solid var(--symbius-border);
+  background: transparent;
+  color: var(--symbius-white);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--symbius-font);
+  transition: background .12s;
+}
+
+.ops-client-picker__item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ops-client-picker__list li:last-child .ops-client-picker__item {
+  border-bottom: none;
+}
+
+.ops-client-picker__avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  background: #2a4a7a;
+  color: #e8f0ff;
+}
+
+.ops-client-picker__name {
+  font-size: .92rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  line-height: 1.25;
+}
+
+/* ─── Planejamento workspace ──────────────────────────────────── */
+
+.ops-planner {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -521,116 +628,50 @@
   overflow: hidden;
 }
 
-.ops-hub__header {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 0 28px;
-  height: 52px;
-  background: var(--symbius-surface);
-  border-bottom: 1px solid var(--symbius-border);
-  flex-shrink: 0;
-}
-
-.ops-hub__brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.ops-hub__logo {
-  height: 22px;
-  width: auto;
-  opacity: .9;
-}
-
-.ops-hub__name {
-  font-size: .78rem;
-  font-weight: 600;
-  letter-spacing: .04em;
-  color: var(--symbius-muted);
-  text-transform: uppercase;
-}
-
-.ops-hub__tabs {
-  display: flex;
-  gap: 2px;
-  align-items: center;
-  height: 100%;
-}
-
-.ops-hub__tab {
-  display: flex;
-  align-items: center;
-  height: 100%;
-  padding: 0 18px;
-  font-size: .8rem;
-  font-weight: 500;
-  color: var(--symbius-muted);
-  border-bottom: 2px solid transparent;
-  text-decoration: none;
-  transition: color .15s, border-color .15s;
-  white-space: nowrap;
-}
-
-.ops-hub__tab:hover {
-  color: var(--symbius-white);
-}
-
-.ops-hub__tab.is-active {
-  color: var(--symbius-white);
-  border-bottom-color: var(--symbius-accent, #e53);
-}
-
-.ops-hub__body {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ─── Planejamento page ───────────────────────────────────────── */
-
-.ops-planner {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-}
-
 .ops-planner__toolbar {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 20px;
   border-bottom: 1px solid var(--symbius-border);
+  background: var(--symbius-surface);
   flex-shrink: 0;
 }
 
-.ops-planner__selectors {
+.ops-planner__client-bar {
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
 }
 
-.ops-planner__select {
-  background: var(--symbius-surface-elevated);
-  border: 1px solid var(--symbius-border);
-  border-radius: 8px;
+.ops-planner__back,
+.ops-exec__back {
+  color: var(--symbius-muted);
+  text-decoration: none;
+  font-size: .8rem;
+  white-space: nowrap;
+  transition: color .15s;
+}
+
+.ops-planner__back:hover,
+.ops-exec__back:hover {
   color: var(--symbius-white);
-  font-family: var(--symbius-font);
-  font-size: .82rem;
-  padding: 6px 10px;
-  min-width: 200px;
-  cursor: pointer;
-  transition: border-color .15s;
 }
 
-.ops-planner__select:focus {
-  outline: none;
-  border-color: var(--symbius-accent, #e53);
+.ops-planner__client-name {
+  font-size: .95rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ops-planner__swap {
+  flex-shrink: 0;
+  font-size: .78rem !important;
+  padding: 5px 10px !important;
 }
 
 .ops-planner__mode-actions {
@@ -639,22 +680,11 @@
   gap: 8px;
 }
 
-.ops-planner__empty {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ops-planner__empty p {
-  color: var(--symbius-muted);
-  font-size: .9rem;
-}
-
 .ops-planner__funil-page {
   flex: 1;
   min-height: 0;
   height: 100%;
+  padding: 10px 12px;
 }
 
 .ops-planner__funil-page.funil-page {
@@ -677,8 +707,26 @@
 .ops-exec {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 100vh;
+  background: var(--symbius-black);
+  color: var(--symbius-white);
+  font-family: var(--symbius-font);
   overflow: hidden;
+}
+
+.ops-exec__topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--symbius-border);
+  background: var(--symbius-surface);
+  flex-shrink: 0;
+}
+
+.ops-exec__title {
+  font-size: .9rem;
+  font-weight: 600;
 }
 
 .ops-exec__toolbar {
@@ -768,19 +816,19 @@
 }
 
 @media (max-width: 600px) {
-  .ops-hub__header {
-    padding: 0 16px;
-    height: 48px;
-  }
-
-  .ops-hub__tab {
-    padding: 0 12px;
-    font-size: .76rem;
+  .ops-client-picker {
+    max-height: min(70vh, 480px);
   }
 
   .ops-planner__toolbar,
-  .ops-exec__toolbar {
+  .ops-exec__toolbar,
+  .ops-exec__topbar {
     padding: 8px 14px;
+  }
+
+  .ops-planner__client-bar {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .ops-exec__role-chips {
