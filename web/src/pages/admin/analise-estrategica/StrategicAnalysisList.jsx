@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../../lib/api';
 
@@ -29,13 +29,26 @@ function publicUrl(slug) {
   return `${window.location.origin}/a/${slug}`;
 }
 
+function matchesQuery(item, query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const hay = [
+    item.clientName,
+    item.websiteUrl,
+    item.publicSlug,
+    STATUS_LABEL[item.status] || item.status,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return hay.includes(q);
+}
+
 export default function StrategicAnalysisList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [channels, setChannels] = useState('');
-  const [creating, setCreating] = useState(false);
+  const [query, setQuery] = useState('');
   const [copiedId, setCopiedId] = useState('');
 
   const load = useCallback(async () => {
@@ -53,25 +66,10 @@ export default function StrategicAnalysisList() {
     load();
   }, [load]);
 
-  async function handleCreate(e) {
-    e.preventDefault();
-    if (!channels.trim()) return;
-    setCreating(true);
-    setError('');
-    try {
-      await api.createStrategicAnalysis({
-        clientName: clientName.trim(),
-        channels: channels.trim(),
-      });
-      setClientName('');
-      setChannels('');
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setCreating(false);
-    }
-  }
+  const filtered = useMemo(
+    () => items.filter((item) => matchesQuery(item, query)),
+    [items, query],
+  );
 
   async function copyLink(item) {
     try {
@@ -108,49 +106,39 @@ export default function StrategicAnalysisList() {
           </Link>
           <span className="admin-shell__label">Análise Estratégica</span>
         </div>
+        <Link
+          to="/admin/analise-estrategica/nova"
+          className="sa-btn sa-btn--primary"
+        >
+          Nova análise
+        </Link>
       </header>
 
       <main className="admin-shell__main sa-admin__main">
         <div className="admin-shell__intro">
           <h1 className="admin-shell__title">Análise Estratégica</h1>
           <p className="admin-shell__subtitle">
-            Informe os canais → copie o prompt → cole no GPT → cole a saída aqui
-            → LP pronta.
+            Clientes com análise gerada ou em andamento. Busque e abra a LP, ou
+            continue o fluxo GPT.
           </p>
         </div>
 
-        <form className="sa-create" onSubmit={handleCreate}>
-          <div className="sa-create__fields sa-create__fields--stack">
-            <label className="sa-field">
-              <span>Nome do cliente (opcional)</span>
-              <input
-                type="text"
-                placeholder="Ex.: Sense Biologicus"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-              />
-            </label>
-            <label className="sa-field">
-              <span>Canais (um link por linha)</span>
-              <textarea
-                rows={4}
-                placeholder={
-                  'https://cliente.com.br\nhttps://instagram.com/cliente\nhttps://linkedin.com/company/cliente'
-                }
-                value={channels}
-                onChange={(e) => setChannels(e.target.value)}
-                required
-              />
-            </label>
-          </div>
-          <button
-            type="submit"
-            className="sa-btn sa-btn--primary"
-            disabled={creating || !channels.trim()}
-          >
-            {creating ? 'Preparando…' : 'Gerar prompt'}
-          </button>
-        </form>
+        <div className="sa-toolbar">
+          <label className="sa-field sa-toolbar__search">
+            <span className="sa-visually-hidden">Pesquisar</span>
+            <input
+              type="search"
+              placeholder="Pesquisar cliente, site ou slug…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <p className="sa-toolbar__count">
+            {loading
+              ? 'Carregando…'
+              : `${filtered.length} de ${items.length}`}
+          </p>
+        </div>
 
         {error ? <p className="sa-error">{error}</p> : null}
 
@@ -158,7 +146,12 @@ export default function StrategicAnalysisList() {
           {loading ? (
             <p className="sa-muted">Carregando…</p>
           ) : items.length === 0 ? (
-            <p className="sa-muted">Nenhuma análise ainda.</p>
+            <p className="sa-muted">
+              Nenhuma análise ainda.{' '}
+              <Link to="/admin/analise-estrategica/nova">Criar a primeira</Link>
+            </p>
+          ) : filtered.length === 0 ? (
+            <p className="sa-muted">Nenhum resultado para “{query.trim()}”.</p>
           ) : (
             <table className="sa-table">
               <thead>
@@ -171,7 +164,7 @@ export default function StrategicAnalysisList() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
+                {filtered.map((item) => (
                   <tr key={item.id}>
                     <td>
                       <strong>{item.clientName || '—'}</strong>

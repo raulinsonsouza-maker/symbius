@@ -23,6 +23,7 @@ import OpsPlanejamentoPage from './pages/admin/operacao/OpsPlanejamentoPage';
 import OpsExecucaoPage from './pages/admin/operacao/OpsExecucaoPage';
 import LegacyOperacaoClientRedirect from './pages/admin/operacao/LegacyOperacaoClientRedirect';
 import StrategicAnalysisList from './pages/admin/analise-estrategica/StrategicAnalysisList';
+import StrategicAnalysisCreate from './pages/admin/analise-estrategica/StrategicAnalysisCreate';
 import StrategicAnalysisEditor from './pages/admin/analise-estrategica/StrategicAnalysisEditor';
 import StrategicAnalysisPublicPage from './pages/StrategicAnalysisPublicPage';
 
@@ -139,6 +140,14 @@ export default function App() {
           element={
             <RequireAuth>
               <StrategicAnalysisList />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/analise-estrategica/nova"
+          element={
+            <RequireAuth>
+              <StrategicAnalysisCreate />
             </RequireAuth>
           }
         />
