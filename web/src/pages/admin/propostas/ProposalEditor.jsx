@@ -687,14 +687,22 @@ export default function ProposalEditor() {
 
       {settingsOpen && (
         <SettingsModal
+          onSaved={(s, list) => {
+            setSettings(s);
+            if (Array.isArray(list)) setServices(list);
+          }}
           onClose={async () => {
             setSettingsOpen(false);
-            const [s, list] = await Promise.all([
-              api.getSettings(),
-              api.listServices(),
-            ]);
-            setSettings(s);
-            setServices(list);
+            try {
+              const [s, list] = await Promise.all([
+                api.getSettings(),
+                api.listServices(),
+              ]);
+              setSettings(s);
+              setServices(list);
+            } catch {
+              /* ignore refresh errors on close */
+            }
           }}
         />
       )}

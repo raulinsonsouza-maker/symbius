@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 
-export default function SettingsModal({ onClose }) {
+export default function SettingsModal({ onClose, onSaved }) {
   const [settings, setSettings] = useState(null);
   const [services, setServices] = useState([]);
   const [newName, setNewName] = useState('');
   const [newBlock, setNewBlock] = useState('setup');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
   const [tab, setTab] = useState('empresa');
 
   useEffect(() => {
@@ -21,12 +22,33 @@ export default function SettingsModal({ onClose }) {
 
   async function saveSettings(event) {
     event.preventDefault();
+    if (!settings || saving) return;
     setSaving(true);
     setError('');
+    setOk('');
     try {
-      setSettings(await api.updateSettings(settings));
+      const payload = {
+        companyName: settings.companyName || '',
+        contactEmail: settings.contactEmail || '',
+        contactPhone: settings.contactPhone || '',
+        contactWebsite: settings.contactWebsite || '',
+        logoUrl: settings.logoUrl || '',
+        defaultResponsible: settings.defaultResponsible || '',
+        whatsappNumber: settings.whatsappNumber || '',
+        legalName: settings.legalName || '',
+        legalDocument: settings.legalDocument || '',
+        legalAddress: settings.legalAddress || '',
+        legalRepName: settings.legalRepName || '',
+        legalRepRole: settings.legalRepRole || '',
+      };
+      const updated = await api.updateSettings(payload);
+      setSettings(updated);
+      setOk('Configurações salvas.');
+      if (typeof onSaved === 'function') {
+        await onSaved(updated, services);
+      }
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Falha ao salvar configurações');
     } finally {
       setSaving(false);
     }
@@ -42,6 +64,7 @@ export default function SettingsModal({ onClose }) {
       });
       setServices((prev) => [...prev, created]);
       setNewName('');
+      setError('');
     } catch (err) {
       setError(err.message);
     }
@@ -103,14 +126,15 @@ export default function SettingsModal({ onClose }) {
           </button>
         </div>
 
-        {error && <p className="prop-error">{error}</p>}
+        {error ? <p className="prop-error">{error}</p> : null}
+        {ok ? <p className="prop-ok">{ok}</p> : null}
 
         {tab === 'empresa' ? (
           <form className="prop-form-grid" onSubmit={saveSettings}>
             <label>
               Nome
               <input
-                value={settings.companyName}
+                value={settings.companyName || ''}
                 onChange={(e) =>
                   setSettings({ ...settings, companyName: e.target.value })
                 }
@@ -119,7 +143,7 @@ export default function SettingsModal({ onClose }) {
             <label>
               E-mail
               <input
-                value={settings.contactEmail}
+                value={settings.contactEmail || ''}
                 onChange={(e) =>
                   setSettings({ ...settings, contactEmail: e.target.value })
                 }
@@ -128,7 +152,7 @@ export default function SettingsModal({ onClose }) {
             <label>
               Telefone
               <input
-                value={settings.contactPhone}
+                value={settings.contactPhone || ''}
                 onChange={(e) =>
                   setSettings({ ...settings, contactPhone: e.target.value })
                 }
@@ -137,7 +161,7 @@ export default function SettingsModal({ onClose }) {
             <label>
               Site
               <input
-                value={settings.contactWebsite}
+                value={settings.contactWebsite || ''}
                 onChange={(e) =>
                   setSettings({ ...settings, contactWebsite: e.target.value })
                 }
@@ -146,7 +170,7 @@ export default function SettingsModal({ onClose }) {
             <label>
               WhatsApp (DDI+DDD+número)
               <input
-                value={settings.whatsappNumber}
+                value={settings.whatsappNumber || ''}
                 onChange={(e) =>
                   setSettings({ ...settings, whatsappNumber: e.target.value })
                 }
@@ -155,7 +179,7 @@ export default function SettingsModal({ onClose }) {
             <label>
               Responsável padrão
               <input
-                value={settings.defaultResponsible}
+                value={settings.defaultResponsible || ''}
                 onChange={(e) =>
                   setSettings({
                     ...settings,
@@ -167,7 +191,7 @@ export default function SettingsModal({ onClose }) {
             <label>
               Logo (URL)
               <input
-                value={settings.logoUrl}
+                value={settings.logoUrl || ''}
                 onChange={(e) =>
                   setSettings({ ...settings, logoUrl: e.target.value })
                 }
@@ -220,9 +244,26 @@ export default function SettingsModal({ onClose }) {
                 }
               />
             </label>
-            <button type="submit" className="lp-btn lp-btn--solid" disabled={saving}>
-              {saving ? 'Salvando…' : 'Salvar configurações'}
-            </button>
+
+            {error ? <p className="prop-error">{error}</p> : null}
+            {ok ? <p className="prop-ok">{ok}</p> : null}
+
+            <div className="prop-modal__actions">
+              <button
+                type="submit"
+                className="lp-btn lp-btn--solid"
+                disabled={saving}
+              >
+                {saving ? 'Salvando…' : ok ? 'Salvo ✓' : 'Salvar configurações'}
+              </button>
+              <button
+                type="button"
+                className="lp-btn lp-btn--ghost"
+                onClick={onClose}
+              >
+                Fechar
+              </button>
+            </div>
           </form>
         ) : (
           <div className="prop-services-admin">

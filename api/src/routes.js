@@ -45,8 +45,13 @@ export async function getSettings(_req, res) {
 }
 
 export async function updateSettings(req, res) {
-  const settings = await getStore().updateSettings(req.body || {});
-  return res.json(settings);
+  try {
+    const settings = await getStore().updateSettings(req.body || {});
+    return res.json(settings);
+  } catch (err) {
+    const status = err.status && err.status < 500 ? err.status : 500;
+    return res.status(status).json({ error: err.message || 'Falha ao salvar' });
+  }
 }
 
 export async function listServices(_req, res) {

@@ -310,20 +310,25 @@ const pgStore = {
         updated_at = NOW()
        WHERE id = 1 RETURNING *`,
       [
-        b.companyName,
-        b.contactEmail,
-        b.contactPhone,
-        b.contactWebsite,
-        b.logoUrl,
-        b.defaultResponsible,
-        b.whatsappNumber,
-        b.legalName,
-        b.legalDocument,
-        b.legalAddress,
-        b.legalRepName,
-        b.legalRepRole,
+        b.companyName ?? null,
+        b.contactEmail ?? null,
+        b.contactPhone ?? null,
+        b.contactWebsite ?? null,
+        b.logoUrl ?? null,
+        b.defaultResponsible ?? null,
+        b.whatsappNumber ?? null,
+        b.legalName ?? null,
+        b.legalDocument ?? null,
+        b.legalAddress ?? null,
+        b.legalRepName ?? null,
+        b.legalRepRole ?? null,
       ],
     );
+    if (!rows[0]) {
+      throw Object.assign(new Error('Configurações não encontradas'), {
+        status: 404,
+      });
+    }
     return mapSettings(rows[0]);
   },
 
