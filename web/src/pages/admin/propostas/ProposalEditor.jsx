@@ -382,7 +382,7 @@ export default function ProposalEditor() {
               <section className="prop-card">
                 <h3>Escopo (bullets)</h3>
                 {(proposal.scopeItems || []).map((item, index) => (
-                  <div key={`${item}-${index}`} className="prop-inline-form">
+                  <div key={`scope-${index}`} className="prop-inline-form">
                     <input
                       value={item}
                       onChange={(e) => {
@@ -579,7 +579,7 @@ export default function ProposalEditor() {
           <section className="prop-card">
             <h3>Observações</h3>
             {(proposal.observations || []).map((item, index) => (
-              <div key={`${item}-${index}`} className="prop-inline-form">
+              <div key={`obs-${index}`} className="prop-inline-form">
                 <input
                   value={item}
                   onChange={(e) => {
