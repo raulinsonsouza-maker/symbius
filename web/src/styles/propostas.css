@@ -772,6 +772,7 @@
 /* ── Landing pública da proposta (identidade Symbius) ── */
 .prop-lp {
   --prop-lp-width: 960px;
+  --prop-lp-accent: #d4ff4f;
   min-height: 100vh;
   background: var(--symbius-black);
   background-image: radial-gradient(
@@ -958,7 +959,8 @@
 .prop-lp__scope-num {
   font-size: 0.75rem;
   letter-spacing: 0.18em;
-  color: rgba(212, 255, 79, 0.85);
+  color: var(--prop-lp-accent);
+  opacity: 0.9;
   line-height: 1.6;
   padding-top: 0.15em;
 }
@@ -1056,6 +1058,7 @@
   font-size: clamp(1.8rem, 3.6vw, 2.6rem);
   font-weight: 300;
   letter-spacing: -0.03em;
+  color: var(--prop-lp-accent);
 }
 
 .prop-lp__traffic {
@@ -1079,6 +1082,7 @@
   font-weight: 300;
   letter-spacing: -0.02em;
   white-space: nowrap;
+  color: var(--prop-lp-accent);
 }
 
 .prop-lp__totals {
@@ -1103,6 +1107,7 @@
   font-size: clamp(1.3rem, 2.6vw, 1.8rem);
   font-weight: 300;
   letter-spacing: -0.02em;
+  color: var(--prop-lp-accent);
 }
 
 .prop-lp__obs {
