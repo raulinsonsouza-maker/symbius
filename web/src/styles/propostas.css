@@ -899,28 +899,89 @@
   border-top: 1px solid var(--symbius-border);
 }
 
+.prop-lp__section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: clamp(20px, 3vh, 28px);
+}
+
+.prop-lp__section-head .prop-lp__label {
+  margin: 0;
+}
+
+.prop-lp__section-count {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--symbius-muted);
+}
+
 .prop-lp__scope {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: clamp(16px, 3vw, 28px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--symbius-border);
 }
 
-.prop-lp__scope li {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  font-size: clamp(1.05rem, 2vw, 1.3rem);
+.prop-lp__scope-item {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: clamp(18px, 2.4vh, 24px) clamp(12px, 1.5vw, 20px)
+    clamp(18px, 2.4vh, 24px) 0;
+  border-bottom: 1px solid var(--symbius-border);
+  min-height: 4.5rem;
+}
+
+.prop-lp__scope-item:nth-child(odd) {
+  padding-right: clamp(16px, 2vw, 28px);
+  border-right: 1px solid var(--symbius-border);
+}
+
+.prop-lp__scope-item:nth-child(even) {
+  padding-left: clamp(16px, 2vw, 28px);
+}
+
+.prop-lp__scope-item:nth-child(odd):last-child {
+  grid-column: 1 / -1;
+  border-right: none;
+  padding-right: 0;
+}
+
+.prop-lp__scope-num {
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  color: rgba(212, 255, 79, 0.85);
+  line-height: 1.6;
+  padding-top: 0.15em;
+}
+
+.prop-lp__scope-text {
+  font-size: clamp(1.02rem, 1.8vw, 1.22rem);
   font-weight: 300;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+  color: var(--symbius-white);
 }
 
-.prop-lp__num {
-  font-size: 0.78rem;
-  letter-spacing: 0.2em;
-  color: var(--symbius-muted);
+@media (max-width: 720px) {
+  .prop-lp__scope {
+    grid-template-columns: 1fr;
+  }
+
+  .prop-lp__scope-item:nth-child(odd),
+  .prop-lp__scope-item:nth-child(even) {
+    padding-left: 0;
+    padding-right: 0;
+    border-right: none;
+  }
 }
 
 .prop-lp__blocks {

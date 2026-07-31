@@ -169,18 +169,24 @@ export default function ProposalPublicPage() {
         )}
 
         {scopeItems.length > 0 && (
-          <section className="prop-lp__section">
-            <p className="prop-lp__label">Escopo</p>
-            <ul className="prop-lp__scope">
+          <section className="prop-lp__section prop-lp__section--scope">
+            <div className="prop-lp__section-head">
+              <p className="prop-lp__label">Escopo</p>
+              <p className="prop-lp__section-count">
+                {String(scopeItems.length).padStart(2, '0')}{' '}
+                {scopeItems.length === 1 ? 'item' : 'itens'}
+              </p>
+            </div>
+            <ol className="prop-lp__scope">
               {scopeItems.map((item, index) => (
-                <li key={`${item}-${index}`}>
-                  <span className="prop-lp__num">
+                <li key={`scope-${index}`} className="prop-lp__scope-item">
+                  <span className="prop-lp__scope-num" aria-hidden="true">
                     {String(index + 1).padStart(2, '0')}
                   </span>
-                  <span>{item}</span>
+                  <span className="prop-lp__scope-text">{item}</span>
                 </li>
               ))}
-            </ul>
+            </ol>
           </section>
         )}
 
