@@ -38,8 +38,25 @@ function BlockEditor({
   services,
   selectedIds,
   onToggleService,
+  onAddService,
   natureLabel,
 }) {
+  const [newServiceName, setNewServiceName] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  async function handleAddService(e) {
+    e.preventDefault();
+    const name = newServiceName.trim();
+    if (!name || !onAddService || adding) return;
+    setAdding(true);
+    try {
+      await onAddService(name);
+      setNewServiceName('');
+    } finally {
+      setAdding(false);
+    }
+  }
+
   return (
     <section className={`prop-block ${enabled ? 'is-on' : 'is-off'}`}>
       <header className="prop-block__header">
@@ -84,6 +101,26 @@ function BlockEditor({
                 </label>
               ))}
             </div>
+            {onAddService ? (
+              <form className="prop-checklist__add" onSubmit={handleAddService}>
+                <input
+                  type="text"
+                  placeholder="Novo serviço incluso…"
+                  value={newServiceName}
+                  onChange={(e) => setNewServiceName(e.target.value)}
+                  disabled={adding}
+                />
+                <button
+                  type="submit"
+                  className="lp-btn lp-btn--ghost lp-btn--sm"
+                  disabled={adding || !newServiceName.trim()}
+                  aria-label="Adicionar serviço"
+                  title="Adicionar serviço"
+                >
+                  {adding ? '…' : '+'}
+                </button>
+              </form>
+            ) : null}
           </div>
         </div>
       )}
@@ -179,6 +216,22 @@ export default function ProposalEditor() {
         : [...current, serviceId];
       return { ...prev, [field]: next };
     });
+  }
+
+  async function addIncludedService(block, idsField, name) {
+    try {
+      const created = await api.createService({ name, block });
+      setServices((prev) => [...prev, created]);
+      setProposal((prev) => {
+        const current = prev[idsField] || [];
+        if (current.includes(created.id)) return prev;
+        return { ...prev, [idsField]: [...current, created.id] };
+      });
+      setError('');
+    } catch (err) {
+      setError(err.message || 'Não foi possível adicionar o serviço');
+      throw err;
+    }
   }
 
   function applyTemplate(template) {
@@ -438,6 +491,9 @@ export default function ProposalEditor() {
                 services={setupServices}
                 selectedIds={proposal.setupServiceIds || []}
                 onToggleService={(sid) => toggleService('setupServiceIds', sid)}
+                onAddService={(name) =>
+                  addIncludedService('setup', 'setupServiceIds', name)
+                }
                 natureLabel="Único"
               />
 
@@ -454,6 +510,9 @@ export default function ProposalEditor() {
                 selectedIds={proposal.operationServiceIds || []}
                 onToggleService={(sid) =>
                   toggleService('operationServiceIds', sid)
+                }
+                onAddService={(name) =>
+                  addIncludedService('operacao', 'operationServiceIds', name)
                 }
                 natureLabel="Mensal"
               />

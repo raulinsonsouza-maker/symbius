@@ -281,6 +281,26 @@
   overflow: auto;
 }
 
+.prop-checklist__add {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.prop-checklist__add input {
+  width: 100%;
+}
+
+.prop-checklist__add button {
+  min-width: 40px;
+  padding-left: 12px;
+  padding-right: 12px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
 .prop-check {
   display: flex !important;
   flex-direction: row !important;
