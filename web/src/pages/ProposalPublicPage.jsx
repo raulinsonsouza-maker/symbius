@@ -115,6 +115,11 @@ export default function ProposalPublicPage() {
     : (proposal.setupEnabled ? Number(proposal.setupPrice) || 0 : 0) +
       (trafficActive ? Number(proposal.trafficPrice) || 0 : 0);
 
+  // Só mostra totais quando há mais de uma linha de preço (evita repetir o mesmo valor).
+  const priceLineCount = blocks.length + (trafficActive ? 1 : 0);
+  const showTotals =
+    priceLineCount > 1 && (uniqueTotal > 0 || monthlyTotal > 0);
+
   const scopeItems = (proposal.scopeItems || []).filter(Boolean);
   const observations = (proposal.observations || []).filter(Boolean);
 
@@ -236,7 +241,7 @@ export default function ProposalPublicPage() {
             </div>
           )}
 
-          {(uniqueTotal > 0 || monthlyTotal > 0) && (
+          {showTotals ? (
             <div className="prop-lp__totals">
               {uniqueTotal > 0 && (
                 <div>
@@ -251,7 +256,7 @@ export default function ProposalPublicPage() {
                 </div>
               )}
             </div>
-          )}
+          ) : null}
         </section>
 
         {observations.length > 0 && (

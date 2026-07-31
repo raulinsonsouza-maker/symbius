@@ -18,6 +18,17 @@ export default function ProposalPreview({
   );
 
   const isBlank = proposal.template === 'blank';
+  const blankCount = isBlank
+    ? (proposal.blankItems || []).filter(
+        (item) => item.description || item.totalValue,
+      ).length
+    : 0;
+  const brandLineCount = isBlank
+    ? 0
+    : (proposal.setupEnabled ? 1 : 0) +
+      (proposal.operationEnabled ? 1 : 0) +
+      (proposal.trafficEnabled ? 1 : 0);
+  const priceLineCount = isBlank ? blankCount : brandLineCount;
   const uniqueTotal = isBlank
     ? (proposal.blankItems || []).reduce(
         (sum, item) => sum + (Number(item.totalValue) || 0),
@@ -28,6 +39,8 @@ export default function ProposalPreview({
   const monthlyTotal = proposal.operationEnabled
     ? Number(proposal.operationPrice) || 0
     : 0;
+  const showTotals =
+    priceLineCount > 1 && (uniqueTotal > 0 || monthlyTotal > 0);
 
   return (
     <div id={printId} className="proposal-sheet">
@@ -157,20 +170,22 @@ export default function ProposalPreview({
           </tbody>
         </table>
 
-        <div className="proposal-sheet__totals">
-          {uniqueTotal > 0 && (
-            <div className="proposal-sheet__total-row">
-              <span>Total único</span>
-              <strong>{formatCurrency(uniqueTotal)}</strong>
-            </div>
-          )}
-          {monthlyTotal > 0 && (
-            <div className="proposal-sheet__total-row">
-              <span>Total mensal</span>
-              <strong>{formatCurrency(monthlyTotal)}</strong>
-            </div>
-          )}
-        </div>
+        {showTotals ? (
+          <div className="proposal-sheet__totals">
+            {uniqueTotal > 0 && (
+              <div className="proposal-sheet__total-row">
+                <span>Total único</span>
+                <strong>{formatCurrency(uniqueTotal)}</strong>
+              </div>
+            )}
+            {monthlyTotal > 0 && (
+              <div className="proposal-sheet__total-row">
+                <span>Total mensal</span>
+                <strong>{formatCurrency(monthlyTotal)}</strong>
+              </div>
+            )}
+          </div>
+        ) : null}
       </section>
 
       {(proposal.observations || []).length > 0 && (
