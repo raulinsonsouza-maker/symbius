@@ -47,6 +47,7 @@ import {
   syncContractFinance,
   getCashflow,
   getFinanceDre,
+  getFinanceDreAnnual,
   updateFinanceDreSettings,
   updateFinanceDreRecurring,
   updateFinanceDreMonthOverride,
@@ -122,6 +123,7 @@ app.put('/api/finance/entries/:id', updateFinanceEntry);
 app.post('/api/finance/contracts/:id/sync', syncContractFinance);
 app.get('/api/finance/cashflow', getCashflow);
 app.get('/api/finance/dre', getFinanceDre);
+app.get('/api/finance/dre/annual', getFinanceDreAnnual);
 app.put('/api/finance/dre/settings', updateFinanceDreSettings);
 app.put('/api/finance/dre/recurring', updateFinanceDreRecurring);
 app.put('/api/finance/dre/months/:month', updateFinanceDreMonthOverride);

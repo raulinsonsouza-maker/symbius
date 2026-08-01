@@ -328,3 +328,59 @@ export async function buildDre(store, opts = {}) {
     recurring,
   };
 }
+
+/** Meses do DRE anual: 2026 começa em agosto; demais anos jan–dez. */
+export function annualMonthsForYear(year) {
+  const y = Number(year) || new Date().getFullYear();
+  const start = y === 2026 ? 8 : 1;
+  const months = [];
+  for (let m = start; m <= 12; m += 1) {
+    months.push(`${y}-${String(m).padStart(2, '0')}`);
+  }
+  return months;
+}
+
+function moneySum(rows, key) {
+  return money(rows.reduce((s, r) => s + (Number(r?.[key]) || 0), 0));
+}
+
+/**
+ * @param {object} store
+ * @param {{ year?: number|string }} opts
+ */
+export async function buildDreAnnual(store, opts = {}) {
+  const year = Number(opts.year) || new Date().getFullYear();
+  const months = annualMonthsForYear(year);
+  const items = [];
+
+  for (const month of months) {
+    const dre = await buildDre(store, { month });
+    items.push({
+      month,
+      period: dre.period,
+      summary: dre.summary,
+      asaasConfigured: dre.asaasConfigured,
+    });
+  }
+
+  const summaries = items.map((i) => i.summary || {});
+  const totals = {
+    receitaBruta: moneySum(summaries, 'receitaBruta'),
+    impostosTaxas: moneySum(summaries, 'impostosTaxas'),
+    ferramentas: moneySum(summaries, 'ferramentas'),
+    prolabore: moneySum(summaries, 'prolabore'),
+    lucroLiquido: moneySum(summaries, 'lucroLiquido'),
+    reservas: moneySum(summaries, 'reservas'),
+    caixaLivre: moneySum(summaries, 'caixaLivre'),
+  };
+
+  return {
+    year,
+    months,
+    fromMonth: months[0],
+    toMonth: months[months.length - 1],
+    items,
+    totals,
+    asaasConfigured: items.some((i) => i.asaasConfigured),
+  };
+}

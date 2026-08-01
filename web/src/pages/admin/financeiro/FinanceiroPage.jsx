@@ -98,7 +98,10 @@ function emptyAsaas() {
 
 export default function FinanceiroPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get('tab') || 'dre';
+  const rawTab = searchParams.get('tab') || 'dre';
+  const tab = ['dre', 'receivables', 'asaas', 'entries'].includes(rawTab)
+    ? rawTab
+    : 'dre';
   const clientFilter = searchParams.get('clientId') || '';
 
   const [entries, setEntries] = useState([]);
@@ -456,7 +459,7 @@ export default function FinanceiroPage() {
         <div className="admin-shell__intro">
           <h1 className="admin-shell__title">Financeiro</h1>
           <p className="admin-shell__subtitle">
-            DRE / caixa, cobranças Asaas e lançamentos.
+            DRE mensal e anual — resultado e caixa livre.
           </p>
         </div>
 
@@ -470,24 +473,30 @@ export default function FinanceiroPage() {
           </div>
         ) : null}
 
-        <div className="prop-template-row" style={{ marginBottom: 20 }}>
-          {[
-            ['dre', 'DRE / Caixa'],
-            ['dashboard', 'Dashboard'],
-            ['cashflow', 'Fluxo / previsão'],
-            ['receivables', 'A receber'],
-            ['asaas', 'Cobranças Asaas'],
-            ['entries', 'Despesas e receitas'],
-          ].map(([value, label]) => (
+        <div className="fin-ops-bar">
+          {tab !== 'dre' ? (
             <button
-              key={value}
               type="button"
-              className={`prop-chip ${tab === value ? 'is-active' : ''}`}
-              onClick={() => setTab(value)}
+              className="lp-btn lp-btn--ghost lp-btn--sm"
+              onClick={() => setTab('dre')}
             >
-              {label}
+              ← Voltar ao DRE
             </button>
-          ))}
+          ) : null}
+          <details className="fin-ops">
+            <summary className="fin-ops__summary">Operações</summary>
+            <div className="fin-ops__menu">
+              <button type="button" onClick={() => setTab('receivables')}>
+                A receber
+              </button>
+              <button type="button" onClick={() => setTab('entries')}>
+                Despesas e receitas
+              </button>
+              <button type="button" onClick={() => setTab('asaas')}>
+                Cobranças Asaas
+              </button>
+            </div>
+          </details>
         </div>
 
         {error && <p className="prop-error">{error}</p>}

@@ -22,12 +22,11 @@ function monthLabel(yearMonth) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-function monthShort(yearMonth) {
+function monthHeader(yearMonth) {
   const [y, m] = String(yearMonth).split('-').map(Number);
-  const label = new Date(y, m - 1, 1).toLocaleDateString('pt-BR', {
-    month: 'short',
-  });
-  return `${label.replace('.', '')}/${String(y).slice(2)}`;
+  return new Date(y, m - 1, 1)
+    .toLocaleDateString('pt-BR', { month: 'short' })
+    .replace('.', '');
 }
 
 function pctLabel(rate) {
@@ -41,9 +40,32 @@ function moneyClass(n, { invert = false } = {}) {
   return positive ? 'fin-dre__val--pos' : 'fin-dre__val--neg';
 }
 
+function buildMonthOptions() {
+  const now = currentMonth();
+  const options = [];
+  for (let i = -17; i <= 1; i += 1) {
+    const value = shiftMonth(now, i);
+    options.push({ value, label: monthLabel(value) });
+  }
+  return options;
+}
+
+const ANNUAL_ROWS = [
+  { key: 'receitaBruta', label: 'Receita bruta', invert: false },
+  { key: 'impostosTaxas', label: 'Impostos e taxas', invert: true },
+  { key: 'ferramentas', label: 'Ferramentas', invert: true },
+  { key: 'prolabore', label: 'Pró-labore', invert: true },
+  { key: 'lucroLiquido', label: 'Lucro líquido', invert: false },
+  { key: 'reservas', label: 'Reservas', invert: true },
+  { key: 'caixaLivre', label: 'Caixa livre', invert: false },
+];
+
 export default function DrePanel({ onOpenAsaas }) {
+  const [view, setView] = useState('monthly'); // monthly | annual
   const [month, setMonth] = useState(currentMonth);
+  const [year, setYear] = useState(() => Number(currentMonth().slice(0, 4)));
   const [dre, setDre] = useState(null);
+  const [annual, setAnnual] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -58,12 +80,13 @@ export default function DrePanel({ onOpenAsaas }) {
   const [prolabore, setProlabore] = useState([]);
   const [asaasFeesOverride, setAsaasFeesOverride] = useState('');
 
-  const monthChips = useMemo(() => {
-    const base = currentMonth();
-    return [-2, -1, 0, 1].map((d) => shiftMonth(base, d));
+  const monthOptions = useMemo(() => buildMonthOptions(), []);
+  const yearOptions = useMemo(() => {
+    const y = new Date().getFullYear();
+    return [2026, y, y + 1].filter((n, i, arr) => arr.indexOf(n) === i).sort();
   }, []);
 
-  async function load(m = month) {
+  async function loadMonthly(m = month) {
     setLoading(true);
     setError('');
     try {
@@ -99,10 +122,25 @@ export default function DrePanel({ onOpenAsaas }) {
     }
   }
 
+  async function loadAnnual(y = year) {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.getFinanceDreAnnual({ year: y });
+      setAnnual(data);
+    } catch (err) {
+      setError(err.message || 'Falha ao carregar DRE anual');
+      setAnnual(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    load(month);
+    if (view === 'annual') loadAnnual(year);
+    else loadMonthly(month);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month]);
+  }, [view, month, year]);
 
   const preview = useMemo(() => {
     if (!dre) return null;
@@ -174,6 +212,11 @@ export default function DrePanel({ onOpenAsaas }) {
     else setProlabore((p) => p.filter((_, i) => i !== index));
   }
 
+  function openMonth(m) {
+    setMonth(m);
+    setView('monthly');
+  }
+
   async function saveAll() {
     setSaving(true);
     setError('');
@@ -202,7 +245,7 @@ export default function DrePanel({ onOpenAsaas }) {
         });
       }
       setOk('DRE salvo.');
-      await load(month);
+      await loadMonthly(month);
     } catch (err) {
       setError(err.message || 'Falha ao salvar DRE');
     } finally {
@@ -210,443 +253,586 @@ export default function DrePanel({ onOpenAsaas }) {
     }
   }
 
-  if (loading && !dre) {
+  if (loading && ((view === 'monthly' && !dre) || (view === 'annual' && !annual))) {
     return <p className="prop-muted">Carregando DRE…</p>;
   }
 
-  if (!dre || !preview) {
-    return <p className="prop-error">{error || 'Não foi possível montar o DRE.'}</p>;
-  }
+  const kpiSource =
+    view === 'annual'
+      ? annual?.totals
+      : preview
+        ? {
+            receitaBruta: preview.receitaBruta,
+            impostosTaxas: preview.impostos,
+            ferramentas: preview.ferramentas,
+            prolabore: preview.pl,
+            lucroLiquido: preview.lucro,
+            reservas: preview.totalReservas,
+            caixaLivre: preview.caixaLivre,
+          }
+        : null;
 
   return (
     <div className="fin-dre">
       <section className="fin-dre__hero">
         <div className="fin-dre__hero-main">
-          <div className="fin-dre__period-nav">
+          <div className="fin-dre__mode">
             <button
               type="button"
-              className="fin-dre__nav-btn"
-              onClick={() => setMonth((m) => shiftMonth(m, -1))}
-              aria-label="Mês anterior"
+              className={`fin-dre__mode-btn ${view === 'monthly' ? 'is-active' : ''}`}
+              onClick={() => setView('monthly')}
             >
-              ‹
+              Mensal
             </button>
-            <div className="fin-dre__period-copy">
-              <span className="fin-dre__eyebrow">Período do DRE</span>
-              <strong>{monthLabel(month)}</strong>
-              <small>{dre.period?.label}</small>
-            </div>
             <button
               type="button"
-              className="fin-dre__nav-btn"
-              onClick={() => setMonth((m) => shiftMonth(m, 1))}
-              aria-label="Próximo mês"
+              className={`fin-dre__mode-btn ${view === 'annual' ? 'is-active' : ''}`}
+              onClick={() => setView('annual')}
             >
-              ›
+              Anual
             </button>
           </div>
 
-          <div className="fin-dre__chips">
-            {monthChips.map((m) => (
+          {view === 'monthly' ? (
+            <div className="fin-dre__period-nav">
               <button
-                key={m}
                 type="button"
-                className={`fin-dre__chip ${month === m ? 'is-active' : ''}`}
-                onClick={() => setMonth(m)}
+                className="fin-dre__nav-btn"
+                onClick={() => setMonth((m) => shiftMonth(m, -1))}
+                aria-label="Mês anterior"
               >
-                {monthShort(m)}
+                ‹
               </button>
-            ))}
-            <label className="fin-dre__chip fin-dre__chip--month">
-              <span>Outro</span>
-              <input
-                type="month"
-                value={month}
-                onChange={(e) => setMonth(e.target.value)}
-              />
-            </label>
-          </div>
+              <div className="fin-dre__period-copy">
+                <span className="fin-dre__eyebrow">Período do DRE</span>
+                <label className="fin-dre__month-select">
+                  <select
+                    value={month}
+                    onChange={(e) => setMonth(e.target.value)}
+                    aria-label="Selecionar mês"
+                  >
+                    {!monthOptions.some((o) => o.value === month) ? (
+                      <option value={month}>{monthLabel(month)}</option>
+                    ) : null}
+                    {monthOptions.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <small>{dre?.period?.label || '—'}</small>
+              </div>
+              <button
+                type="button"
+                className="fin-dre__nav-btn"
+                onClick={() => setMonth((m) => shiftMonth(m, 1))}
+                aria-label="Próximo mês"
+              >
+                ›
+              </button>
+            </div>
+          ) : (
+            <div className="fin-dre__period-nav">
+              <div className="fin-dre__period-copy">
+                <span className="fin-dre__eyebrow">DRE anual</span>
+                <label className="fin-dre__month-select">
+                  <select
+                    value={year}
+                    onChange={(e) => setYear(Number(e.target.value))}
+                    aria-label="Selecionar ano"
+                  >
+                    {yearOptions.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <small>
+                  {annual?.fromMonth && annual?.toMonth
+                    ? `${monthLabel(annual.fromMonth)} → ${monthLabel(annual.toMonth)}`
+                    : year === 2026
+                      ? 'Agosto → Dezembro'
+                      : 'Janeiro → Dezembro'}
+                </small>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="fin-dre__hero-side">
-          <label className="fin-dre__day">
-            <span>Início mês comercial</span>
-            <input
-              type="number"
-              min={1}
-              max={28}
-              value={periodStartDay}
-              onChange={(e) => setPeriodStartDay(Number(e.target.value) || 1)}
-            />
-          </label>
-          <div className="fin-dre__hero-actions">
-            <button
-              type="button"
-              className="lp-btn lp-btn--solid lp-btn--sm"
-              onClick={saveAll}
-              disabled={saving}
-            >
-              {saving ? 'Salvando…' : 'Salvar estrutura'}
-            </button>
-            {typeof onOpenAsaas === 'function' ? (
-              <button
-                type="button"
-                className="lp-btn lp-btn--ghost lp-btn--sm"
-                onClick={onOpenAsaas}
-              >
-                Ver cobranças Asaas
-              </button>
-            ) : null}
-          </div>
+          {view === 'monthly' ? (
+            <>
+              <label className="fin-dre__day">
+                <span>Início mês comercial</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={28}
+                  value={periodStartDay}
+                  onChange={(e) => setPeriodStartDay(Number(e.target.value) || 1)}
+                />
+              </label>
+              <div className="fin-dre__hero-actions">
+                <button
+                  type="button"
+                  className="lp-btn lp-btn--solid lp-btn--sm"
+                  onClick={saveAll}
+                  disabled={saving}
+                >
+                  {saving ? 'Salvando…' : 'Salvar estrutura'}
+                </button>
+                {typeof onOpenAsaas === 'function' ? (
+                  <button
+                    type="button"
+                    className="lp-btn lp-btn--ghost lp-btn--sm"
+                    onClick={onOpenAsaas}
+                  >
+                    Ver cobranças Asaas
+                  </button>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <div className="fin-dre__hero-actions">
+              {typeof onOpenAsaas === 'function' ? (
+                <button
+                  type="button"
+                  className="lp-btn lp-btn--ghost lp-btn--sm"
+                  onClick={onOpenAsaas}
+                >
+                  Ver cobranças Asaas
+                </button>
+              ) : null}
+            </div>
+          )}
         </div>
       </section>
 
-      <div className="fin-dre__kpis">
-        <div className="fin-dre__kpi fin-dre__kpi--income">
-          <span>Receita bruta</span>
-          <strong>{formatCurrency(preview.receitaBruta)}</strong>
-          <small>{(dre.revenues || []).length} cobrança(s)</small>
+      {kpiSource ? (
+        <div className="fin-dre__kpis">
+          <div className="fin-dre__kpi fin-dre__kpi--income">
+            <span>Receita bruta</span>
+            <strong>{formatCurrency(kpiSource.receitaBruta)}</strong>
+            <small>{view === 'annual' ? `Ano ${year}` : `${(dre?.revenues || []).length} cobrança(s)`}</small>
+          </div>
+          <div className="fin-dre__kpi fin-dre__kpi--tax">
+            <span>Impostos e taxas</span>
+            <strong>{formatCurrency(kpiSource.impostosTaxas)}</strong>
+            <small>{view === 'annual' ? 'Soma do período' : `Simples ${pctLabel(simplesRate / 100)}`}</small>
+          </div>
+          <div className="fin-dre__kpi fin-dre__kpi--cost">
+            <span>Custos fixos</span>
+            <strong>
+              {formatCurrency(
+                (Number(kpiSource.ferramentas) || 0) + (Number(kpiSource.prolabore) || 0),
+              )}
+            </strong>
+            <small>Ferramentas + pró-labore</small>
+          </div>
+          <div className="fin-dre__kpi fin-dre__kpi--profit">
+            <span>Lucro líquido</span>
+            <strong className={moneyClass(kpiSource.lucroLiquido)}>
+              {formatCurrency(kpiSource.lucroLiquido)}
+            </strong>
+            <small>Após custos</small>
+          </div>
+          <div className="fin-dre__kpi fin-dre__kpi--cash">
+            <span>Caixa livre</span>
+            <strong className={moneyClass(kpiSource.caixaLivre)}>
+              {formatCurrency(kpiSource.caixaLivre)}
+            </strong>
+            <small>Após reservas</small>
+          </div>
         </div>
-        <div className="fin-dre__kpi fin-dre__kpi--tax">
-          <span>Impostos e taxas</span>
-          <strong>{formatCurrency(preview.impostos)}</strong>
-          <small>Simples {pctLabel(simplesRate / 100)}</small>
-        </div>
-        <div className="fin-dre__kpi fin-dre__kpi--cost">
-          <span>Custos fixos</span>
-          <strong>{formatCurrency(preview.ferramentas + preview.pl)}</strong>
-          <small>Ferramentas + pró-labore</small>
-        </div>
-        <div className="fin-dre__kpi fin-dre__kpi--profit">
-          <span>Lucro líquido</span>
-          <strong className={moneyClass(preview.lucro)}>
-            {formatCurrency(preview.lucro)}
-          </strong>
-          <small>Após custos</small>
-        </div>
-        <div className="fin-dre__kpi fin-dre__kpi--cash">
-          <span>Caixa livre</span>
-          <strong className={moneyClass(preview.caixaLivre)}>
-            {formatCurrency(preview.caixaLivre)}
-          </strong>
-          <small>Após reservas</small>
-        </div>
-      </div>
+      ) : null}
 
       {error ? <p className="prop-error">{error}</p> : null}
       {ok ? <p className="prop-ok">{ok}</p> : null}
 
-      {!dre.asaasConfigured ? (
-        <p className="prop-muted">
-          Asaas não configurado — receitas do período ficam zeradas até definir
-          ASAAS_API_KEY.
-        </p>
-      ) : null}
-
-      <div className="fin-dre__layout">
-        <div className="fin-dre__table-wrap">
-          <table className="fin-dre__table">
-            <thead>
-              <tr>
-                <th>Categoria</th>
-                <th>Descrição</th>
-                <th>Valor (R$)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="fin-dre__section fin-dre__section--income">
-                <td>Receitas</td>
-                <td colSpan={2} />
-              </tr>
-              {(dre.revenues || []).length === 0 ? (
+      {view === 'annual' ? (
+        !annual ? (
+          <p className="prop-error">Não foi possível montar o DRE anual.</p>
+        ) : (
+          <div className="fin-dre__annual-wrap">
+            <table className="fin-dre__annual">
+              <thead>
                 <tr>
-                  <td />
-                  <td className="prop-muted">
-                    Nenhuma cobrança recebida no período
-                  </td>
-                  <td className="fin-dre__val fin-dre__val--muted">0,00</td>
+                  <th>Linha</th>
+                  {annual.items.map((item) => (
+                    <th key={item.month}>
+                      <button
+                        type="button"
+                        className="fin-dre__annual-month"
+                        onClick={() => openMonth(item.month)}
+                        title={`Abrir DRE de ${monthLabel(item.month)}`}
+                      >
+                        {monthHeader(item.month)}
+                      </button>
+                    </th>
+                  ))}
+                  <th className="fin-dre__annual-total">Total</th>
                 </tr>
-              ) : (
-                dre.revenues.map((r) => (
-                  <tr key={r.id} className="fin-dre__row--income">
-                    <td />
-                    <td>{r.description}</td>
-                    <td className={`fin-dre__val ${moneyClass(r.value)}`}>
-                      {formatCurrency(r.value)}
+              </thead>
+              <tbody>
+                {ANNUAL_ROWS.map((row) => (
+                  <tr
+                    key={row.key}
+                    className={
+                      row.key === 'caixaLivre'
+                        ? 'fin-dre__annual-row--cash'
+                        : row.key === 'lucroLiquido'
+                          ? 'fin-dre__annual-row--profit'
+                          : undefined
+                    }
+                  >
+                    <td>{row.label}</td>
+                    {annual.items.map((item) => {
+                      const value = Number(item.summary?.[row.key]) || 0;
+                      return (
+                        <td
+                          key={item.month}
+                          className={`fin-dre__val ${moneyClass(value, { invert: row.invert })}`}
+                        >
+                          {formatCurrency(value)}
+                        </td>
+                      );
+                    })}
+                    <td
+                      className={`fin-dre__val fin-dre__annual-total ${moneyClass(
+                        annual.totals?.[row.key],
+                        { invert: row.invert },
+                      )}`}
+                    >
+                      {formatCurrency(annual.totals?.[row.key])}
                     </td>
                   </tr>
-                ))
-              )}
-              <tr className="fin-dre__total fin-dre__total--income">
-                <td />
-                <td>Receita Bruta</td>
-                <td className={`fin-dre__val ${moneyClass(preview.receitaBruta)}`}>
-                  {formatCurrency(preview.receitaBruta)}
-                </td>
-              </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="fin-dre__annual-hint prop-muted">
+              Clique no mês para abrir o DRE mensal detalhado.
+            </p>
+          </div>
+        )
+      ) : !dre || !preview ? (
+        <p className="prop-error">{error || 'Não foi possível montar o DRE.'}</p>
+      ) : (
+        <>
+          {!dre.asaasConfigured ? (
+            <p className="prop-muted">
+              Asaas não configurado — receitas do período ficam zeradas até definir
+              ASAAS_API_KEY.
+            </p>
+          ) : null}
 
-              <tr className="fin-dre__section fin-dre__section--tax">
-                <td>(-) Impostos e taxas</td>
-                <td colSpan={2} />
-              </tr>
-              <tr className="fin-dre__row--tax">
-                <td />
-                <td>
-                  Simples Nacional (
-                  <input
-                    className="fin-dre__pct"
-                    type="number"
-                    step="0.1"
-                    value={simplesRate}
-                    onChange={(e) => setSimplesRate(Number(e.target.value) || 0)}
-                  />
-                  %)
-                </td>
-                <td className={`fin-dre__val ${moneyClass(preview.simples, { invert: true })}`}>
-                  {formatCurrency(preview.simples)}
-                </td>
-              </tr>
-              <tr className="fin-dre__row--tax">
-                <td />
-                <td>
-                  Asaas – taxas
-                  <input
-                    className="fin-dre__inline-num"
-                    type="number"
-                    step="0.01"
-                    placeholder={String(dre.taxes?.asaasFees?.amount ?? 0)}
-                    value={asaasFeesOverride}
-                    onChange={(e) => setAsaasFeesOverride(e.target.value)}
-                    title="Deixe vazio para usar cálculo automático"
-                  />
-                </td>
-                <td className={`fin-dre__val ${moneyClass(preview.taxasAsaas, { invert: true })}`}>
-                  {formatCurrency(preview.taxasAsaas)}
-                </td>
-              </tr>
-              <tr className="fin-dre__total fin-dre__total--tax">
-                <td />
-                <td>Total Impostos e Taxas</td>
-                <td className={`fin-dre__val ${moneyClass(preview.impostos, { invert: true })}`}>
-                  {formatCurrency(preview.impostos)}
-                </td>
-              </tr>
+          <div className="fin-dre__layout">
+            <div className="fin-dre__table-wrap">
+              <table className="fin-dre__table">
+                <thead>
+                  <tr>
+                    <th>Categoria</th>
+                    <th>Descrição</th>
+                    <th>Valor (R$)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="fin-dre__section fin-dre__section--income">
+                    <td>Receitas</td>
+                    <td colSpan={2} />
+                  </tr>
+                  {(dre.revenues || []).length === 0 ? (
+                    <tr>
+                      <td />
+                      <td className="prop-muted">
+                        Nenhuma cobrança recebida no período
+                      </td>
+                      <td className="fin-dre__val fin-dre__val--muted">0,00</td>
+                    </tr>
+                  ) : (
+                    dre.revenues.map((r) => (
+                      <tr key={r.id} className="fin-dre__row--income">
+                        <td />
+                        <td>{r.description}</td>
+                        <td className={`fin-dre__val ${moneyClass(r.value)}`}>
+                          {formatCurrency(r.value)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                  <tr className="fin-dre__total fin-dre__total--income">
+                    <td />
+                    <td>Receita Bruta</td>
+                    <td className={`fin-dre__val ${moneyClass(preview.receitaBruta)}`}>
+                      {formatCurrency(preview.receitaBruta)}
+                    </td>
+                  </tr>
 
-              <tr className="fin-dre__section fin-dre__section--cost">
-                <td>(-) Ferramentas</td>
-                <td colSpan={2}>
-                  <button
-                    type="button"
-                    className="fin-dre__add"
-                    onClick={() => addLine('tools')}
-                  >
-                    + Item
-                  </button>
-                </td>
-              </tr>
-              {tools.map((row, index) => (
-                <tr key={row.id || index} className="fin-dre__row--cost">
-                  <td />
-                  <td className="fin-dre__edit-row">
-                    <input
-                      value={row.name}
-                      onChange={(e) =>
-                        updateLine('tools', index, { name: e.target.value })
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="fin-dre__remove"
-                      onClick={() => removeLine('tools', index)}
-                    >
-                      Remover
-                    </button>
-                  </td>
-                  <td className="fin-dre__val">
-                    <input
-                      className="fin-dre__amount"
-                      type="number"
-                      step="0.01"
-                      value={row.amount}
-                      onChange={(e) =>
-                        updateLine('tools', index, {
-                          amount: Number(e.target.value) || 0,
-                        })
-                      }
-                    />
-                  </td>
-                </tr>
-              ))}
-              <tr className="fin-dre__total fin-dre__total--cost">
-                <td />
-                <td>Total Ferramentas</td>
-                <td className={`fin-dre__val ${moneyClass(preview.ferramentas, { invert: true })}`}>
-                  {formatCurrency(preview.ferramentas)}
-                </td>
-              </tr>
+                  <tr className="fin-dre__section fin-dre__section--tax">
+                    <td>(-) Impostos e taxas</td>
+                    <td colSpan={2} />
+                  </tr>
+                  <tr className="fin-dre__row--tax">
+                    <td />
+                    <td>
+                      Simples Nacional (
+                      <input
+                        className="fin-dre__pct"
+                        type="number"
+                        step="0.1"
+                        value={simplesRate}
+                        onChange={(e) => setSimplesRate(Number(e.target.value) || 0)}
+                      />
+                      %)
+                    </td>
+                    <td className={`fin-dre__val ${moneyClass(preview.simples, { invert: true })}`}>
+                      {formatCurrency(preview.simples)}
+                    </td>
+                  </tr>
+                  <tr className="fin-dre__row--tax">
+                    <td />
+                    <td>
+                      Asaas – taxas
+                      <input
+                        className="fin-dre__inline-num"
+                        type="number"
+                        step="0.01"
+                        placeholder={String(dre.taxes?.asaasFees?.amount ?? 0)}
+                        value={asaasFeesOverride}
+                        onChange={(e) => setAsaasFeesOverride(e.target.value)}
+                        title="Deixe vazio para usar cálculo automático"
+                      />
+                    </td>
+                    <td className={`fin-dre__val ${moneyClass(preview.taxasAsaas, { invert: true })}`}>
+                      {formatCurrency(preview.taxasAsaas)}
+                    </td>
+                  </tr>
+                  <tr className="fin-dre__total fin-dre__total--tax">
+                    <td />
+                    <td>Total Impostos e Taxas</td>
+                    <td className={`fin-dre__val ${moneyClass(preview.impostos, { invert: true })}`}>
+                      {formatCurrency(preview.impostos)}
+                    </td>
+                  </tr>
 
-              <tr className="fin-dre__result fin-dre__result--op">
-                <td>Resultado operacional</td>
-                <td>Receita após impostos e ferramentas</td>
-                <td className={`fin-dre__val ${moneyClass(preview.resultadoOp)}`}>
-                  {formatCurrency(preview.resultadoOp)}
-                </td>
-              </tr>
+                  <tr className="fin-dre__section fin-dre__section--cost">
+                    <td>(-) Ferramentas</td>
+                    <td colSpan={2}>
+                      <button
+                        type="button"
+                        className="fin-dre__add"
+                        onClick={() => addLine('tools')}
+                      >
+                        + Item
+                      </button>
+                    </td>
+                  </tr>
+                  {tools.map((row, index) => (
+                    <tr key={row.id || index} className="fin-dre__row--cost">
+                      <td />
+                      <td className="fin-dre__edit-row">
+                        <input
+                          value={row.name}
+                          onChange={(e) =>
+                            updateLine('tools', index, { name: e.target.value })
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="fin-dre__remove"
+                          onClick={() => removeLine('tools', index)}
+                        >
+                          Remover
+                        </button>
+                      </td>
+                      <td className="fin-dre__val">
+                        <input
+                          className="fin-dre__amount"
+                          type="number"
+                          step="0.01"
+                          value={row.amount}
+                          onChange={(e) =>
+                            updateLine('tools', index, {
+                              amount: Number(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="fin-dre__total fin-dre__total--cost">
+                    <td />
+                    <td>Total Ferramentas</td>
+                    <td className={`fin-dre__val ${moneyClass(preview.ferramentas, { invert: true })}`}>
+                      {formatCurrency(preview.ferramentas)}
+                    </td>
+                  </tr>
 
-              <tr className="fin-dre__section fin-dre__section--payroll">
-                <td>Pró-labore</td>
-                <td colSpan={2}>
-                  <button
-                    type="button"
-                    className="fin-dre__add"
-                    onClick={() => addLine('prolabore')}
-                  >
-                    + Item
-                  </button>
-                </td>
-              </tr>
-              {prolabore.map((row, index) => (
-                <tr key={row.id || index} className="fin-dre__row--payroll">
-                  <td />
-                  <td className="fin-dre__edit-row">
-                    <input
-                      value={row.name}
-                      onChange={(e) =>
-                        updateLine('prolabore', index, { name: e.target.value })
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="fin-dre__remove"
-                      onClick={() => removeLine('prolabore', index)}
-                    >
-                      Remover
-                    </button>
-                  </td>
-                  <td className="fin-dre__val">
-                    <input
-                      className="fin-dre__amount"
-                      type="number"
-                      step="0.01"
-                      value={row.amount}
-                      onChange={(e) =>
-                        updateLine('prolabore', index, {
-                          amount: Number(e.target.value) || 0,
-                        })
-                      }
-                    />
-                  </td>
-                </tr>
-              ))}
-              <tr className="fin-dre__total fin-dre__total--payroll">
-                <td />
-                <td>Total Pró-labore</td>
-                <td className={`fin-dre__val ${moneyClass(preview.pl, { invert: true })}`}>
-                  {formatCurrency(preview.pl)}
-                </td>
-              </tr>
+                  <tr className="fin-dre__result fin-dre__result--op">
+                    <td>Resultado operacional</td>
+                    <td>Receita após impostos e ferramentas</td>
+                    <td className={`fin-dre__val ${moneyClass(preview.resultadoOp)}`}>
+                      {formatCurrency(preview.resultadoOp)}
+                    </td>
+                  </tr>
 
-              <tr className="fin-dre__result fin-dre__result--profit">
-                <td>Lucro líquido do mês</td>
-                <td>Resultado final</td>
-                <td className={`fin-dre__val ${moneyClass(preview.lucro)}`}>
-                  {formatCurrency(preview.lucro)}
-                </td>
-              </tr>
+                  <tr className="fin-dre__section fin-dre__section--payroll">
+                    <td>Pró-labore</td>
+                    <td colSpan={2}>
+                      <button
+                        type="button"
+                        className="fin-dre__add"
+                        onClick={() => addLine('prolabore')}
+                      >
+                        + Item
+                      </button>
+                    </td>
+                  </tr>
+                  {prolabore.map((row, index) => (
+                    <tr key={row.id || index} className="fin-dre__row--payroll">
+                      <td />
+                      <td className="fin-dre__edit-row">
+                        <input
+                          value={row.name}
+                          onChange={(e) =>
+                            updateLine('prolabore', index, { name: e.target.value })
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="fin-dre__remove"
+                          onClick={() => removeLine('prolabore', index)}
+                        >
+                          Remover
+                        </button>
+                      </td>
+                      <td className="fin-dre__val">
+                        <input
+                          className="fin-dre__amount"
+                          type="number"
+                          step="0.01"
+                          value={row.amount}
+                          onChange={(e) =>
+                            updateLine('prolabore', index, {
+                              amount: Number(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="fin-dre__total fin-dre__total--payroll">
+                    <td />
+                    <td>Total Pró-labore</td>
+                    <td className={`fin-dre__val ${moneyClass(preview.pl, { invert: true })}`}>
+                      {formatCurrency(preview.pl)}
+                    </td>
+                  </tr>
 
-              <tr className="fin-dre__section fin-dre__section--reserve">
-                <td>Reservas</td>
-                <td colSpan={2}>
-                  <span className="fin-dre__rates">
-                    Mkt{' '}
-                    <input
-                      className="fin-dre__pct"
-                      type="number"
-                      value={rMkt}
-                      onChange={(e) => setRMkt(Number(e.target.value) || 0)}
-                    />
-                    % · Giro{' '}
-                    <input
-                      className="fin-dre__pct"
-                      type="number"
-                      value={rWork}
-                      onChange={(e) => setRWork(Number(e.target.value) || 0)}
-                    />
-                    % · Exp.{' '}
-                    <input
-                      className="fin-dre__pct"
-                      type="number"
-                      value={rExp}
-                      onChange={(e) => setRExp(Number(e.target.value) || 0)}
-                    />
-                    %
-                  </span>
-                </td>
-              </tr>
-              {preview.reserves.map((r) => (
-                <tr key={r.name} className="fin-dre__row--reserve">
-                  <td />
-                  <td>{r.name}</td>
-                  <td className={`fin-dre__val ${moneyClass(r.amount, { invert: true })}`}>
-                    {formatCurrency(r.amount)}
-                  </td>
-                </tr>
-              ))}
-              <tr className="fin-dre__total fin-dre__total--reserve">
-                <td />
-                <td>Total Reservas</td>
-                <td className={`fin-dre__val ${moneyClass(preview.totalReservas, { invert: true })}`}>
-                  {formatCurrency(preview.totalReservas)}
-                </td>
-              </tr>
+                  <tr className="fin-dre__result fin-dre__result--profit">
+                    <td>Lucro líquido do mês</td>
+                    <td>Resultado final</td>
+                    <td className={`fin-dre__val ${moneyClass(preview.lucro)}`}>
+                      {formatCurrency(preview.lucro)}
+                    </td>
+                  </tr>
 
-              <tr className="fin-dre__result fin-dre__result--cash">
-                <td>Caixa livre</td>
-                <td>Saldo disponível após reservas</td>
-                <td className={`fin-dre__val ${moneyClass(preview.caixaLivre)}`}>
-                  {formatCurrency(preview.caixaLivre)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                  <tr className="fin-dre__section fin-dre__section--reserve">
+                    <td>Reservas</td>
+                    <td colSpan={2}>
+                      <span className="fin-dre__rates">
+                        Mkt{' '}
+                        <input
+                          className="fin-dre__pct"
+                          type="number"
+                          value={rMkt}
+                          onChange={(e) => setRMkt(Number(e.target.value) || 0)}
+                        />
+                        % · Giro{' '}
+                        <input
+                          className="fin-dre__pct"
+                          type="number"
+                          value={rWork}
+                          onChange={(e) => setRWork(Number(e.target.value) || 0)}
+                        />
+                        % · Exp.{' '}
+                        <input
+                          className="fin-dre__pct"
+                          type="number"
+                          value={rExp}
+                          onChange={(e) => setRExp(Number(e.target.value) || 0)}
+                        />
+                        %
+                      </span>
+                    </td>
+                  </tr>
+                  {preview.reserves.map((r) => (
+                    <tr key={r.name} className="fin-dre__row--reserve">
+                      <td />
+                      <td>{r.name}</td>
+                      <td className={`fin-dre__val ${moneyClass(r.amount, { invert: true })}`}>
+                        {formatCurrency(r.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="fin-dre__total fin-dre__total--reserve">
+                    <td />
+                    <td>Total Reservas</td>
+                    <td className={`fin-dre__val ${moneyClass(preview.totalReservas, { invert: true })}`}>
+                      {formatCurrency(preview.totalReservas)}
+                    </td>
+                  </tr>
 
-        <aside className="fin-dre__summary">
-          <h3>Resumo executivo</h3>
-          <dl>
-            <div className="fin-dre__summary-row fin-dre__summary-row--income">
-              <dt>Receita Bruta</dt>
-              <dd>{formatCurrency(preview.receitaBruta)}</dd>
+                  <tr className="fin-dre__result fin-dre__result--cash">
+                    <td>Caixa livre</td>
+                    <td>Saldo disponível após reservas</td>
+                    <td className={`fin-dre__val ${moneyClass(preview.caixaLivre)}`}>
+                      {formatCurrency(preview.caixaLivre)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div className="fin-dre__summary-row fin-dre__summary-row--tax">
-              <dt>Impostos e Taxas</dt>
-              <dd>{formatCurrency(preview.impostos)}</dd>
-            </div>
-            <div className="fin-dre__summary-row fin-dre__summary-row--cost">
-              <dt>Ferramentas</dt>
-              <dd>{formatCurrency(preview.ferramentas)}</dd>
-            </div>
-            <div className="fin-dre__summary-row fin-dre__summary-row--payroll">
-              <dt>Pró-labore</dt>
-              <dd>{formatCurrency(preview.pl)}</dd>
-            </div>
-            <div className="fin-dre__summary-row fin-dre__summary-row--profit">
-              <dt>Lucro Líquido</dt>
-              <dd>{formatCurrency(preview.lucro)}</dd>
-            </div>
-            <div className="fin-dre__summary-row fin-dre__summary-row--reserve">
-              <dt>Reservas</dt>
-              <dd>{formatCurrency(preview.totalReservas)}</dd>
-            </div>
-            <div className="fin-dre__summary-accent">
-              <dt>Caixa Livre</dt>
-              <dd className={moneyClass(preview.caixaLivre)}>
-                {formatCurrency(preview.caixaLivre)}
-              </dd>
-            </div>
-          </dl>
-        </aside>
-      </div>
+
+            <aside className="fin-dre__summary">
+              <h3>Resumo executivo</h3>
+              <dl>
+                <div className="fin-dre__summary-row fin-dre__summary-row--income">
+                  <dt>Receita Bruta</dt>
+                  <dd>{formatCurrency(preview.receitaBruta)}</dd>
+                </div>
+                <div className="fin-dre__summary-row fin-dre__summary-row--tax">
+                  <dt>Impostos e Taxas</dt>
+                  <dd>{formatCurrency(preview.impostos)}</dd>
+                </div>
+                <div className="fin-dre__summary-row fin-dre__summary-row--cost">
+                  <dt>Ferramentas</dt>
+                  <dd>{formatCurrency(preview.ferramentas)}</dd>
+                </div>
+                <div className="fin-dre__summary-row fin-dre__summary-row--payroll">
+                  <dt>Pró-labore</dt>
+                  <dd>{formatCurrency(preview.pl)}</dd>
+                </div>
+                <div className="fin-dre__summary-row fin-dre__summary-row--profit">
+                  <dt>Lucro Líquido</dt>
+                  <dd>{formatCurrency(preview.lucro)}</dd>
+                </div>
+                <div className="fin-dre__summary-row fin-dre__summary-row--reserve">
+                  <dt>Reservas</dt>
+                  <dd>{formatCurrency(preview.totalReservas)}</dd>
+                </div>
+                <div className="fin-dre__summary-accent">
+                  <dt>Caixa Livre</dt>
+                  <dd className={moneyClass(preview.caixaLivre)}>
+                    {formatCurrency(preview.caixaLivre)}
+                  </dd>
+                </div>
+              </dl>
+            </aside>
+          </div>
+        </>
+      )}
     </div>
   );
 }

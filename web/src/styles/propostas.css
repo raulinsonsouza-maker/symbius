@@ -3581,49 +3581,65 @@
   font-size: 0.85rem;
 }
 
-.fin-dre__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.fin-dre__chip {
-  min-height: 34px;
-  padding: 6px 12px;
+.fin-dre__mode {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
   border-radius: 999px;
   border: 1px solid var(--symbius-border);
+  background: rgba(255, 255, 255, 0.03);
+  width: fit-content;
+}
+
+.fin-dre__mode-btn {
+  min-height: 32px;
+  padding: 4px 14px;
+  border: 0;
+  border-radius: 999px;
   background: transparent;
   color: var(--symbius-muted-light);
-  font-size: 0.82rem;
+  font: inherit;
+  font-size: 0.85rem;
   cursor: pointer;
 }
 
-.fin-dre__chip:hover {
-  border-color: rgba(255, 255, 255, 0.35);
-  color: var(--symbius-white);
-}
-
-.fin-dre__chip.is-active {
+.fin-dre__mode-btn.is-active {
   background: var(--dre-cash);
-  border-color: var(--dre-cash);
   color: #0a0a0a;
   font-weight: 650;
 }
 
-.fin-dre__chip--month {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.fin-dre__month-select select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 40px;
+  max-width: 100%;
+  padding: 6px 36px 6px 0;
+  border: 0;
+  border-bottom: 1px solid rgba(212, 255, 79, 0.35);
+  border-radius: 0;
+  background:
+    transparent
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23d4ff4f' d='M1 1l5 5 5-5'/%3E%3C/svg%3E")
+    right 8px center / 12px no-repeat;
+  color: var(--symbius-white);
+  font: inherit;
+  font-size: clamp(1.2rem, 2.4vw, 1.65rem);
+  font-weight: 650;
+  line-height: 1.2;
   cursor: pointer;
 }
 
-.fin-dre__chip--month input {
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  max-width: 128px;
-  padding: 0;
+.fin-dre__month-select select:focus {
+  outline: none;
+  border-bottom-color: var(--dre-cash);
+}
+
+.fin-dre__month-select select option {
+  background: #111;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 .fin-dre__hero-side {
@@ -3655,6 +3671,143 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.fin-dre__annual-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.015);
+  padding: 8px 4px 12px;
+}
+
+.fin-dre__annual {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.fin-dre__annual th,
+.fin-dre__annual td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.fin-dre__annual th:first-child,
+.fin-dre__annual td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: #0a0a0a;
+  z-index: 1;
+}
+
+.fin-dre__annual th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--symbius-muted);
+}
+
+.fin-dre__annual-month {
+  background: none;
+  border: 0;
+  color: var(--dre-income);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  text-transform: capitalize;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fin-dre__annual-total {
+  font-weight: 700;
+  border-left: 1px solid rgba(212, 255, 79, 0.25);
+}
+
+.fin-dre__annual-row--profit td {
+  background: rgba(62, 207, 142, 0.08);
+}
+
+.fin-dre__annual-row--cash td {
+  background: rgba(212, 255, 79, 0.12);
+  font-weight: 650;
+}
+
+.fin-dre__annual-hint {
+  margin: 12px 12px 4px;
+  font-size: 0.85rem;
+}
+
+.fin-ops-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.fin-ops {
+  position: relative;
+}
+
+.fin-ops__summary {
+  list-style: none;
+  min-height: 34px;
+  padding: 6px 14px;
+  border: 1px solid var(--symbius-border);
+  border-radius: 999px;
+  color: var(--symbius-muted-light);
+  font-size: 0.85rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.fin-ops__summary::-webkit-details-marker {
+  display: none;
+}
+
+.fin-ops[open] .fin-ops__summary {
+  border-color: rgba(212, 255, 79, 0.45);
+  color: var(--symbius-white);
+}
+
+.fin-ops__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--symbius-border);
+  border-radius: 12px;
+  background: #111;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.fin-ops__menu button {
+  text-align: left;
+  background: none;
+  border: 0;
+  color: var(--symbius-muted-light);
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.fin-ops__menu button:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--symbius-white);
 }
 
 .fin-dre__kpis {

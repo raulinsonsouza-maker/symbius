@@ -134,6 +134,12 @@ export const api = {
     ).toString();
     return request(`/finance/dre${q ? `?${q}` : ''}`);
   },
+  getFinanceDreAnnual: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== ''),
+    ).toString();
+    return request(`/finance/dre/annual${q ? `?${q}` : ''}`);
+  },
   updateFinanceDreSettings: (data) =>
     request('/finance/dre/settings', {
       method: 'PUT',

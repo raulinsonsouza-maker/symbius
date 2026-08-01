@@ -523,6 +523,17 @@ export async function getFinanceDre(req, res) {
   }
 }
 
+export async function getFinanceDreAnnual(req, res) {
+  try {
+    const { buildDreAnnual } = await import('./finance/dre.js');
+    const year = Number(req.query.year) || new Date().getFullYear();
+    return res.json(await buildDreAnnual(getStore(), { year }));
+  } catch (err) {
+    const status = err.status && err.status < 500 ? err.status : 502;
+    return res.status(status).json({ error: err.message || 'Falha ao montar DRE anual' });
+  }
+}
+
 export async function updateFinanceDreSettings(req, res) {
   try {
     const settings = await getStore().updateDreSettings(req.body || {});
