@@ -513,6 +513,54 @@ export async function getCashflow(req, res) {
   );
 }
 
+export async function getFinanceDre(req, res) {
+  try {
+    const { buildDre } = await import('./finance/dre.js');
+    return res.json(await buildDre(getStore(), { month: req.query.month }));
+  } catch (err) {
+    const status = err.status && err.status < 500 ? err.status : 502;
+    return res.status(status).json({ error: err.message || 'Falha ao montar DRE' });
+  }
+}
+
+export async function updateFinanceDreSettings(req, res) {
+  try {
+    const settings = await getStore().updateDreSettings(req.body || {});
+    return res.json(settings);
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'Falha ao salvar' });
+  }
+}
+
+export async function updateFinanceDreRecurring(req, res) {
+  try {
+    const items = Array.isArray(req.body?.items) ? req.body.items : req.body;
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ error: 'Envie { items: [...] }' });
+    }
+    const saved = await getStore().replaceRecurringCosts(items);
+    return res.json(saved);
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'Falha ao salvar' });
+  }
+}
+
+export async function updateFinanceDreMonthOverride(req, res) {
+  try {
+    const month = String(req.params.month || req.body?.month || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({ error: 'month no formato YYYY-MM' });
+    }
+    const payload = await getStore().upsertDreMonthOverride(
+      month,
+      req.body?.payload || req.body || {},
+    );
+    return res.json(payload);
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'Falha ao salvar' });
+  }
+}
+
 export async function getAsaasFinanceOverview(_req, res) {
   try {
     return res.json(await buildAsaasOverview(getStore()));

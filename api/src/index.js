@@ -46,6 +46,10 @@ import {
   updateFinanceEntry,
   syncContractFinance,
   getCashflow,
+  getFinanceDre,
+  updateFinanceDreSettings,
+  updateFinanceDreRecurring,
+  updateFinanceDreMonthOverride,
   getAsaasFinanceOverview,
   listAsaasFinancePayments,
   syncAsaasFinance,
@@ -117,6 +121,10 @@ app.post('/api/finance/entries', createFinanceEntry);
 app.put('/api/finance/entries/:id', updateFinanceEntry);
 app.post('/api/finance/contracts/:id/sync', syncContractFinance);
 app.get('/api/finance/cashflow', getCashflow);
+app.get('/api/finance/dre', getFinanceDre);
+app.put('/api/finance/dre/settings', updateFinanceDreSettings);
+app.put('/api/finance/dre/recurring', updateFinanceDreRecurring);
+app.put('/api/finance/dre/months/:month', updateFinanceDreMonthOverride);
 app.get('/api/finance/asaas/overview', getAsaasFinanceOverview);
 app.get('/api/finance/asaas/payments', listAsaasFinancePayments);
 app.post('/api/finance/asaas/sync', syncAsaasFinance);

@@ -299,3 +299,39 @@ CREATE TABLE IF NOT EXISTS strategic_analyses (
 
 CREATE INDEX IF NOT EXISTS strategic_analyses_created_at_idx
   ON strategic_analyses (created_at DESC);
+
+-- DRE / Caixa interativo
+CREATE TABLE IF NOT EXISTS finance_dre_settings (
+  id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  simples_rate NUMERIC(8, 4) NOT NULL DEFAULT 0.06,
+  reserve_marketing_rate NUMERIC(8, 4) NOT NULL DEFAULT 0.10,
+  reserve_working_rate NUMERIC(8, 4) NOT NULL DEFAULT 0.15,
+  reserve_expansion_rate NUMERIC(8, 4) NOT NULL DEFAULT 0.05,
+  period_start_day SMALLINT NOT NULL DEFAULT 1,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO finance_dre_settings (id)
+VALUES (1)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS finance_recurring_costs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  section TEXT NOT NULL CHECK (section IN ('tools', 'prolabore')),
+  name TEXT NOT NULL DEFAULT '',
+  amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS finance_recurring_costs_section_idx
+  ON finance_recurring_costs (section, sort_order);
+
+CREATE TABLE IF NOT EXISTS finance_dre_month_overrides (
+  year_month TEXT PRIMARY KEY,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+

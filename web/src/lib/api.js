@@ -128,6 +128,27 @@ export const api = {
     ).toString();
     return request(`/finance/cashflow${q ? `?${q}` : ''}`);
   },
+  getFinanceDre: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== ''),
+    ).toString();
+    return request(`/finance/dre${q ? `?${q}` : ''}`);
+  },
+  updateFinanceDreSettings: (data) =>
+    request('/finance/dre/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  updateFinanceDreRecurring: (data) =>
+    request('/finance/dre/recurring', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  updateFinanceDreMonthOverride: (month, data) =>
+    request(`/finance/dre/months/${month}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   getAsaasFinanceOverview: () => request('/finance/asaas/overview'),
   listAsaasFinancePayments: (params = {}) => {
     const q = new URLSearchParams(

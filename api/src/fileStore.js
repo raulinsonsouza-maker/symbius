@@ -1142,4 +1142,84 @@ export const fileStore = {
     writeDb(db);
     return true;
   },
+
+  async getDreSettings() {
+    const db = readDb();
+    if (!db.dreSettings) {
+      const { defaultDreSettings } = await import('./finance/dre.js');
+      db.dreSettings = defaultDreSettings();
+      writeDb(db);
+    }
+    return { ...db.dreSettings };
+  },
+
+  async updateDreSettings(b = {}) {
+    const db = readDb();
+    const cur = db.dreSettings || (await this.getDreSettings());
+    db.dreSettings = {
+      ...cur,
+      ...(b.simplesRate != null ? { simplesRate: Number(b.simplesRate) } : {}),
+      ...(b.reserveMarketingRate != null
+        ? { reserveMarketingRate: Number(b.reserveMarketingRate) }
+        : {}),
+      ...(b.reserveWorkingRate != null
+        ? { reserveWorkingRate: Number(b.reserveWorkingRate) }
+        : {}),
+      ...(b.reserveExpansionRate != null
+        ? { reserveExpansionRate: Number(b.reserveExpansionRate) }
+        : {}),
+      ...(b.periodStartDay != null
+        ? { periodStartDay: Number(b.periodStartDay) }
+        : {}),
+    };
+    writeDb(db);
+    return { ...db.dreSettings };
+  },
+
+  async listRecurringCosts() {
+    const db = readDb();
+    return [...(db.recurringCosts || [])];
+  },
+
+  async ensureRecurringCostsSeeded() {
+    const db = readDb();
+    if (db.recurringCosts?.length) return;
+    const { defaultRecurringCosts } = await import('./finance/dre.js');
+    db.recurringCosts = defaultRecurringCosts().map((r) => ({
+      id: randomUUID(),
+      ...r,
+      active: true,
+    }));
+    writeDb(db);
+  },
+
+  async replaceRecurringCosts(items = []) {
+    const db = readDb();
+    db.recurringCosts = items.map((item, i) => ({
+      id: item.id || randomUUID(),
+      section: item.section === 'prolabore' ? 'prolabore' : 'tools',
+      name: String(item.name || '').trim() || 'Item',
+      amount: Number(item.amount) || 0,
+      active: item.active !== false,
+      sortOrder: item.sortOrder != null ? Number(item.sortOrder) : (i + 1) * 10,
+    }));
+    writeDb(db);
+    return [...db.recurringCosts];
+  },
+
+  async getDreMonthOverride(yearMonth) {
+    const db = readDb();
+    return { ...(db.dreMonthOverrides?.[yearMonth] || {}) };
+  },
+
+  async upsertDreMonthOverride(yearMonth, payload = {}) {
+    const db = readDb();
+    if (!db.dreMonthOverrides) db.dreMonthOverrides = {};
+    db.dreMonthOverrides[yearMonth] = {
+      ...(db.dreMonthOverrides[yearMonth] || {}),
+      ...(payload || {}),
+    };
+    writeDb(db);
+    return { ...db.dreMonthOverrides[yearMonth] };
+  },
 };

@@ -1556,6 +1556,144 @@ Object.assign(pgStore, {
   },
 });
 
+function mapDreSettings(row) {
+  if (!row) return null;
+  return {
+    simplesRate: Number(row.simples_rate) || 0.06,
+    reserveMarketingRate: Number(row.reserve_marketing_rate) || 0.1,
+    reserveWorkingRate: Number(row.reserve_working_rate) || 0.15,
+    reserveExpansionRate: Number(row.reserve_expansion_rate) || 0.05,
+    periodStartDay: Number(row.period_start_day) || 1,
+  };
+}
+
+function mapRecurringCost(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    section: row.section,
+    name: row.name,
+    amount: Number(row.amount) || 0,
+    active: row.active !== false,
+    sortOrder: Number(row.sort_order) || 0,
+  };
+}
+
+Object.assign(pgStore, {
+  async getDreSettings() {
+    await pool.query(
+      `INSERT INTO finance_dre_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`,
+    );
+    const { rows } = await pool.query(
+      'SELECT * FROM finance_dre_settings WHERE id = 1',
+    );
+    return mapDreSettings(rows[0]);
+  },
+
+  async updateDreSettings(b = {}) {
+    await pool.query(
+      `INSERT INTO finance_dre_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`,
+    );
+    const { rows } = await pool.query(
+      `UPDATE finance_dre_settings SET
+        simples_rate = COALESCE($1, simples_rate),
+        reserve_marketing_rate = COALESCE($2, reserve_marketing_rate),
+        reserve_working_rate = COALESCE($3, reserve_working_rate),
+        reserve_expansion_rate = COALESCE($4, reserve_expansion_rate),
+        period_start_day = COALESCE($5, period_start_day),
+        updated_at = NOW()
+       WHERE id = 1 RETURNING *`,
+      [
+        b.simplesRate != null ? Number(b.simplesRate) : null,
+        b.reserveMarketingRate != null ? Number(b.reserveMarketingRate) : null,
+        b.reserveWorkingRate != null ? Number(b.reserveWorkingRate) : null,
+        b.reserveExpansionRate != null ? Number(b.reserveExpansionRate) : null,
+        b.periodStartDay != null ? Number(b.periodStartDay) : null,
+      ],
+    );
+    return mapDreSettings(rows[0]);
+  },
+
+  async listRecurringCosts() {
+    const { rows } = await pool.query(
+      `SELECT * FROM finance_recurring_costs
+       ORDER BY section, sort_order, name`,
+    );
+    return rows.map(mapRecurringCost);
+  },
+
+  async ensureRecurringCostsSeeded() {
+    const { rows } = await pool.query(
+      'SELECT COUNT(*)::int AS c FROM finance_recurring_costs',
+    );
+    if (rows[0].c > 0) return;
+    const { defaultRecurringCosts } = await import('./finance/dre.js');
+    for (const item of defaultRecurringCosts()) {
+      await pool.query(
+        `INSERT INTO finance_recurring_costs (section, name, amount, active, sort_order)
+         VALUES ($1,$2,$3,true,$4)`,
+        [item.section, item.name, item.amount, item.sortOrder],
+      );
+    }
+  },
+
+  async replaceRecurringCosts(items = []) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM finance_recurring_costs');
+      const saved = [];
+      for (const [i, item] of items.entries()) {
+        const section = item.section === 'prolabore' ? 'prolabore' : 'tools';
+        const { rows } = await client.query(
+          `INSERT INTO finance_recurring_costs (section, name, amount, active, sort_order)
+           VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+          [
+            section,
+            String(item.name || '').trim() || 'Item',
+            Number(item.amount) || 0,
+            item.active !== false,
+            item.sortOrder != null ? Number(item.sortOrder) : (i + 1) * 10,
+          ],
+        );
+        saved.push(mapRecurringCost(rows[0]));
+      }
+      await client.query('COMMIT');
+      return saved;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
+
+  async getDreMonthOverride(yearMonth) {
+    const { rows } = await pool.query(
+      'SELECT payload FROM finance_dre_month_overrides WHERE year_month = $1',
+      [yearMonth],
+    );
+    return rows[0]?.payload && typeof rows[0].payload === 'object'
+      ? rows[0].payload
+      : {};
+  },
+
+  async upsertDreMonthOverride(yearMonth, payload = {}) {
+    const current = await this.getDreMonthOverride(yearMonth);
+    const merged = { ...current, ...(payload || {}) };
+    const { rows } = await pool.query(
+      `INSERT INTO finance_dre_month_overrides (year_month, payload, updated_at)
+       VALUES ($1, $2::jsonb, NOW())
+       ON CONFLICT (year_month) DO UPDATE SET
+         payload = EXCLUDED.payload,
+         updated_at = NOW()
+       RETURNING payload`,
+      [yearMonth, JSON.stringify(merged)],
+    );
+    return rows[0]?.payload || {};
+  },
+});
+
 let store = fileStore;
 
 export async function initStore() {

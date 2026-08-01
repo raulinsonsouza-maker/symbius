@@ -7,6 +7,7 @@ import {
   fromDateInputValue,
   toDateInputValue,
 } from '../../../components/contratos/AsaasBillingFields';
+import DrePanel from './DrePanel';
 
 function addDaysISO(days) {
   const d = new Date();
@@ -97,7 +98,7 @@ function emptyAsaas() {
 
 export default function FinanceiroPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get('tab') || 'dashboard';
+  const tab = searchParams.get('tab') || 'dre';
   const clientFilter = searchParams.get('clientId') || '';
 
   const [entries, setEntries] = useState([]);
@@ -455,7 +456,7 @@ export default function FinanceiroPage() {
         <div className="admin-shell__intro">
           <h1 className="admin-shell__title">Financeiro</h1>
           <p className="admin-shell__subtitle">
-            Conta Asaas, agenda Symbius e lançamentos manuais.
+            DRE / caixa, cobranças Asaas e lançamentos.
           </p>
         </div>
 
@@ -471,6 +472,7 @@ export default function FinanceiroPage() {
 
         <div className="prop-template-row" style={{ marginBottom: 20 }}>
           {[
+            ['dre', 'DRE / Caixa'],
             ['dashboard', 'Dashboard'],
             ['cashflow', 'Fluxo / previsão'],
             ['receivables', 'A receber'],
@@ -489,7 +491,9 @@ export default function FinanceiroPage() {
         </div>
 
         {error && <p className="prop-error">{error}</p>}
-        {loading ? (
+        {tab === 'dre' ? (
+          <DrePanel onOpenAsaas={() => setTab('asaas')} />
+        ) : loading ? (
           <p className="prop-muted">Carregando…</p>
         ) : (
           <>
@@ -943,6 +947,10 @@ export default function FinanceiroPage() {
 
             {tab === 'asaas' && (
               <div>
+                <p className="prop-muted" style={{ marginBottom: 12 }}>
+                  Detalhe das cobranças Asaas (drill-down). O resultado do mês
+                  está na aba DRE / Caixa.
+                </p>
                 {!asaas.configured ? (
                   <p className="prop-muted">
                     Configure ASAAS_API_KEY na API para listar cobranças.
