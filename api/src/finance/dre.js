@@ -73,6 +73,109 @@ function estimateAsaasFee(payment) {
   return 0.99;
 }
 
+function displayClientName(client) {
+  if (!client) return '';
+  return (
+    String(client.tradeName || client.legalName || client.name || '').trim()
+  );
+}
+
+function formatRevenueDescription(rawDescription, clientName, paymentId) {
+  const raw = String(rawDescription || '').trim();
+  const title = raw.replace(/\s*[—–-]\s*CTR-\d{4}-\d+\s*$/i, '').trim() || raw;
+  if (clientName && title) return `${clientName} — ${title}`;
+  if (clientName) return clientName;
+  return title || `Cobrança ${paymentId}`;
+}
+
+async function resolvePaymentClientName(store, payment, caches) {
+  const { clientsById, clientsByAsaas, contractsById, contractsByNumber } =
+    caches;
+
+  // 1) lançamento reconciliado pelo payment id
+  try {
+    const entry = await store.getFinanceEntryByAsaasPaymentId?.(payment.id);
+    if (entry?.clientId && clientsById.has(entry.clientId)) {
+      return displayClientName(clientsById.get(entry.clientId));
+    }
+    if (entry?.clientName) return String(entry.clientName).trim();
+    if (entry?.contractId && contractsById.has(entry.contractId)) {
+      const c = contractsById.get(entry.contractId);
+      if (c?.clientId && clientsById.has(c.clientId)) {
+        return displayClientName(clientsById.get(c.clientId));
+      }
+      if (c?.clientName) return String(c.clientName).trim();
+    }
+  } catch {
+    /* ignore */
+  }
+
+  // 2) externalReference = entry id, contract id, ou setup:contractId
+  const ref = String(payment.externalReference || '').trim();
+  if (ref) {
+    if (contractsById.has(ref)) {
+      const c = contractsById.get(ref);
+      if (c?.clientId && clientsById.has(c.clientId)) {
+        return displayClientName(clientsById.get(c.clientId));
+      }
+    }
+    const setupMatch = ref.match(/^setup:(.+)$/i);
+    if (setupMatch && contractsById.has(setupMatch[1])) {
+      const c = contractsById.get(setupMatch[1]);
+      if (c?.clientId && clientsById.has(c.clientId)) {
+        return displayClientName(clientsById.get(c.clientId));
+      }
+    }
+    try {
+      const entry = await store.getFinanceEntry?.(ref);
+      if (entry?.clientId && clientsById.has(entry.clientId)) {
+        return displayClientName(clientsById.get(entry.clientId));
+      }
+      if (entry?.clientName) return String(entry.clientName).trim();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // 3) número do contrato na descrição (CTR-2026-0002)
+  const ctr = String(payment.description || '').match(/CTR-\d{4}-\d+/i);
+  if (ctr) {
+    const contract = contractsByNumber.get(ctr[0].toUpperCase());
+    if (contract?.clientId && clientsById.has(contract.clientId)) {
+      return displayClientName(clientsById.get(contract.clientId));
+    }
+    if (contract?.clientName) return String(contract.clientName).trim();
+  }
+
+  // 4) customer Asaas
+  const asaasCustomer = String(payment.customer || '').trim();
+  if (asaasCustomer && clientsByAsaas.has(asaasCustomer)) {
+    return displayClientName(clientsByAsaas.get(asaasCustomer));
+  }
+
+  return '';
+}
+
+async function buildClientCaches(store) {
+  const clients = (await store.listClientsIncludingArchived?.()) ||
+    (await store.listClients?.()) ||
+    [];
+  const contracts = (await store.listContracts?.()) || [];
+  const clientsById = new Map(clients.map((c) => [c.id, c]));
+  const clientsByAsaas = new Map(
+    clients
+      .filter((c) => c.asaasCustomerId)
+      .map((c) => [String(c.asaasCustomerId), c]),
+  );
+  const contractsById = new Map(contracts.map((c) => [c.id, c]));
+  const contractsByNumber = new Map(
+    contracts
+      .filter((c) => c.number)
+      .map((c) => [String(c.number).toUpperCase(), c]),
+  );
+  return { clientsById, clientsByAsaas, contractsById, contractsByNumber };
+}
+
 async function fetchReceivedPayments(from, to) {
   if (!asaasConfigured()) return [];
   const collected = [];
@@ -141,24 +244,29 @@ export async function buildDre(store, opts = {}) {
     console.error('DRE Asaas fetch failed:', err.message);
   }
 
-  const revenueLines = payments.map((p) => {
+  const revenueLines = [];
+  const caches = await buildClientCaches(store);
+  for (const p of payments) {
     const value = money(p.value);
     const net = money(p.netValue);
     const fee =
       net > 0 && value >= net
         ? money(value - net)
         : estimateAsaasFee(p);
-    return {
+    const clientName = await resolvePaymentClientName(store, p, caches);
+    revenueLines.push({
       id: p.id,
-      description: p.description || `Cobrança ${p.id}`,
+      description: formatRevenueDescription(p.description, clientName, p.id),
+      clientName: clientName || '',
       value,
       netValue: net,
       fee,
       billingType: p.billingType || '',
       paymentDate: p.paymentDate || p.confirmedDate || '',
       customer: p.customer || '',
-    };
-  });
+      externalReference: p.externalReference || '',
+    });
+  }
 
   const receitaBruta = money(
     revenueLines.reduce((s, l) => s + l.value, 0),
