@@ -301,6 +301,7 @@ export async function buildDre(store, opts = {}) {
     period: { from, to, label: `${formatBR(from)} a ${formatBR(to)}` },
     asaasConfigured: asaasConfiguredFlag,
     settings,
+    overrides,
     revenues: revenueLines,
     receitaBruta,
     taxes: {

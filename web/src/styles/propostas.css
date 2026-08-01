@@ -3500,19 +3500,139 @@
 
 /* DRE / Caixa */
 .fin-dre {
+  --dre-income: #3ecf8e;
+  --dre-tax: #f0b429;
+  --dre-cost: #7aa2ff;
+  --dre-payroll: #c084fc;
+  --dre-profit: #5eead4;
+  --dre-reserve: #fb923c;
+  --dre-cash: #d4ff4f;
+  --dre-neg: #fb7185;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.fin-dre__toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px 16px;
+.fin-dre__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(220px, 0.9fr);
+  gap: 16px 20px;
+  padding: 18px 20px;
+  border: 1px solid rgba(62, 207, 142, 0.28);
+  border-radius: 14px;
+  background:
+    radial-gradient(1200px 240px at 0% 0%, rgba(62, 207, 142, 0.12), transparent 55%),
+    radial-gradient(800px 200px at 100% 0%, rgba(212, 255, 79, 0.08), transparent 50%),
+    rgba(255, 255, 255, 0.02);
 }
 
-.fin-dre__month,
+.fin-dre__hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.fin-dre__period-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fin-dre__nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--symbius-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--symbius-white);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fin-dre__nav-btn:hover {
+  border-color: rgba(62, 207, 142, 0.55);
+  background: rgba(62, 207, 142, 0.1);
+}
+
+.fin-dre__period-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fin-dre__eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--symbius-muted);
+}
+
+.fin-dre__period-copy strong {
+  font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+  font-weight: 650;
+  line-height: 1.15;
+}
+
+.fin-dre__period-copy small {
+  color: var(--symbius-muted);
+  font-size: 0.85rem;
+}
+
+.fin-dre__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fin-dre__chip {
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--symbius-border);
+  background: transparent;
+  color: var(--symbius-muted-light);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.fin-dre__chip:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: var(--symbius-white);
+}
+
+.fin-dre__chip.is-active {
+  background: var(--dre-cash);
+  border-color: var(--dre-cash);
+  color: #0a0a0a;
+  font-weight: 650;
+}
+
+.fin-dre__chip--month {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.fin-dre__chip--month input {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  max-width: 128px;
+  padding: 0;
+}
+
+.fin-dre__hero-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .fin-dre__day {
   display: flex;
   flex-direction: column;
@@ -3521,20 +3641,81 @@
   color: var(--symbius-muted);
 }
 
-.fin-dre__month input,
 .fin-dre__day input {
   min-height: 36px;
+  max-width: 96px;
   padding: 6px 10px;
-  border: 1px solid var(--symbius-border, #ddd);
+  border: 1px solid var(--symbius-border);
   border-radius: 8px;
-  background: var(--symbius-surface, #fff);
+  background: rgba(255, 255, 255, 0.03);
   color: inherit;
 }
 
-.fin-dre__period {
-  margin: 0;
-  font-size: 13px;
+.fin-dre__hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fin-dre__kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fin-dre__kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--symbius-border);
+  background: rgba(255, 255, 255, 0.02);
+  min-width: 0;
+}
+
+.fin-dre__kpi span {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--symbius-muted);
+}
+
+.fin-dre__kpi strong {
+  font-size: 1.05rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.fin-dre__kpi small {
+  color: var(--symbius-muted);
+  font-size: 0.78rem;
+}
+
+.fin-dre__kpi--income {
+  border-color: rgba(62, 207, 142, 0.4);
+  background: linear-gradient(160deg, rgba(62, 207, 142, 0.14), transparent 70%);
+}
+
+.fin-dre__kpi--tax {
+  border-color: rgba(240, 180, 41, 0.4);
+  background: linear-gradient(160deg, rgba(240, 180, 41, 0.12), transparent 70%);
+}
+
+.fin-dre__kpi--cost {
+  border-color: rgba(122, 162, 255, 0.4);
+  background: linear-gradient(160deg, rgba(122, 162, 255, 0.12), transparent 70%);
+}
+
+.fin-dre__kpi--profit {
+  border-color: rgba(94, 234, 212, 0.4);
+  background: linear-gradient(160deg, rgba(94, 234, 212, 0.12), transparent 70%);
+}
+
+.fin-dre__kpi--cash {
+  border-color: rgba(212, 255, 79, 0.45);
+  background: linear-gradient(160deg, rgba(212, 255, 79, 0.16), transparent 70%);
 }
 
 .fin-dre__layout {
@@ -3546,6 +3727,9 @@
 
 .fin-dre__table-wrap {
   overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.015);
 }
 
 .fin-dre__table {
@@ -3560,13 +3744,13 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--symbius-muted);
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--symbius-border, #e5e5e5);
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .fin-dre__table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid color-mix(in srgb, var(--symbius-border, #e5e5e5) 70%, transparent);
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   vertical-align: middle;
 }
 
@@ -3574,23 +3758,43 @@
   padding-top: 18px;
   font-weight: 700;
   font-size: 12px;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   border-bottom: none;
 }
 
+.fin-dre__section--income td:first-child { color: var(--dre-income); }
+.fin-dre__section--tax td:first-child { color: var(--dre-tax); }
+.fin-dre__section--cost td:first-child { color: var(--dre-cost); }
+.fin-dre__section--payroll td:first-child { color: var(--dre-payroll); }
+.fin-dre__section--reserve td:first-child { color: var(--dre-reserve); }
+
 .fin-dre__total td {
-  font-weight: 600;
+  font-weight: 650;
   border-bottom-width: 2px;
 }
 
+.fin-dre__total--income td { border-bottom-color: rgba(62, 207, 142, 0.35); }
+.fin-dre__total--tax td { border-bottom-color: rgba(240, 180, 41, 0.35); }
+.fin-dre__total--cost td { border-bottom-color: rgba(122, 162, 255, 0.35); }
+.fin-dre__total--payroll td { border-bottom-color: rgba(192, 132, 252, 0.35); }
+.fin-dre__total--reserve td { border-bottom-color: rgba(251, 146, 60, 0.35); }
+
 .fin-dre__result td {
   font-weight: 700;
-  background: color-mix(in srgb, var(--symbius-surface, #f7f7f5) 80%, transparent);
 }
 
-.fin-dre__result--accent td {
-  background: color-mix(in srgb, #d4ff4f 28%, transparent);
+.fin-dre__result--op td {
+  background: rgba(94, 234, 212, 0.08);
+}
+
+.fin-dre__result--profit td {
+  background: rgba(62, 207, 142, 0.1);
+}
+
+.fin-dre__result--cash td {
+  background: rgba(212, 255, 79, 0.16);
+  color: #f7ffe0;
 }
 
 .fin-dre__val {
@@ -3600,15 +3804,19 @@
   min-width: 110px;
 }
 
+.fin-dre__val--pos { color: var(--dre-income); }
+.fin-dre__val--neg { color: var(--dre-neg); }
+.fin-dre__val--muted { color: var(--symbius-muted); }
+
 .fin-dre__pct,
 .fin-dre__amount,
 .fin-dre__inline-num {
   width: 72px;
   margin-left: 6px;
   padding: 4px 6px;
-  border: 1px solid var(--symbius-border, #ddd);
+  border: 1px solid var(--symbius-border);
   border-radius: 6px;
-  background: var(--symbius-surface, #fff);
+  background: rgba(255, 255, 255, 0.03);
   color: inherit;
   font: inherit;
 }
@@ -3629,11 +3837,28 @@
   flex: 1;
   min-width: 0;
   padding: 4px 8px;
-  border: 1px solid var(--symbius-border, #ddd);
+  border: 1px solid var(--symbius-border);
   border-radius: 6px;
-  background: var(--symbius-surface, #fff);
+  background: rgba(255, 255, 255, 0.03);
   color: inherit;
   font: inherit;
+}
+
+.fin-dre__add,
+.fin-dre__remove {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--dre-cost);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.fin-dre__remove {
+  color: var(--dre-neg);
+  opacity: 0.85;
 }
 
 .fin-dre__rates {
@@ -3641,15 +3866,18 @@
   text-transform: none;
   letter-spacing: 0;
   font-size: 13px;
+  color: var(--symbius-muted-light);
 }
 
 .fin-dre__summary {
   position: sticky;
   top: 16px;
   padding: 16px 18px;
-  border: 1px solid var(--symbius-border, #e5e5e5);
-  border-radius: 12px;
-  background: var(--symbius-surface, #fff);
+  border: 1px solid rgba(212, 255, 79, 0.28);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(212, 255, 79, 0.08), transparent 40%),
+    rgba(255, 255, 255, 0.03);
 }
 
 .fin-dre__summary h3 {
@@ -3664,12 +3892,21 @@
   gap: 10px;
 }
 
-.fin-dre__summary dl > div {
+.fin-dre__summary-row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   font-size: 13px;
+  padding-left: 10px;
+  border-left: 3px solid transparent;
 }
+
+.fin-dre__summary-row--income { border-left-color: var(--dre-income); }
+.fin-dre__summary-row--tax { border-left-color: var(--dre-tax); }
+.fin-dre__summary-row--cost { border-left-color: var(--dre-cost); }
+.fin-dre__summary-row--payroll { border-left-color: var(--dre-payroll); }
+.fin-dre__summary-row--profit { border-left-color: var(--dre-profit); }
+.fin-dre__summary-row--reserve { border-left-color: var(--dre-reserve); }
 
 .fin-dre__summary dt {
   color: var(--symbius-muted);
@@ -3682,9 +3919,14 @@
 }
 
 .fin-dre__summary-accent {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
   margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px solid var(--symbius-border, #e5e5e5);
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(212, 255, 79, 0.14);
+  border: 1px solid rgba(212, 255, 79, 0.35);
 }
 
 .fin-dre__summary-accent dt,
@@ -3694,12 +3936,28 @@
   color: inherit;
 }
 
+@media (max-width: 1100px) {
+  .fin-dre__kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 960px) {
+  .fin-dre__hero {
+    grid-template-columns: 1fr;
+  }
+
   .fin-dre__layout {
     grid-template-columns: 1fr;
   }
 
   .fin-dre__summary {
     position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .fin-dre__kpis {
+    grid-template-columns: 1fr 1fr;
   }
 }
