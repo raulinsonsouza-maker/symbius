@@ -53,7 +53,7 @@ function buildMonthOptions() {
 const ANNUAL_ROWS = [
   { key: 'receitaBruta', label: 'Receita bruta', invert: false },
   { key: 'impostosTaxas', label: 'Impostos e taxas', invert: true },
-  { key: 'ferramentas', label: 'Ferramentas', invert: true },
+  { key: 'ferramentas', label: 'Despesas operacionais', invert: true },
   { key: 'prolabore', label: 'Pró-labore', invert: true },
   { key: 'lucroLiquido', label: 'Lucro líquido', invert: false },
   { key: 'reservas', label: 'Reservas', invert: true },
@@ -199,7 +199,7 @@ export default function DrePanel({ onOpenAsaas }) {
     const row = {
       id: `new-${Date.now()}`,
       section,
-      name: section === 'tools' ? 'Nova ferramenta' : 'Novo sócio',
+      name: section === 'tools' ? 'Nova despesa' : 'Novo sócio',
       amount: 0,
       active: true,
     };
@@ -429,7 +429,7 @@ export default function DrePanel({ onOpenAsaas }) {
                 (Number(kpiSource.ferramentas) || 0) + (Number(kpiSource.prolabore) || 0),
               )}
             </strong>
-            <small>Ferramentas + pró-labore</small>
+            <small>Despesas + pró-labore</small>
           </div>
           <div className="fin-dre__kpi fin-dre__kpi--profit">
             <span>Lucro líquido</span>
@@ -617,7 +617,7 @@ export default function DrePanel({ onOpenAsaas }) {
                   </tr>
 
                   <tr className="fin-dre__section fin-dre__section--cost">
-                    <td>(-) Ferramentas</td>
+                    <td>(-) Despesas operacionais</td>
                     <td colSpan={2}>
                       <button
                         type="button"
@@ -663,7 +663,7 @@ export default function DrePanel({ onOpenAsaas }) {
                   ))}
                   <tr className="fin-dre__total fin-dre__total--cost">
                     <td />
-                    <td>Total Ferramentas</td>
+                    <td>Total despesas operacionais</td>
                     <td className={`fin-dre__val ${moneyClass(preview.ferramentas, { invert: true })}`}>
                       {formatCurrency(preview.ferramentas)}
                     </td>
@@ -671,7 +671,7 @@ export default function DrePanel({ onOpenAsaas }) {
 
                   <tr className="fin-dre__result fin-dre__result--op">
                     <td>Resultado operacional</td>
-                    <td>Receita após impostos e ferramentas</td>
+                    <td>Receita após impostos e despesas</td>
                     <td className={`fin-dre__val ${moneyClass(preview.resultadoOp)}`}>
                       {formatCurrency(preview.resultadoOp)}
                     </td>
@@ -807,7 +807,7 @@ export default function DrePanel({ onOpenAsaas }) {
                   <dd>{formatCurrency(preview.impostos)}</dd>
                 </div>
                 <div className="fin-dre__summary-row fin-dre__summary-row--cost">
-                  <dt>Ferramentas</dt>
+                  <dt>Despesas operacionais</dt>
                   <dd>{formatCurrency(preview.ferramentas)}</dd>
                 </div>
                 <div className="fin-dre__summary-row fin-dre__summary-row--payroll">

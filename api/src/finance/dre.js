@@ -290,7 +290,13 @@ export async function buildDre(store, opts = {}) {
 
   const toolsCatIds = new Set(
     cats
-      .filter((c) => categoryMatches(c, ['tools'], /ferramenta/i))
+      .filter((c) =>
+        categoryMatches(
+          c,
+          ['tools', 'opex', 'operating'],
+          /ferramenta|despesa\s*operacion/i,
+        ),
+      )
       .map((c) => c.id),
   );
   const payrollCatIds = new Set(
@@ -315,7 +321,7 @@ export async function buildDre(store, opts = {}) {
     .filter((e) => paidExpense(e) && toolsCatIds.has(e.categoryId))
     .map((e) => ({
       id: e.id,
-      name: e.description || 'Despesa ferramentas',
+      name: e.description || 'Despesa operacional',
       amount: money(e.amount),
       source: 'entry',
     }));
