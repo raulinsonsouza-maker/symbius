@@ -231,35 +231,98 @@ export async function generateSignedContractPdf({
   writeParagraph(doc, legal.closing.agreement);
   writeParagraph(doc, legal.closing.placeDate, { after: 0.8 });
 
-  ensureSpace(doc, 100);
+  ensureSpace(doc, 120);
   const signY = doc.y;
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(9)
-    .fillColor('#111')
-    .text(legal.closing.providerSignName, leftX, signY, { width: colW });
-  doc
-    .font('Helvetica')
-    .fontSize(8)
-    .fillColor('#555')
-    .text(legal.closing.providerSignRole, leftX, doc.y + 2, { width: colW });
-  doc.text(legal.closing.providerSignPerson, leftX, doc.y + 1, { width: colW });
-
   const rightX = leftX + colW + gap;
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(9)
-    .fillColor('#111')
-    .text(legal.closing.clientSignName, rightX, signY, { width: colW });
-  let cy = signY + 12;
-  doc
-    .font('Helvetica')
-    .fontSize(8)
-    .fillColor('#555')
-    .text(legal.closing.clientSignRole, rightX, cy, { width: colW });
-  cy = doc.y + 1;
-  doc.text(legal.closing.clientSignPerson, rightX, cy, { width: colW });
-  doc.y = Math.max(doc.y, signY + 50) + 16;
+
+  function writeSignColumn(x, lines) {
+    let y = signY;
+    for (const line of lines) {
+      doc
+        .font(line.bold ? 'Helvetica-Bold' : 'Helvetica')
+        .fontSize(line.size || 8)
+        .fillColor(line.color || '#555')
+        .text(line.text, x, y, { width: colW, align: 'left' });
+      y = doc.y + (line.gap ?? 2);
+    }
+    return y;
+  }
+
+  const providerLines = [
+    { text: legal.closing.providerSignName, bold: true, size: 9, color: '#111', gap: 3 },
+    { text: legal.closing.providerSignRole, size: 8, color: '#555', gap: 2 },
+    { text: legal.closing.providerSignPerson, size: 8, color: '#555', gap: 6 },
+  ];
+  if (signature.providerSignedAt || signature.providerSignerName) {
+    providerLines.push({
+      text: 'Assinado eletronicamente',
+      size: 7.5,
+      color: '#2e7d4f',
+      gap: 2,
+    });
+    providerLines.push({
+      text: signature.providerSignerName || legal.closing.providerSignPerson,
+      size: 8,
+      color: '#111',
+      gap: 2,
+    });
+    if (signature.providerSignerEmail) {
+      providerLines.push({
+        text: signature.providerSignerEmail,
+        size: 7.5,
+        color: '#666',
+        gap: 2,
+      });
+    }
+    providerLines.push({
+      text: signature.providerSignedAt
+        ? new Date(signature.providerSignedAt).toLocaleString('pt-BR')
+        : '—',
+      size: 7.5,
+      color: '#666',
+      gap: 2,
+    });
+  }
+
+  const clientLines = [
+    { text: legal.closing.clientSignName, bold: true, size: 9, color: '#111', gap: 3 },
+    { text: legal.closing.clientSignRole, size: 8, color: '#555', gap: 2 },
+    { text: legal.closing.clientSignPerson, size: 8, color: '#555', gap: 6 },
+  ];
+  if (signature.signedAt || signature.signerName) {
+    clientLines.push({
+      text: 'Assinado eletronicamente',
+      size: 7.5,
+      color: '#2e7d4f',
+      gap: 2,
+    });
+    clientLines.push({
+      text: signature.signerName || legal.closing.clientSignPerson,
+      size: 8,
+      color: '#111',
+      gap: 2,
+    });
+    if (signature.signerEmail) {
+      clientLines.push({
+        text: signature.signerEmail,
+        size: 7.5,
+        color: '#666',
+        gap: 2,
+      });
+    }
+    clientLines.push({
+      text: signature.signedAt
+        ? new Date(signature.signedAt).toLocaleString('pt-BR')
+        : '—',
+      size: 7.5,
+      color: '#666',
+      gap: 2,
+    });
+  }
+
+  const yLeft = writeSignColumn(leftX, providerLines);
+  const yRight = writeSignColumn(rightX, clientLines);
+  doc.y = Math.max(yLeft, yRight, signY + 70) + 16;
 
   // Signature evidence page
   doc.addPage();
@@ -267,11 +330,40 @@ export async function generateSignedContractPdf({
   doc.moveDown(0.5);
   writeParagraph(
     doc,
-    'Este documento registra a assinatura eletrônica simples do contrato, com identificação do signatário, carimbo temporal e hash de integridade do conteúdo.',
+    'Este documento registra as assinaturas eletrônicas simples do contrato (CONTRATADA e CONTRATANTE), com identificação dos signatários, carimbo temporal e hash de integridade do conteúdo.',
     { align: 'left', after: 0.7 },
   );
 
-  const rows = [
+  function writeEvidenceSection(title, rows) {
+    ensureSpace(doc, 48);
+    doc.font('Helvetica-Bold').fontSize(11).fillColor('#111').text(title);
+    doc.moveDown(0.35);
+    for (const [label, value] of rows) {
+      ensureSpace(doc, 32);
+      doc.font('Helvetica').fontSize(8).fillColor('#888').text(label);
+      doc
+        .font('Helvetica')
+        .fontSize(10)
+        .fillColor('#111')
+        .text(String(value || '—'), { width: 495 });
+      doc.moveDown(0.35);
+    }
+    doc.moveDown(0.5);
+  }
+
+  writeEvidenceSection('CONTRATADA', [
+    ['Representante', signature.providerSignerName || legal.closing.providerSignPerson || '—'],
+    ['E-mail', signature.providerSignerEmail || '—'],
+    ['Documento', signature.providerSignerDocument || '—'],
+    [
+      'Data/hora',
+      signature.providerSignedAt
+        ? new Date(signature.providerSignedAt).toLocaleString('pt-BR')
+        : '—',
+    ],
+  ]);
+
+  writeEvidenceSection('CONTRATANTE', [
     ['Signatário', signature.signerName || '—'],
     ['E-mail', signature.signerEmail || '—'],
     ['Documento', signature.signerDocument || '—'],
@@ -283,25 +375,17 @@ export async function generateSignedContractPdf({
     ],
     ['IP', signature.signerIp || '—'],
     ['User-Agent', signature.signerUserAgent || '—'],
+  ]);
+
+  writeEvidenceSection('Integridade', [
     ['Hash SHA-256', signature.contentHash || '—'],
     ['Contrato', contract.number || contract.id],
-  ];
+  ]);
 
-  for (const [label, value] of rows) {
-    ensureSpace(doc, 36);
-    doc.font('Helvetica').fontSize(8).fillColor('#888').text(label);
-    doc
-      .font('Helvetica')
-      .fontSize(10)
-      .fillColor('#111')
-      .text(String(value || '—'), { width: 495 });
-    doc.moveDown(0.4);
-  }
-
-  doc.moveDown(0.8);
+  doc.moveDown(0.4);
   writeParagraph(
     doc,
-    'Assinatura eletrônica realizada no sistema Symbius (Lei 14.063/2020). O conteúdo deste PDF corresponde ao instrumento particular de prestação de serviços aceito pelas Partes.',
+    'Assinaturas eletrônicas realizadas no sistema Symbius (Lei 14.063/2020). O conteúdo deste PDF corresponde ao instrumento particular de prestação de serviços aceito pelas Partes.',
     { align: 'left', size: 8.5, color: '#666' },
   );
 
@@ -338,6 +422,10 @@ export async function regenerateSignedContractPdf({
       signerIp: contract.signerIp,
       signerUserAgent: contract.signerUserAgent,
       contentHash: contract.contentHash,
+      providerSignedAt: contract.providerSignedAt,
+      providerSignerName: contract.providerSignerName,
+      providerSignerEmail: contract.providerSignerEmail,
+      providerSignerDocument: contract.providerSignerDocument,
     },
   });
 }

@@ -9,7 +9,7 @@ export const LEGAL_INSTRUMENT_TITLE =
   'INSTRUMENTO PARTICULAR DE PRESTAÇÃO DE SERVIÇOS';
 
 export const LEGAL_INSTRUMENT_SUBTITLE =
-  'GESTÃO DE TRÁFEGO PAGO, PERFORMANCE E REMUNERAÇÃO CONTRATUAL';
+  'GESTÃO DE TRÁFEGO PAGO E REMUNERAÇÃO VARIÁVEL';
 
 function brandName(settings) {
   return settings?.companyName || 'Symbius';
@@ -505,7 +505,7 @@ function closingClauses() {
       blocks: [
         {
           type: 'p',
-          text: '15.1. As Partes reconhecem como válidas as assinaturas eletrônicas apostas neste instrumento por plataforma aceita entre elas, bem como os respectivos registros de autenticação, autoria e integridade.',
+          text: '15.1. As Partes reconhecem como válidas as assinaturas eletrônicas apostas neste instrumento por ambas as Partes (CONTRATADA e CONTRATANTE) por plataforma aceita entre elas, bem como os respectivos registros de autenticação, autoria e integridade.',
         },
         {
           type: 'p',
@@ -536,7 +536,7 @@ export function buildLegalContractDocument(contract, settings, client) {
     ? `CPF nº ${client.legalRepDocument}`
     : '[CPF]';
 
-  const preamble = `A CONTRATADA e a CONTRATANTE, em conjunto denominadas “Partes” e, individualmente, “Parte”, celebram o presente Instrumento Particular de Prestação de Serviços de Gestão de Tráfego Pago e Remuneração Contratual, mediante as cláusulas e condições seguintes.`;
+  const preamble = `A CONTRATADA e a CONTRATANTE, em conjunto denominadas “Partes” e, individualmente, “Parte”, celebram o presente Instrumento Particular de Prestação de Serviços de Gestão de Tráfego Pago e Remuneração Variável, mediante as cláusulas e condições seguintes.`;
 
   const clauses = [
     ...fixedClauses({ brand, company, clientName, meetingDays }),

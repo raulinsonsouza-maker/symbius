@@ -511,6 +511,20 @@ export const fileStore = {
     });
   },
 
+  async applyProviderSignature(id, data) {
+    const current = await this.getContract(id);
+    if (!current) return null;
+    if (current.signedAt || current.status === 'signed') return current;
+    return this.updateContract(id, {
+      providerSignedAt: data.providerSignedAt,
+      providerSignerName: data.providerSignerName || '',
+      providerSignerEmail: data.providerSignerEmail || '',
+      providerSignerDocument: data.providerSignerDocument || '',
+      acceptanceProviderName:
+        data.providerSignerName || current.acceptanceProviderName || '',
+    });
+  },
+
   async addSignatureEvent(contractId, eventType, meta = {}) {
     const db = readDb();
     const event = {
@@ -602,6 +616,10 @@ export const fileStore = {
       signerUserAgent: '',
       contentHash: '',
       signedPdfPath: '',
+      providerSignedAt: null,
+      providerSignerName: '',
+      providerSignerEmail: '',
+      providerSignerDocument: '',
       createdAt: now,
       updatedAt: now,
     };

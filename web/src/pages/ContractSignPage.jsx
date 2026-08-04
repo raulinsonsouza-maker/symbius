@@ -123,6 +123,32 @@ export default function ContractSignPage() {
             signature={done.contract?.signature}
             client={done.client || data?.client}
           />
+          {(done.contract?.providerSignedAt ||
+            done.contract?.signature?.providerSigned) && (
+            <SignatureStamp
+              signature={{
+                signed: true,
+                signedAt:
+                  done.contract.providerSignedAt ||
+                  done.contract.signature?.providerSignedAt,
+                signerName:
+                  done.contract.providerSignerName ||
+                  done.contract.signature?.providerSignerName,
+                signerEmail:
+                  done.contract.providerSignerEmail ||
+                  done.contract.signature?.providerSignerEmail,
+                signerDocument:
+                  done.contract.providerSignerDocument ||
+                  done.contract.signature?.providerSignerDocument,
+                contentHash: done.contract.contentHash,
+              }}
+              partyName={
+                data?.settings?.legalName ||
+                data?.settings?.companyName ||
+                'CONTRATADA'
+              }
+            />
+          )}
           <div className="sign-page__actions">
             {done.viewUrl && (
               <a className="lp-btn lp-btn--solid" href={done.viewUrl}>
@@ -179,7 +205,11 @@ export default function ContractSignPage() {
         </p>
         <div className="sign-page__status">
           <span>Status do contrato</span>
-          <strong>Aguardando assinatura</strong>
+          <strong>
+            {contract.providerSignedAt || contract.signature?.providerSigned
+              ? 'Assinado pela CONTRATADA · aguardando CONTRATANTE'
+              : 'Aguardando assinatura'}
+          </strong>
           {contract.number && <em>{contract.number}</em>}
         </div>
       </header>

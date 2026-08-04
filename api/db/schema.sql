@@ -160,6 +160,10 @@ ALTER TABLE contracts ADD COLUMN IF NOT EXISTS signer_ip TEXT NOT NULL DEFAULT '
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS signer_user_agent TEXT NOT NULL DEFAULT '';
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS content_hash TEXT NOT NULL DEFAULT '';
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS signed_pdf_path TEXT NOT NULL DEFAULT '';
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS provider_signed_at TIMESTAMPTZ;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS provider_signer_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS provider_signer_email TEXT NOT NULL DEFAULT '';
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS provider_signer_document TEXT NOT NULL DEFAULT '';
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS setup_due_date TEXT NOT NULL DEFAULT '';
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS fee_first_due_date TEXT NOT NULL DEFAULT '';
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS asaas_billing_type TEXT NOT NULL DEFAULT 'UNDEFINED';
@@ -183,6 +187,7 @@ CREATE TABLE IF NOT EXISTS contract_signature_events (
         'sent',
         'viewed',
         'signed',
+        'provider_signed',
         'email_failed',
         'asaas_charged',
         'asaas_failed'
@@ -201,6 +206,7 @@ ALTER TABLE contract_signature_events
       'sent',
       'viewed',
       'signed',
+      'provider_signed',
       'email_failed',
       'asaas_charged',
       'asaas_failed'

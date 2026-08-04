@@ -53,12 +53,32 @@ export function contractHashPayload(contract) {
     mediaNotes: contract.mediaNotes,
     acceptanceProviderName: contract.acceptanceProviderName,
     acceptanceClientName: contract.acceptanceClientName,
+    providerSignedAt: contract.providerSignedAt || null,
+    providerSignerName: contract.providerSignerName || '',
+    providerSignerEmail: contract.providerSignerEmail || '',
+    providerSignerDocument: contract.providerSignerDocument || '',
   };
 }
 
 export function hashContractContent(contract) {
   const json = JSON.stringify(contractHashPayload(contract));
   return createHash('sha256').update(json).digest('hex');
+}
+
+export function resolveProviderSigner(settings, contract) {
+  const name =
+    String(settings?.legalRepName || contract?.acceptanceProviderName || '').trim() ||
+    'Bruno Reis';
+  const email =
+    String(
+      settings?.providerSignerEmail ||
+        settings?.contactEmail ||
+        'bruno@symbius.com.br',
+    )
+      .trim()
+      .toLowerCase() || 'bruno@symbius.com.br';
+  const document = String(settings?.legalRepDocument || '').trim();
+  return { name, email, document };
 }
 
 export function isSigningTokenExpired(expiresAt) {
@@ -77,6 +97,7 @@ export function clientIp(req) {
 export function publicSignatureView(contract) {
   if (!contract) return null;
   const signed = Boolean(contract.signedAt) || contract.status === 'signed';
+  const providerSigned = Boolean(contract.providerSignedAt);
   return {
     signed,
     signedAt: contract.signedAt || null,
@@ -85,6 +106,11 @@ export function publicSignatureView(contract) {
     signerDocument: contract.signerDocument || '',
     contentHash: contract.contentHash || '',
     hasPdf: Boolean(contract.signedPdfPath),
+    providerSigned,
+    providerSignedAt: contract.providerSignedAt || null,
+    providerSignerName: contract.providerSignerName || '',
+    providerSignerEmail: contract.providerSignerEmail || '',
+    providerSignerDocument: contract.providerSignerDocument || '',
   };
 }
 

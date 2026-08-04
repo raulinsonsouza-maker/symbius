@@ -1675,8 +1675,14 @@
 .contract-sheet__signatures {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;
+  gap: 40px 48px;
   margin: 32px 0 16px;
+  align-items: start;
+}
+
+.contract-sheet__sign-col {
+  min-width: 0;
+  text-align: center;
 }
 
 .contract-sheet__signatures > div {
@@ -1698,6 +1704,11 @@
   margin: 2px 0 0;
   font-size: 0.78rem;
   color: #888;
+}
+
+.contract-sheet__sign-col .signature-stamp {
+  text-align: left;
+  margin: 0;
 }
 
 .contract-sheet__date-line {

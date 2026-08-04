@@ -53,10 +53,14 @@ export default function ContractPreview({
   const companyName = settings?.legalName || settings?.companyName || 'Symbius';
   const logoSrc = resolvePrintLogo(settings?.logoUrl);
   const doc = buildLegalContractDocument(contract, settings, client);
-  const signed =
+  const clientSigned =
     contract.signature?.signed ||
     Boolean(contract.signedAt) ||
     contract.status === 'signed';
+  const providerSigned =
+    Boolean(contract.providerSignedAt) ||
+    Boolean(contract.signature?.providerSigned) ||
+    Boolean(contract.signature?.providerSignedAt);
 
   return (
     <div id={printId} className="contract-sheet contract-sheet--legal">
@@ -116,54 +120,86 @@ export default function ContractPreview({
         <p className="contract-sheet__clause-p">{doc.closing.agreement}</p>
         <p className="contract-sheet__clause-p">{doc.closing.placeDate}</p>
 
-        {signed ? (
-          <SignatureStamp
-            client={client}
-            partyName={doc.clientParty.name}
-            partyDocument={doc.clientParty.document}
-            signature={
-              contract.signature || {
-                signed: true,
-                signedAt: contract.signedAt,
-                signerName: contract.signerName || doc.clientParty.name,
-                signerEmail: contract.signerEmail,
-                signerDocument: contract.signerDocument,
-                signerIp: contract.signerIp,
-                contentHash: contract.contentHash,
-              }
-            }
-          />
-        ) : (
-          <>
-            <div className="contract-sheet__signatures">
-              <div>
+        <div className="contract-sheet__signatures">
+          <div className="contract-sheet__sign-col">
+            {providerSigned ? (
+              <SignatureStamp
+                compact
+                partyName={doc.provider.name}
+                partyDocument={doc.provider.document}
+                signature={{
+                  signed: true,
+                  signedAt:
+                    contract.providerSignedAt ||
+                    contract.signature?.providerSignedAt,
+                  signerName:
+                    contract.providerSignerName ||
+                    contract.signature?.providerSignerName ||
+                    doc.closing.providerSignPerson,
+                  signerEmail:
+                    contract.providerSignerEmail ||
+                    contract.signature?.providerSignerEmail ||
+                    '',
+                  signerDocument:
+                    contract.providerSignerDocument ||
+                    contract.signature?.providerSignerDocument ||
+                    '',
+                  contentHash: contract.contentHash || contract.signature?.contentHash,
+                }}
+              />
+            ) : (
+              <>
                 <span className="contract-sheet__sign-line" />
                 <strong>{doc.closing.providerSignName}</strong>
                 <p>{doc.closing.providerSignRole}</p>
                 <p>{doc.closing.providerSignPerson}</p>
-              </div>
-              <div>
+              </>
+            )}
+          </div>
+          <div className="contract-sheet__sign-col">
+            {clientSigned ? (
+              <SignatureStamp
+                compact
+                client={client}
+                partyName={doc.clientParty.name}
+                partyDocument={doc.clientParty.document}
+                signature={
+                  contract.signature || {
+                    signed: true,
+                    signedAt: contract.signedAt,
+                    signerName: contract.signerName || doc.clientParty.name,
+                    signerEmail: contract.signerEmail,
+                    signerDocument: contract.signerDocument,
+                    signerIp: contract.signerIp,
+                    contentHash: contract.contentHash,
+                  }
+                }
+              />
+            ) : (
+              <>
                 <span className="contract-sheet__sign-line" />
                 <strong>{doc.closing.clientSignName}</strong>
                 <p>{doc.closing.clientSignRole}</p>
                 <p>{doc.closing.clientSignPerson}</p>
+              </>
+            )}
+          </div>
+        </div>
+        {!clientSigned ? (
+          <div className="contract-sheet__witnesses">
+            <p className="contract-sheet__witnesses-label">TESTEMUNHAS</p>
+            <div className="contract-sheet__signatures">
+              <div>
+                <span className="contract-sheet__sign-line" />
+                <p>Nome / CPF</p>
+              </div>
+              <div>
+                <span className="contract-sheet__sign-line" />
+                <p>Nome / CPF</p>
               </div>
             </div>
-            <div className="contract-sheet__witnesses">
-              <p className="contract-sheet__witnesses-label">TESTEMUNHAS</p>
-              <div className="contract-sheet__signatures">
-                <div>
-                  <span className="contract-sheet__sign-line" />
-                  <p>Nome / CPF</p>
-                </div>
-                <div>
-                  <span className="contract-sheet__sign-line" />
-                  <p>Nome / CPF</p>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
+          </div>
+        ) : null}
       </section>
     </div>
   );

@@ -7,6 +7,7 @@ import {
   clientIp,
   publicSignatureView,
   stripSigningSecrets,
+  resolveProviderSigner,
 } from './signing.js';
 import {
   emailConfigured,
@@ -290,7 +291,42 @@ export async function createContract(req, res) {
 
 export async function updateContract(req, res) {
   const store = getStore();
-  const contract = await store.updateContract(req.params.id, req.body || {});
+  const current = await store.getContract(req.params.id);
+  if (!current) {
+    return res.status(404).json({ error: 'Contrato não encontrado' });
+  }
+
+  const body = req.body || {};
+  const isFullySigned =
+    Boolean(current.signedAt) || current.status === 'signed';
+
+  let patch = body;
+  if (isFullySigned) {
+    const allowed = new Set([
+      'status',
+      'asaasBillingType',
+      'asaasSubscriptionId',
+      'asaasSetupPaymentId',
+      'asaasSyncedAt',
+      'setupDueDate',
+      'feeFirstDueDate',
+    ]);
+    const blocked = Object.keys(body).filter(
+      (k) => body[k] !== undefined && !allowed.has(k),
+    );
+    if (blocked.length) {
+      return res.status(400).json({
+        error:
+          'Contrato assinado não pode ter conteúdo alterado. Apenas campos operacionais (Asaas/status) são permitidos.',
+        blocked,
+      });
+    }
+    patch = Object.fromEntries(
+      Object.entries(body).filter(([k]) => allowed.has(k)),
+    );
+  }
+
+  const contract = await store.updateContract(req.params.id, patch);
   if (!contract) {
     return res.status(404).json({ error: 'Contrato não encontrado' });
   }
@@ -726,13 +762,31 @@ export async function sendContract(req, res) {
     });
   }
 
+  const settings = await store.getSettings();
+  let working = contract;
+  if (!working.providerSignedAt) {
+    const provider = resolveProviderSigner(settings, working);
+    const providerSignedAt = new Date().toISOString();
+    working =
+      (await store.applyProviderSignature(working.id, {
+        providerSignedAt,
+        providerSignerName: provider.name,
+        providerSignerEmail: provider.email,
+        providerSignerDocument: provider.document,
+      })) || working;
+    await store.addSignatureEvent(working.id, 'provider_signed', {
+      name: provider.name,
+      email: provider.email,
+      ip: clientIp(req),
+    });
+  }
+
   const token = createSigningToken();
   const expiresAt = signingExpiresAt();
-  const updated = await store.prepareContractForSend(contract.id, {
+  const updated = await store.prepareContractForSend(working.id, {
     token,
     expiresAt,
   });
-  const settings = await store.getSettings();
   const signUrl = `${appBaseUrl()}/assinar/${token}`;
   const company =
     settings?.legalName || settings?.companyName || 'Symbius';
@@ -748,6 +802,7 @@ export async function sendContract(req, res) {
     await store.addSignatureEvent(contract.id, 'sent', {
       to: client.email,
       expiresAt: expiresAt.toISOString(),
+      providerSignedAt: updated.providerSignedAt || working.providerSignedAt,
     });
   } catch (err) {
     await store.addSignatureEvent(contract.id, 'email_failed', {
@@ -902,6 +957,14 @@ export async function postPublicSign(req, res) {
     });
   }
 
+  if (!contract.providerSignedAt) {
+    return res.status(409).json({
+      error:
+        'Contrato ainda não foi assinado pela CONTRATADA. Solicite um novo envio.',
+      code: 'PROVIDER_PENDING',
+    });
+  }
+
   const body = req.body || {};
   const name = String(body.name || '').trim();
   const email = String(body.email || '').trim().toLowerCase();
@@ -943,6 +1006,10 @@ export async function postPublicSign(req, res) {
         signerIp: ip,
         signerUserAgent: userAgent,
         contentHash,
+        providerSignedAt: contract.providerSignedAt,
+        providerSignerName: contract.providerSignerName,
+        providerSignerEmail: contract.providerSignerEmail,
+        providerSignerDocument: contract.providerSignerDocument,
       },
     });
     signedPdfPath = pdf.relativePath.replace(/\\/g, '/');

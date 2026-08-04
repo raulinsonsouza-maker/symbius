@@ -141,6 +141,10 @@ function mapContract(row) {
     signerUserAgent: row.signer_user_agent || '',
     contentHash: row.content_hash || '',
     signedPdfPath: row.signed_pdf_path || '',
+    providerSignedAt: row.provider_signed_at || null,
+    providerSignerName: row.provider_signer_name || '',
+    providerSignerEmail: row.provider_signer_email || '',
+    providerSignerDocument: row.provider_signer_document || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -776,6 +780,30 @@ const pgStore = {
         data.signerUserAgent || '',
         data.contentHash || '',
         data.signedPdfPath || '',
+        id,
+      ],
+    );
+    return mapContract(rows[0]);
+  },
+
+  async applyProviderSignature(id, data) {
+    const { rows } = await pool.query(
+      `UPDATE contracts SET
+        provider_signed_at = $1,
+        provider_signer_name = $2,
+        provider_signer_email = $3,
+        provider_signer_document = $4,
+        acceptance_provider_name = COALESCE(NULLIF($2, ''), acceptance_provider_name),
+        updated_at = NOW()
+       WHERE id = $5
+         AND signed_at IS NULL
+         AND status IS DISTINCT FROM 'signed'
+       RETURNING *`,
+      [
+        data.providerSignedAt,
+        data.providerSignerName || '',
+        data.providerSignerEmail || '',
+        data.providerSignerDocument || '',
         id,
       ],
     );
