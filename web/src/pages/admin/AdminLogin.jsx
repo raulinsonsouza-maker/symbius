@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { isAuthenticated, login } from '../../lib/auth';
+import Seo from '../../components/Seo';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -14,6 +15,12 @@ export default function AdminLogin() {
 
   return (
     <div className="admin-auth">
+      <Seo
+        title="Login administrativo"
+        description="Área restrita Symbius."
+        path="/admin/login"
+        noindex
+      />
       <form
         className="admin-auth__card"
         onSubmit={(event) => {

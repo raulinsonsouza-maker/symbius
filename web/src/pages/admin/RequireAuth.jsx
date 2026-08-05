@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { isAuthenticated } from '../../lib/auth';
+import Seo from '../../components/Seo';
 
 export default function RequireAuth({ children }) {
   const location = useLocation();
@@ -8,5 +9,15 @@ export default function RequireAuth({ children }) {
       <Navigate to="/admin/login" replace state={{ from: location.pathname }} />
     );
   }
-  return children;
+  return (
+    <>
+      <Seo
+        title="Painel administrativo"
+        description="Área restrita Symbius."
+        path={location.pathname}
+        noindex
+      />
+      {children}
+    </>
+  );
 }

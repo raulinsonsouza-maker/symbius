@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import ContractPreview from '../components/contratos/ContractPreview';
+import Seo from '../components/Seo';
 
 export default function ContractPublicPage() {
   const { slug } = useParams();
@@ -15,20 +16,10 @@ export default function ContractPublicPage() {
       .catch((err) => setError(err.message));
   }, [slug]);
 
-  useEffect(() => {
-    if (!data) return undefined;
-    const previous = document.title;
-    const company =
-      data.settings.legalName || data.settings.companyName || 'Symbius';
-    document.title = `${company} | Contrato ${data.contract.number}`;
-    return () => {
-      document.title = previous;
-    };
-  }, [data]);
-
   if (error) {
     return (
       <div className="prop-lp prop-lp--message">
+        <Seo title="Contrato não encontrado" path={`/c/${slug}`} noindex />
         <div className="prop-lp__message">
           <p className="prop-lp__label">Contrato</p>
           <h1>Não encontramos este contrato.</h1>
@@ -44,9 +35,10 @@ export default function ContractPublicPage() {
   if (!data) {
     return (
       <div className="prop-lp prop-lp--message">
+        <Seo title="Carregando contrato" path={`/c/${slug}`} noindex />
         <div className="prop-lp__message">
-          <p className="prop-lp__label">Carregando</p>
-          <h1>Preparando o contrato…</h1>
+          <p className="prop-lp__label">Contrato</p>
+          <h1>Carregando…</h1>
         </div>
       </div>
     );
@@ -62,6 +54,12 @@ export default function ContractPublicPage() {
 
   return (
     <div className="prop-lp prop-lp--legal">
+      <Seo
+        title={`${company} | Contrato ${contract.number}`}
+        description="Documento contratual privado Symbius."
+        path={`/c/${slug}`}
+        noindex
+      />
       <header className="prop-lp__nav">
         <img src={logo} alt={company} className="prop-lp__logo" />
         <div className="prop-lp__nav-side">

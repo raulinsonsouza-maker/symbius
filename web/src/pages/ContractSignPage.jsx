@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import ContractPreview from '../components/contratos/ContractPreview';
 import SignatureStamp from '../components/contratos/SignatureStamp';
+import Seo from '../components/Seo';
 
 export default function ContractSignPage() {
   const { token } = useParams();
@@ -58,15 +59,6 @@ export default function ContractSignPage() {
     };
   }, [token]);
 
-  useEffect(() => {
-    if (!data?.contract) return undefined;
-    const previous = document.title;
-    document.title = `Assinar · ${data.contract.number || 'Contrato'}`;
-    return () => {
-      document.title = previous;
-    };
-  }, [data]);
-
   const company = useMemo(
     () =>
       data?.settings?.legalName ||
@@ -98,6 +90,7 @@ export default function ContractSignPage() {
   if (loading) {
     return (
       <div className="prop-lp prop-lp--message">
+        <Seo title="Assinatura de contrato" path={`/assinar/${token}`} noindex />
         <div className="prop-lp__message">
           <p className="prop-lp__label">Assinatura</p>
           <h1>Carregando contrato…</h1>
@@ -109,6 +102,7 @@ export default function ContractSignPage() {
   if (done) {
     return (
       <div className="sign-page">
+        <Seo title="Contrato assinado" path={`/assinar/${token}`} noindex />
         <div className="sign-page__success">
           <p className="prop-lp__label">Contrato assinado</p>
           <h1>Assinatura registrada com sucesso</h1>
@@ -174,6 +168,7 @@ export default function ContractSignPage() {
   if (!data) {
     return (
       <div className="prop-lp prop-lp--message">
+        <Seo title="Link de assinatura inválido" path={`/assinar/${token}`} noindex />
         <div className="prop-lp__message">
           <p className="prop-lp__label">Assinatura</p>
           <h1>
@@ -196,6 +191,12 @@ export default function ContractSignPage() {
 
   return (
     <div className="sign-page">
+      <Seo
+        title={`${company} | Assinatura ${contract.number || ''}`.trim()}
+        description="Fluxo de assinatura digital privado Symbius."
+        path={`/assinar/${token}`}
+        noindex
+      />
       <header className="sign-page__hero">
         <p className="prop-lp__label">{company}</p>
         <h1>Seu contrato está pronto para assinatura</h1>

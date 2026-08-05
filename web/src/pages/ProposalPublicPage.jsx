@@ -7,7 +7,7 @@ import {
   formatCurrency,
   resolveServiceNames,
 } from '../data/proposalTemplates';
-
+import Seo from '../components/Seo';
 function buildBlocks(proposal, services) {
   if (proposal.template === 'blank') {
     return (proposal.blankItems || [])
@@ -58,21 +58,15 @@ export default function ProposalPublicPage() {
       .catch((err) => setError(err.message));
   }, [slug]);
 
-  useEffect(() => {
-    if (!data) return undefined;
-    const previous = document.title;
-    const { proposal, settings } = data;
-    document.title = `${settings.companyName || 'Symbius'} | Proposta ${
-      proposal.clientName || proposal.number
-    }`;
-    return () => {
-      document.title = previous;
-    };
-  }, [data]);
-
   if (error) {
     return (
       <div className="prop-lp prop-lp--message">
+        <Seo
+          title="Proposta não encontrada"
+          description="Link de proposta inválido ou expirado."
+          path={`/p/${slug}`}
+          noindex
+        />
         <div className="prop-lp__message">
           <p className="prop-lp__label">Proposta</p>
           <h1>Não encontramos esta proposta.</h1>
@@ -88,15 +82,21 @@ export default function ProposalPublicPage() {
   if (!data) {
     return (
       <div className="prop-lp prop-lp--message">
+        <Seo title="Carregando proposta" path={`/p/${slug}`} noindex />
         <div className="prop-lp__message">
-          <p className="prop-lp__label">Carregando</p>
-          <h1>Preparando sua proposta…</h1>
+          <p className="prop-lp__label">Proposta</p>
+          <h1>Carregando…</h1>
         </div>
       </div>
     );
   }
 
-  const { proposal, settings, services } = data;
+  const { proposal, settings } = data;
+  const seoTitle = `${settings.companyName || 'Symbius'} | Proposta ${
+    proposal.clientName || proposal.number
+  }`;
+
+  const { services } = data;
   const logo = settings.logoUrl || '/images/logotipo-branco.png';
   const company = settings.companyName || 'Symbius';
   const wa = whatsappUrl(
@@ -125,6 +125,14 @@ export default function ProposalPublicPage() {
 
   return (
     <div className="prop-lp">
+      <Seo
+        title={seoTitle}
+        description={`Proposta comercial privada Symbius${
+          proposal.clientName ? ` para ${proposal.clientName}` : ''
+        }.`}
+        path={`/p/${slug}`}
+        noindex
+      />
       <header className="prop-lp__nav">
         <img src={logo} alt={company} className="prop-lp__logo" />
         <div className="prop-lp__nav-side">

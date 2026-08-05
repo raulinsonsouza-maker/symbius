@@ -1,0 +1,35 @@
+User-agent: *
+Allow: /
+
+# Painel e documentos privados — não indexar
+Disallow: /admin
+Disallow: /admin/
+Disallow: /assinar
+Disallow: /assinar/
+Disallow: /p/
+Disallow: /c/
+Disallow: /a/
+
+# Sitemap
+Sitemap: https://symbius.com.br/sitemap.xml
+
+User-agent: GPTBot
+Disallow: /admin
+Disallow: /assinar
+Disallow: /p/
+Disallow: /c/
+Disallow: /a/
+
+User-agent: CCBot
+Disallow: /admin
+Disallow: /assinar
+Disallow: /p/
+Disallow: /c/
+Disallow: /a/
+
+User-agent: Google-Extended
+Disallow: /admin
+Disallow: /assinar
+Disallow: /p/
+Disallow: /c/
+Disallow: /a/

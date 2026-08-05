@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { whatsappUrl } from '../lib/whatsapp';
 import { BRANDGROWTH, MOVIMENTOS } from '../data/content';
+import Seo from '../components/Seo';
 
 const METHOD_APP_MAX = 180;
 
@@ -396,6 +397,7 @@ export default function StrategicAnalysisPublicPage() {
   if (error) {
     return (
       <div className="sa-lp sa-lp--message">
+        <Seo title="Análise não encontrada" path={`/a/${slug}`} noindex />
         <div className="sa-lp__wrap">
           <p className="sa-lp__eyebrow">Análise Estratégica</p>
           <h1>Não encontramos esta análise.</h1>
@@ -411,6 +413,7 @@ export default function StrategicAnalysisPublicPage() {
   if (!data) {
     return (
       <div className="sa-lp sa-lp--message">
+        <Seo title="Carregando análise" path={`/a/${slug}`} noindex />
         <div className="sa-lp__wrap">
           <p className="sa-lp__muted">Carregando análise…</p>
         </div>
@@ -446,6 +449,12 @@ export default function StrategicAnalysisPublicPage() {
 
   return (
     <div className="sa-lp">
+      <Seo
+        title={`Análise Estratégica | ${clientName}`}
+        description="Relatório estratégico privado elaborado pela Symbius."
+        path={`/a/${slug}`}
+        noindex
+      />
       <header className="sa-lp__masthead">
         <div className="sa-lp__wrap sa-lp__masthead-row">
           <img

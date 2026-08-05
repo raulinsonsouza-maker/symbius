@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import ContactForm from '../components/ContactForm';
 import ProjectGalleryModal from '../components/ProjectGalleryModal';
+import Seo from '../components/Seo';
 import { MOVIMENTOS, GROWTH_SECTION, RESULTADO_PAIRS } from '../data/content';
 import { PORTFOLIO_PROJECTS } from '../data/portfolio';
 import { whatsappUrl } from '../lib/whatsapp';
+import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, SITE_URL } from '../lib/seo';
 
 const STATS = [
   { value: '+4x', label: 'mais oportunidades qualificadas' },
@@ -27,16 +29,24 @@ const FEATURED_CASES = FEATURED_CASE_IDS.map((id) =>
 export default function LandingPage() {
   const [activeProject, setActiveProject] = useState(null);
 
-  useEffect(() => {
-    const previous = document.title;
-    document.title = 'Symbius | Máquina de captação de clientes';
-    return () => {
-      document.title = previous;
-    };
-  }, []);
-
   return (
     <div className="lp">
+      <Seo
+        title={DEFAULT_TITLE}
+        description={DEFAULT_DESCRIPTION}
+        path="/"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          '@id': `${SITE_URL}/#webpage`,
+          url: `${SITE_URL}/`,
+          name: DEFAULT_TITLE,
+          description: DEFAULT_DESCRIPTION,
+          isPartOf: { '@id': `${SITE_URL}/#website` },
+          about: { '@id': `${SITE_URL}/#organization` },
+          inLanguage: 'pt-BR',
+        }}
+      />
       <header className="lp-header">
         <div className="lp-header__inner">
           <img
