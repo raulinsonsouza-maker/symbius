@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
 
-# Painel e documentos privados — não indexar
+# Painel e documentos privados - nao indexar
 Disallow: /admin
 Disallow: /admin/
 Disallow: /assinar
